@@ -5,13 +5,16 @@ const mocks = vi.hoisted(() => {
   const setProviderMock = vi.fn();
   const getBalanceMock = vi.fn();
   const getChainIdMock = vi.fn();
+  const getConstantsMock = vi.fn();
+  const estimateOriginateMock = vi.fn();
   const originateMock = vi.fn();
   const atMock = vi.fn();
   const publicKeyHashMock = vi.fn();
 
   class MockTezosToolkit {
     tz = { getBalance: getBalanceMock };
-    rpc = { getChainId: getChainIdMock };
+    rpc = { getChainId: getChainIdMock, getConstants: getConstantsMock };
+    estimate = { originate: estimateOriginateMock };
     contract = { originate: originateMock, at: atMock };
     setProvider = setProviderMock;
 
@@ -28,6 +31,8 @@ const mocks = vi.hoisted(() => {
     setProviderMock,
     getBalanceMock,
     getChainIdMock,
+    getConstantsMock,
+    estimateOriginateMock,
     originateMock,
     atMock,
     publicKeyHashMock,
@@ -70,6 +75,16 @@ describe('TezosService', () => {
     );
     mocks.getBalanceMock.mockResolvedValue({ toNumber: () => 1_750_000 });
     mocks.getChainIdMock.mockResolvedValue('NetXTestChain');
+    mocks.getConstantsMock.mockResolvedValue({
+      hard_gas_limit_per_operation: '1040000',
+      hard_storage_limit_per_operation: '60000',
+    });
+    mocks.estimateOriginateMock.mockResolvedValue({
+      gasLimit: 380_000,
+      storageLimit: 35_000,
+      suggestedFeeMutez: 45_000,
+      minimalFeeMutez: 40_000,
+    });
     mocks.originateMock.mockResolvedValue({
       contract: vi
         .fn()
@@ -121,6 +136,15 @@ describe('TezosService', () => {
 
     expect(contract).toBe('KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton');
     expect(mocks.originateMock).toHaveBeenCalledTimes(1);
+    expect(mocks.originateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
+        init: 'Unit',
+        fee: expect.any(Number),
+        gasLimit: expect.any(Number),
+        storageLimit: expect.any(Number),
+      }),
+    );
   });
 
   it('executes contract calls and returns operation metadata', async () => {
@@ -153,5 +177,28 @@ describe('TezosService', () => {
     const service = new TezosService('A', baseEnv());
 
     await expect(service.getBalance()).rejects.toThrow(/Chain mismatch detected/);
+  });
+
+  it('retries origination when fee is too low', async () => {
+    mocks.originateMock
+      .mockRejectedValueOnce({
+        body: JSON.stringify([
+          { id: 'proto.024-PtTALLiN.prefilter.fees_too_low' },
+        ]),
+      })
+      .mockResolvedValueOnce({
+        contract: vi
+          .fn()
+          .mockResolvedValue({ address: 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg' }),
+      });
+
+    const service = new TezosService('A', baseEnv());
+    const address = await service.originateContract(
+      'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
+      'Unit',
+    );
+
+    expect(address).toBe('KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg');
+    expect(mocks.originateMock).toHaveBeenCalledTimes(2);
   });
 });

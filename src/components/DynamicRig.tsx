@@ -8,6 +8,11 @@ interface DynamicRigProps {
   onExecute: (entrypoint: string, args: unknown[], wallet: WalletType) => Promise<void>;
 }
 
+const puppetWalletLabels: Record<WalletType, string> = {
+  A: 'Bert',
+  B: 'Ernie',
+};
+
 export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicRigProps) {
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [formValues, setFormValues] = useState<Record<string, string>>({});
@@ -49,14 +54,14 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
           <p className="font-mono text-primary">{contractAddress}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-base-content/70">Execute as:</span>
+          <span className="text-sm text-base-content/70">Execute as puppet wallet:</span>
           <select 
             className="select select-sm select-bordered"
             value={selectedWallet}
             onChange={(e) => setSelectedWallet(e.target.value as 'A' | 'B')}
           >
-            <option value="A">Wallet A</option>
-            <option value="B">Wallet B</option>
+            <option value="A">{puppetWalletLabels.A}</option>
+            <option value="B">{puppetWalletLabels.B}</option>
           </select>
         </div>
       </div>

@@ -1,0 +1,79 @@
+{
+  "prim": "Pair",
+  "args": [
+    { "string": "tz1burnburnburnburnburnburnburjAYjjX" },
+    {
+      "prim": "Pair",
+      "args": [
+        [ { "prim": "Elt", "args": [ { "prim": "Pair", "args": [ { "string": "tz1burnburnburnburnburnburnburjAYjjX" }, { "int": "0" } ] }, { "int": "10000000" } ] } ],
+        {
+          "prim": "Pair",
+          "args": [
+            [
+              { "prim": "Elt", "args": [ { "string": "" }, { "bytes": "74657a6f732d73746f726167653a636f6e74656e74" } ] },
+              {
+                "prim": "Elt",
+                "args": [
+                  { "string": "content" },
+                  {
+                    "bytes": "7b226e616d65223a22546573742053696c766572222c226465736372697074696f6e223a224641322066756e6769626c65207465737420746f6b656e20776974682042616b6572792d7374796c652061646d696e20656e747279706f696e747320666f7220736861646f776e65742e222c2273796d626f6c223a2254534c5652222c22646563696d616c73223a2237222c22737570706c79223a223130303030303030222c2276616c75655f74696572223a2273696c7665723d302e3120676f6c64222c22696e7465726661636573223a5b22545a49502d303132222c22545a49502d303136225d7d"
+                  }
+                ]
+              }
+            ],
+            {
+              "prim": "Pair",
+              "args": [
+                { "int": "1" },
+                {
+                  "prim": "Pair",
+                  "args": [
+                    [],
+                    {
+                      "prim": "Pair",
+                      "args": [
+                        { "prim": "False" },
+                        {
+                          "prim": "Pair",
+                          "args": [
+                            { "prim": "None" },
+                            {
+                              "prim": "Pair",
+                              "args": [
+                                [
+                                  {
+                                    "prim": "Elt",
+                                    "args": [
+                                      { "int": "0" },
+                                      {
+                                        "prim": "Pair",
+                                        "args": [
+                                          { "int": "0" },
+                                          [
+                                            { "prim": "Elt", "args": [ { "string": "decimals" }, { "bytes": "37" } ] },
+                                            { "prim": "Elt", "args": [ { "string": "name" }, { "bytes": "546573742053696c766572" } ] },
+                                            { "prim": "Elt", "args": [ { "string": "symbol" }, { "bytes": "54534c5652" } ] },
+                                            { "prim": "Elt", "args": [ { "string": "value_tier" }, { "bytes": "73696c7665723d302e3120676f6c64" } ] }
+                                          ]
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ],
+                                [ { "prim": "Elt", "args": [ { "int": "0" }, { "int": "10000000" } ] } ]
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

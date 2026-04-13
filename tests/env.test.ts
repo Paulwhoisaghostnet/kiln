@@ -21,6 +21,20 @@ describe('getEnv', () => {
       }),
     ).toThrow(/Environment validation failed/);
   });
+
+  it('parses named token env variables', () => {
+    const env = getEnv({
+      TEZOS_RPC_URL: 'https://rpc.shadownet.teztnets.com',
+      KILN_TOKEN_BRONZE: 'KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj',
+      KILN_TOKEN_SILVER: 'KT1SxqT3TUF44syQ5QauuF9L8upWjr4ayVoq',
+      KILN_TOKEN_GOLD: 'KT1SVy1QrAnXB9oyGPWEbRnotrggPkHt2TLH',
+      KILN_TOKEN_PLATINUM: 'KT1KiGwrgfsg7sJTyJHkGstLY4YKfrHAf3TN',
+      KILN_TOKEN_DIAMOND: 'KT1JAaj2EUjGBfWmJGy3Z5UsoGus7iGVkvEG',
+    });
+
+    expect(env.KILN_TOKEN_BRONZE).toBe('KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj');
+    expect(env.KILN_TOKEN_DIAMOND).toBe('KT1JAaj2EUjGBfWmJGy3Z5UsoGus7iGVkvEG');
+  });
 });
 
 describe('getWalletSecret', () => {

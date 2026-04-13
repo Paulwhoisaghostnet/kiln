@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { injectKilnTokens, parseDummyTokens } from '../src/lib/kiln-injector.js';
+import {
+  injectKilnTokens,
+  parseDummyTokens,
+  resolveDummyTokens,
+} from '../src/lib/kiln-injector.js';
 
 describe('parseDummyTokens', () => {
   it('parses comma-separated KT1 addresses', () => {
@@ -45,5 +49,52 @@ describe('injectKilnTokens', () => {
     expect(() => injectKilnTokens('parameter unit;')).toThrow(
       /KILN_DUMMY_TOKENS is required/,
     );
+  });
+});
+
+describe('resolveDummyTokens', () => {
+  it('prefers named token variables when all are configured', () => {
+    const resolved = resolveDummyTokens({
+      KILN_TOKEN_BRONZE: 'KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj',
+      KILN_TOKEN_SILVER: 'KT1SxqT3TUF44syQ5QauuF9L8upWjr4ayVoq',
+      KILN_TOKEN_GOLD: 'KT1SVy1QrAnXB9oyGPWEbRnotrggPkHt2TLH',
+      KILN_TOKEN_PLATINUM: 'KT1KiGwrgfsg7sJTyJHkGstLY4YKfrHAf3TN',
+      KILN_TOKEN_DIAMOND: 'KT1JAaj2EUjGBfWmJGy3Z5UsoGus7iGVkvEG',
+      KILN_DUMMY_TOKENS:
+        'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton,KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg',
+    });
+
+    expect(resolved.source).toBe('named');
+    expect(resolved.byTier).toEqual({
+      bronze: 'KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj',
+      silver: 'KT1SxqT3TUF44syQ5QauuF9L8upWjr4ayVoq',
+      gold: 'KT1SVy1QrAnXB9oyGPWEbRnotrggPkHt2TLH',
+      platinum: 'KT1KiGwrgfsg7sJTyJHkGstLY4YKfrHAf3TN',
+      diamond: 'KT1JAaj2EUjGBfWmJGy3Z5UsoGus7iGVkvEG',
+    });
+  });
+
+  it('falls back to KILN_DUMMY_TOKENS when named vars are absent', () => {
+    const resolved = resolveDummyTokens({
+      KILN_DUMMY_TOKENS:
+        'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton,KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg',
+    });
+
+    expect(resolved.source).toBe('list');
+    expect(resolved.ordered).toEqual([
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg',
+    ]);
+    expect(resolved.byTier.bronze).toBe('KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton');
+    expect(resolved.byTier.silver).toBe('KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg');
+    expect(resolved.byTier.gold).toBeNull();
+  });
+
+  it('throws when named vars are partially configured', () => {
+    expect(() =>
+      resolveDummyTokens({
+        KILN_TOKEN_BRONZE: 'KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj',
+      }),
+    ).toThrow(/Named dummy token configuration is incomplete/);
   });
 });
