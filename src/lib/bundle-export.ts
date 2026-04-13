@@ -128,7 +128,7 @@ export async function createMainnetReadyBundle(
   await fs.mkdir(reportsDir, { recursive: true });
   await fs.mkdir(metadataDir, { recursive: true });
 
-  const sourceExtension = input.sourceType === 'smartpy' ? 'smartpy' : 'tz';
+  const sourceExtension = input.sourceType === 'smartpy' ? 'py' : 'tz';
   await fs.writeFile(
     join(artifactsDir, `source.${sourceExtension}`),
     input.source,

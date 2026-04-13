@@ -67,7 +67,9 @@ function detectSourceType(sourceType: WorkflowSourceType, source: string): 'mich
   if (
     normalized.includes('import smartpy as sp') ||
     normalized.includes('@sp.module') ||
-    normalized.includes('@sp.entrypoint')
+    normalized.includes('sp.contract') ||
+    normalized.includes('@sp.entrypoint') ||
+    normalized.includes('sp.add_compilation_target')
   ) {
     return 'smartpy';
   }

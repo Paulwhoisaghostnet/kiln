@@ -61,7 +61,7 @@ export async function compileSmartPySource(
   await ensureSmartPyCliAvailable();
 
   const workingDir = await fs.mkdtemp(join(tmpdir(), 'kiln-smartpy-'));
-  const sourceFile = join(workingDir, 'contract.smartpy');
+  const sourceFile = join(workingDir, 'contract.py');
   const outputDir = join(workingDir, 'build');
 
   try {

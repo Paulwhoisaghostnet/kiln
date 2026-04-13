@@ -256,7 +256,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
       },
       sources: {
         supported: ['auto', 'smartpy', 'michelson'],
-        uploadExtensions: ['.tz', '.json', '.smartpy', '.sp', '.txt', '.md'],
+        uploadExtensions: ['.tz', '.json', '.smartpy', '.sp', '.py', '.txt', '.md'],
       },
       workflowStages: [
         'source_intake',

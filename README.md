@@ -48,8 +48,7 @@ npm run dev
 - `Run Bert + Ernie E2E`: executes post-deploy calls from puppet wallets controlled by the suite.
 - `Guided Contract Creator`: optional wizard that generates either SmartPy scaffolds (for real build pipelines) or deployable Michelson stubs (for fast predeploy/deploy/E2E flow checks).
 - `Guided Contract Creator` can now load reference-derived contract elements (admin controls, pause, operators, allowlists, royalties, fee controls) sliced from contracts in `reference/`.
-- `Contract Injector` now supports SmartPy source loading from `.smartpy`, `.sp`, or `.txt` files.
-  `.py` uploads are not required.
+- `Contract Injector` supports SmartPy source loading from `.py`, `.smartpy`, `.sp`, or `.txt` files (same compile path as the workflow).
 - When SmartPy source is loaded, Kiln compiles it server-side before predeploy tests and deployment.
 
 ## Production Start

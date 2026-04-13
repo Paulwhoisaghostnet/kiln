@@ -220,7 +220,8 @@ function looksLikeSmartPy(source: string): boolean {
     normalized.includes('import smartpy as sp') ||
     normalized.includes('@sp.module') ||
     normalized.includes('sp.contract') ||
-    normalized.includes('@sp.entrypoint')
+    normalized.includes('@sp.entrypoint') ||
+    normalized.includes('sp.add_compilation_target')
   );
 }
 
@@ -241,6 +242,7 @@ function detectContractSourceType(
   if (
     lowerName.endsWith('.smartpy') ||
     lowerName.endsWith('.sp') ||
+    lowerName.endsWith('.py') ||
     lowerName.endsWith('.txt')
   ) {
     return looksLikeSmartPy(source) ? 'smartpy' : 'michelson';
@@ -499,7 +501,7 @@ export default function App() {
       addLog('No contract source available to export.', 'error');
       return;
     }
-    const extension = contractSourceType === 'smartpy' ? 'smartpy' : 'tz';
+    const extension = contractSourceType === 'smartpy' ? 'py' : 'tz';
     downloadTextFile(`kiln-source.${extension}`, michelsonCode);
     addLog(`Exported current contract source as kiln-source.${extension}.`, 'success');
   };
@@ -1257,7 +1259,7 @@ export default function App() {
                     <input
                       ref={contractUploadInputRef}
                       type="file"
-                      accept=".tz,.json,.smartpy,.sp,.txt,.md"
+                      accept=".tz,.json,.smartpy,.sp,.py,.txt,.md"
                       className="hidden"
                       onChange={handleFileUpload}
                     />
@@ -1275,9 +1277,10 @@ export default function App() {
                   placeholder='Ex: Unit or Pair "tz1..." 100'
                 />
                 <p className="text-[0.7rem] text-base-content/60 mt-1">
-                  SmartPy sources can be loaded from <span className="font-mono">.smartpy</span>,{' '}
-                  <span className="font-mono">.sp</span>, or <span className="font-mono">.txt</span> files.
-                  Python <span className="font-mono">.py</span> uploads are not required.
+                  SmartPy sources can be loaded from <span className="font-mono">.py</span>,{' '}
+                  <span className="font-mono">.smartpy</span>, <span className="font-mono">.sp</span>, or{' '}
+                  <span className="font-mono">.txt</span> files. The workflow compiles SmartPy to Michelson
+                  server-side when SmartPy mode is active or auto-detected.
                 </p>
               </div>
               <div className="flex-1 p-4">
@@ -1285,7 +1288,7 @@ export default function App() {
                   className="textarea textarea-bordered w-full h-full font-mono text-sm resize-none bg-base-300/50 focus:bg-base-300 transition-colors"
                   placeholder={
                     contractSourceType === 'smartpy'
-                      ? 'Paste SmartPy source (.smartpy/.sp/.txt), upload a file, or double-click to open file picker...'
+                      ? 'Paste SmartPy source (.py/.smartpy/.sp/.txt), upload a file, or double-click to open file picker...'
                       : 'Paste Michelson code here, upload a file, or double-click to open file picker...'
                   }
                   value={michelsonCode}
