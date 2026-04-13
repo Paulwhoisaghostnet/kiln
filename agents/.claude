@@ -1,0 +1,6 @@
+agent=claude
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Read skill, then call /api/kiln/capabilities and /api/kiln/openapi.json.
+workflow=Run compile->validate->audit->simulate->clearance before deployment.
+goal=Produce shadownet evidence and a mainnet-readiness bundle zip.
+

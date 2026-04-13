@@ -1,7 +1,15 @@
 import { z } from 'zod';
+import { getDefaultNetworkId, type KilnNetworkId } from './networks.js';
 import type { WalletType } from './types.js';
 
 const nodeEnvSchema = z.enum(['development', 'test', 'production']);
+const networkSchema = z.enum([
+  'tezos-shadownet',
+  'tezos-ghostnet',
+  'tezos-mainnet',
+  'etherlink-testnet',
+  'etherlink-mainnet',
+]);
 const optionalNonEmptyString = z.preprocess(
   (value) => {
     if (typeof value === 'string' && value.trim() === '') {
@@ -12,9 +20,26 @@ const optionalNonEmptyString = z.preprocess(
   z.string().trim().min(1).optional(),
 );
 
+const envBoolean = z.preprocess((value) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'off', ''].includes(normalized)) {
+      return false;
+    }
+  }
+  return value;
+}, z.boolean());
+
 const envSchema = z.object({
   NODE_ENV: nodeEnvSchema.default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
+  KILN_NETWORK: networkSchema.default(getDefaultNetworkId()),
   TEZOS_RPC_URL: z.string().url().default('https://rpc.shadownet.teztnets.com'),
   TEZOS_CHAIN_ID: optionalNonEmptyString,
   WALLET_A_SECRET_KEY: optionalNonEmptyString,
@@ -30,9 +55,12 @@ const envSchema = z.object({
   API_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   API_JSON_LIMIT: z.string().trim().min(1).default('10mb'),
   CORS_ORIGINS: optionalNonEmptyString,
+  KILN_REQUIRE_SIM_CLEARANCE: envBoolean.default(true),
+  KILN_ACTIVITY_LOG_PATH: optionalNonEmptyString,
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
+export type AppNetwork = KilnNetworkId;
 
 export function getEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   const parsed = envSchema.safeParse(source);

@@ -54,6 +54,7 @@ import { TezosService } from '../src/lib/tezos-service.js';
 const baseEnv = (overrides: Partial<AppEnv> = {}): AppEnv => ({
   NODE_ENV: 'test',
   PORT: 3000,
+  KILN_NETWORK: 'tezos-shadownet',
   TEZOS_RPC_URL: 'https://rpc.shadownet.teztnets.com',
   TEZOS_CHAIN_ID: 'NetXTestChain',
   WALLET_A_SECRET_KEY: 'edskA',
@@ -65,6 +66,9 @@ const baseEnv = (overrides: Partial<AppEnv> = {}): AppEnv => ({
   API_JSON_LIMIT: '10mb',
   CORS_ORIGINS: undefined,
   ...overrides,
+  KILN_REQUIRE_SIM_CLEARANCE:
+    overrides.KILN_REQUIRE_SIM_CLEARANCE ?? false,
+  KILN_ACTIVITY_LOG_PATH: overrides.KILN_ACTIVITY_LOG_PATH,
 });
 
 describe('TezosService', () => {

@@ -3,12 +3,19 @@
 Tezos Kiln is a typed React + Express test rig for:
 - Michelson token-address injection
 - Pre-deployment contract validation (structure + RPC origination estimate)
+- Staged workflow gate: compile -> validate -> audit -> simulate -> clearance
 - Contract origination on Tezos shadownet
 - Connected-wallet deployment via Beacon (Temple + Kukai shadownet)
 - Dynamic entrypoint execution
 - Post-deploy Bert/Ernie puppet-wallet E2E execution
+- Guided contract creation wizard (FA2 fungible, NFT collection, marketplace)
+- Reference-informed guided element slicing from `reference/` examples
+- SmartPy scaffold + Michelson test-stub generation for laymen workflows
+- Activity logging for HTTP + workflow/audit events (troubleshooting/audit trail)
+- Mainnet-readiness bundle export as a zipped release package
 - Wallet balance visibility for test accounts
 - Netlify production hosting (SPA + serverless API)
+- Future-ready multi-network architecture (Tezos mainnet/testnet + Etherlink planned)
 
 ## Prerequisites
 
@@ -35,9 +42,15 @@ npm run dev
 
 ### Testing phases
 
-- `Run Pre-Deploy Tests`: validates Michelson shape (`parameter`/`storage`/`code`), parses entrypoints, verifies token injection, and requests a safe origination estimate.
+- `Run Full Workflow`: compiles SmartPy (when needed), validates Michelson shape (`parameter`/`storage`/`code`), parses entrypoints, runs static audit, runs simulated entrypoint activity, and issues deployment clearance when all gates pass.
 - `Deploy with Connected Wallet`: deploys from the user’s connected shadownet wallet (with optional burn-placeholder admin replacement).
+- `Deploy with Bert`: deploys via server signer (`wallet A`) and enforces workflow clearance by default.
 - `Run Bert + Ernie E2E`: executes post-deploy calls from puppet wallets controlled by the suite.
+- `Guided Contract Creator`: optional wizard that generates either SmartPy scaffolds (for real build pipelines) or deployable Michelson stubs (for fast predeploy/deploy/E2E flow checks).
+- `Guided Contract Creator` can now load reference-derived contract elements (admin controls, pause, operators, allowlists, royalties, fee controls) sliced from contracts in `reference/`.
+- `Contract Injector` now supports SmartPy source loading from `.smartpy`, `.sp`, or `.txt` files.
+  `.py` uploads are not required.
+- When SmartPy source is loaded, Kiln compiles it server-side before predeploy tests and deployment.
 
 ## Production Start
 
@@ -83,6 +96,7 @@ Set these in Netlify Site Settings → Environment variables (use the same names
 
 - `TEZOS_RPC_URL`
 - `TEZOS_CHAIN_ID` (recommended to pin for safety)
+- `KILN_NETWORK` (`tezos-shadownet` today; architecture supports future network expansion)
 - `WALLET_A_SECRET_KEY`
 - `WALLET_B_SECRET_KEY`
 - `KILN_TOKEN_BRONZE`
@@ -104,6 +118,8 @@ Optional:
 - `API_RATE_LIMIT_MAX`
 - `API_JSON_LIMIT`
 - `CORS_ORIGINS`
+- `KILN_REQUIRE_SIM_CLEARANCE` (default `true`; blocks deploys that skip workflow gate)
+- `KILN_ACTIVITY_LOG_PATH` (default `./logs/kiln-activity.log`)
 
 ### Bert/Ernie balances on Netlify
 
@@ -149,6 +165,36 @@ If you must allow external origins:
   ```bash
   npm run check
   ```
+
+## Full-Engagement API
+
+Primary machine endpoints:
+- `GET /api/kiln/capabilities` (runtime/stage/export metadata)
+- `GET /api/kiln/openapi.json` (OpenAPI-style endpoint map)
+- `POST /api/kiln/workflow/run` (compile/validate/audit/simulate/clearance)
+- `POST /api/kiln/audit/run`
+- `POST /api/kiln/simulate/run`
+- `POST /api/kiln/upload` (deploy; clearance enforced by default)
+- `GET /api/kiln/activity/recent?limit=100` (ops/audit tail)
+- `GET /api/kiln/reference/contracts` (reference corpus introspection)
+- `POST /api/kiln/contracts/guided/elements` (reference-derived composition elements)
+- `POST /api/kiln/export/bundle` (mainnet-readiness zipped artifact)
+- `GET /api/kiln/export/download/:fileName` (bundle download)
+
+## CLI (Human + Agent Friendly)
+
+Run JSON-first CLI commands against local or remote Kiln:
+
+```bash
+npm run kiln:cli -- help
+npm run kiln:cli -- capabilities
+npm run kiln:cli -- workflow --file contracts/tokens/test-bronze.tz --source-type michelson --storage 'Unit'
+npm run kiln:cli -- bundle --file contracts/tokens/test-bronze.tz --source-type michelson --storage 'Unit' --project 'Bronze Family'
+```
+
+CLI environment:
+- `KILN_API_URL` (default `http://localhost:3000`)
+- `KILN_API_TOKEN` (optional auth token for protected routes)
 
 ## Shadownet Smoke Test
 
@@ -201,3 +247,27 @@ KILN_TOKEN_DIAMOND=KT1...
 - Optional chain-id mismatch blocking via `TEZOS_CHAIN_ID`
 - Production same-origin default (no open CORS by default)
 - CORS allowlist support via `CORS_ORIGINS` (with `https://*.domain` wildcard support)
+
+## Architecture Slices
+
+To avoid monolithic drift, concerns are now split:
+- `src/lib/networks.ts`: network registry + runtime resolution (active + planned networks)
+- `src/lib/guided-contracts.ts`: guided contract-template generation logic
+- `src/components/GuidedContractBuilder.tsx`: layman-first contract creation UI
+- `src/lib/workflow-runner.ts`: compile/validate/audit/simulate orchestration + clearance
+- `src/lib/reference-guided-elements.ts`: reference corpus -> guided element catalog
+- `src/lib/contract-audit.ts`: static Michelson quality and risk findings
+- `src/lib/contract-simulation.ts`: deterministic predeploy simulation and clearance records
+- `src/lib/activity-logger.ts`: request/workflow/audit activity logging and log-tail support
+- `src/lib/reference-contracts.ts`: reference corpus indexing + entrypoint extraction
+- `src/lib/bundle-export.ts`: mainnet-readiness artifact packaging + zip export
+- `src/lib/tezos-service.ts` + `src/lib/shadownet-wallet.ts`: deployment/runtime wallet operations
+- `src/server-app.ts`: API composition and routing
+
+## Agent Bootstrap Directory
+
+Use the [`agents/`](./agents) directory when connecting external AI agents to Kiln:
+- shared skill: [`agents/KILN_AGENT_SKILL.md`](./agents/KILN_AGENT_SKILL.md)
+- 10 common agent profile files (`.codex`, `.claude`, `.gemini`, `.chatgpt`, `.copilot`, `.cursor`, `.cline`, `.aider`, `.continue`, `.windsurf`)
+
+These files tell agents to use Kiln’s staged workflow, keep humans in control, and produce shadownet-tested + bundled deliverables for mainnet readiness.

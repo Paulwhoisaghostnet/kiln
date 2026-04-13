@@ -1,0 +1,6 @@
+agent=cursor
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Read skill and run Kiln APIs from terminal or tools.
+workflow=Use guided elements + workflow gate for contract composition.
+goal=Produce reliable shadownet proofs and mainnet bundle zip.
+

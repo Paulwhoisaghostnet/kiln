@@ -1,5 +1,9 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
+import { promises as fs } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createApiApp } from '../src/server-app.js';
 import type { AppEnv } from '../src/lib/env.js';
 import type { WalletType } from '../src/lib/types.js';
@@ -15,10 +19,21 @@ const tokenAddresses = {
   diamond: 'KT1JAaj2EUjGBfWmJGy3Z5UsoGus7iGVkvEG',
 };
 
+const sampleMichelson = `
+  parameter (or (pair %mint address nat) (or (pair %transfer address nat) (bool %pause)));
+  storage unit;
+  code {
+    CAR;
+    NIL operation;
+    PAIR
+  };
+`;
+
 function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
   return {
     NODE_ENV: 'test',
     PORT: 3000,
+    KILN_NETWORK: 'tezos-shadownet',
     TEZOS_RPC_URL: 'https://rpc.shadownet.teztnets.com',
     TEZOS_CHAIN_ID: undefined,
     WALLET_A_SECRET_KEY: 'edskA',
@@ -36,6 +51,9 @@ function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
     API_JSON_LIMIT: '10mb',
     CORS_ORIGINS: undefined,
     ...overrides,
+    KILN_REQUIRE_SIM_CLEARANCE:
+      overrides.KILN_REQUIRE_SIM_CLEARANCE ?? false,
+    KILN_ACTIVITY_LOG_PATH: overrides.KILN_ACTIVITY_LOG_PATH,
   };
 }
 
@@ -94,19 +112,26 @@ describe('createApiApp', () => {
     const response = await request(app).get('/api/health');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({
-      status: 'ok',
-      network: 'https://rpc.shadownet.teztnets.com',
-      chainId: 'NetXxyz',
-      tokens: {
-        source: 'named',
-        bronze: tokenAddresses.bronze,
-        silver: tokenAddresses.silver,
-        gold: tokenAddresses.gold,
-        platinum: tokenAddresses.platinum,
-        diamond: tokenAddresses.diamond,
-      },
-    });
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        network: 'https://rpc.shadownet.teztnets.com',
+        chainId: 'NetXxyz',
+        networkId: 'tezos-shadownet',
+        networkLabel: 'Tezos Shadownet',
+        ecosystem: 'tezos',
+        activityLogPath: expect.any(String),
+        requestId: expect.any(String),
+        tokens: {
+          source: 'named',
+          bronze: tokenAddresses.bronze,
+          silver: tokenAddresses.silver,
+          gold: tokenAddresses.gold,
+          platinum: tokenAddresses.platinum,
+          diamond: tokenAddresses.diamond,
+        },
+      }),
+    );
   });
 
   it('returns health details in production mode', async () => {
@@ -155,6 +180,419 @@ describe('createApiApp', () => {
       .get('/api/health')
       .set('Origin', 'https://evil.example.com');
     expect(blockedOrigin.status).toBe(500);
+  });
+
+  it('returns network catalog and active runtime network', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get('/api/networks');
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.active.id).toBe('tezos-shadownet');
+    expect(response.body.supported).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'tezos-mainnet' }),
+        expect.objectContaining({ id: 'etherlink-mainnet' }),
+      ]),
+    );
+  });
+
+  it('returns machine-readable API capabilities', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get('/api/kiln/capabilities');
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.runtime.network.id).toBe('tezos-shadownet');
+    expect(response.body.workflowStages).toEqual(
+      expect.arrayContaining(['compile_if_needed', 'simulate', 'deploy']),
+    );
+  });
+
+  it('serves OpenAPI metadata for agent/tool integrations', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get('/api/kiln/openapi.json');
+
+    expect(response.status).toBe(200);
+    expect(response.body.openapi).toBe('3.1.0');
+    expect(response.body.paths['/api/kiln/workflow/run']).toBeDefined();
+    expect(response.body.paths['/api/kiln/upload']).toBeDefined();
+  });
+
+  it('lists reference contracts with discovered entrypoints', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get('/api/kiln/reference/contracts');
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.count).toBeGreaterThanOrEqual(1);
+    expect(response.body.contracts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          slug: 'wtf-is-a-token',
+          address: 'KT1DUZ2nf4Dd1F2BNm3zeg1TwAnA1iKZXbHD',
+        }),
+      ]),
+    );
+  });
+
+  it('creates guided contract draft for layman wizard flow', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/contracts/guided/create').send({
+      contractType: 'nft_collection',
+      projectName: 'Gallery Mint',
+      adminAddress: walletAAddress,
+      includeMint: true,
+      includeBurn: true,
+      includePause: true,
+      includeAdminTransfer: true,
+      outputFormat: 'smartpy',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.contractType).toBe('nft_collection');
+    expect(response.body.entrypoints).toEqual(
+      expect.arrayContaining(['mint', 'transfer', 'set_royalty_bps']),
+    );
+    expect(response.body.code).toContain('class GalleryMintCollection');
+    expect(response.body.initialStorage).toContain(walletAAddress);
+  });
+
+  it('lists reference-informed guided contract elements', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app)
+      .post('/api/kiln/contracts/guided/elements')
+      .send({
+        contractType: 'fa2_fungible',
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.contractType).toBe('fa2_fungible');
+    expect(response.body.elements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'admin_controls' }),
+        expect.objectContaining({ id: 'pause_guard' }),
+      ]),
+    );
+  });
+
+  it('injects selected reference elements into guided draft entrypoints', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/contracts/guided/create').send({
+      contractType: 'fa2_fungible',
+      projectName: 'Reference Guided',
+      includeMint: true,
+      includeBurn: true,
+      includePause: true,
+      includeAdminTransfer: true,
+      selectedElements: ['operator_support', 'allowlist_gate'],
+      outputFormat: 'smartpy',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.entrypoints).toEqual(
+      expect.arrayContaining(['update_operators', 'set_allowlist']),
+    );
+    expect(response.body.referenceInsights.selectedElements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'operator_support' }),
+      ]),
+    );
+  });
+
+  it('validates smartpy compile payloads', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/smartpy/compile').send({
+      source: '',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toContain('SmartPy source is required');
+  });
+
+  it('compiles SmartPy source through injected compiler', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+      compileSmartPy: async () => ({
+        scenario: 'default',
+        michelson: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR };',
+        initialStorage: 'Unit',
+      }),
+    });
+
+    const response = await request(app).post('/api/kiln/smartpy/compile').send({
+      source: 'import smartpy as sp',
+      scenario: 'default',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.scenario).toBe('default');
+    expect(response.body.michelson).toContain('parameter unit');
+    expect(response.body.initialStorage).toBe('Unit');
+  });
+
+  it('returns 501 when SmartPy CLI is unavailable', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+      compileSmartPy: async () => {
+        throw new Error('SmartPy CLI not found on server PATH.');
+      },
+    });
+
+    const response = await request(app).post('/api/kiln/smartpy/compile').send({
+      source: 'import smartpy as sp',
+    });
+
+    expect(response.status).toBe(501);
+    expect(response.body.error).toContain('SmartPy CLI not found');
+  });
+
+  it('runs full workflow and issues deployment clearance', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/workflow/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      initialStorage: 'Unit',
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['25'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.sourceType).toBe('michelson');
+    expect(response.body.validate.passed).toBe(true);
+    expect(response.body.audit.passed).toBe(true);
+    expect(response.body.simulation.success).toBe(true);
+    expect(response.body.clearance.approved).toBe(true);
+    expect(response.body.clearance.record.id).toMatch(/^clr_/);
+  });
+
+  it('compiles SmartPy source during workflow execution', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+      compileSmartPy: async () => ({
+        scenario: 'default',
+        michelson: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR };',
+        initialStorage: 'Unit',
+      }),
+    });
+
+    const response = await request(app).post('/api/kiln/workflow/run').send({
+      sourceType: 'auto',
+      source: 'import smartpy as sp\n\n@sp.module\ndef main():\n  pass',
+      simulationSteps: [],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.sourceType).toBe('smartpy');
+    expect(response.body.compile.performed).toBe(true);
+    expect(response.body.artifacts.michelson).toContain('parameter unit');
+    expect(response.body.artifacts.initialStorage).toBe('Unit');
+  });
+
+  it('runs standalone contract audit endpoint', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/audit/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.report.passed).toBe(true);
+    expect(response.body.report.entrypoints).toEqual(
+      expect.arrayContaining(['mint', 'pause', 'transfer']),
+    );
+    expect(typeof response.body.report.score).toBe('number');
+  });
+
+  it('runs standalone simulation endpoint and returns clearance', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/simulate/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['10'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.simulation.success).toBe(true);
+    expect(response.body.clearance.approved).toBe(true);
+    expect(response.body.clearance.record.id).toMatch(/^clr_/);
+  });
+
+  it('blocks deployment when workflow clearance is required and missing', async () => {
+    const app = createApiApp({
+      env: baseEnv({ KILN_REQUIRE_SIM_CLEARANCE: true }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/upload').send({
+      code: sampleMichelson,
+      initialStorage: 'Unit',
+      wallet: 'A',
+    });
+
+    expect(response.status).toBe(412);
+    expect(response.body.error).toContain('Deployment blocked');
+  });
+
+  it('deploys when workflow clearance id matches code hash', async () => {
+    const { factory, calls } = mockTezosServiceFactory();
+    const app = createApiApp({
+      env: baseEnv({ KILN_REQUIRE_SIM_CLEARANCE: true }),
+      createTezosService: factory,
+    });
+
+    const workflow = await request(app).post('/api/kiln/workflow/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      initialStorage: 'Unit',
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['5'],
+        },
+      ],
+    });
+
+    expect(workflow.status).toBe(200);
+    const clearanceId = workflow.body.clearance.record?.id as string | undefined;
+    expect(clearanceId).toBeDefined();
+
+    const response = await request(app).post('/api/kiln/upload').send({
+      code: sampleMichelson,
+      initialStorage: 'Unit',
+      wallet: 'A',
+      clearanceId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(calls.originate).toHaveLength(1);
+  });
+
+  it('rejects deployment when clearance does not match contract source hash', async () => {
+    const app = createApiApp({
+      env: baseEnv({ KILN_REQUIRE_SIM_CLEARANCE: true }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const workflow = await request(app).post('/api/kiln/workflow/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      initialStorage: 'Unit',
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['5'],
+        },
+      ],
+    });
+
+    expect(workflow.status).toBe(200);
+    const clearanceId = workflow.body.clearance.record?.id as string | undefined;
+    expect(clearanceId).toBeDefined();
+
+    const response = await request(app).post('/api/kiln/upload').send({
+      code: `${sampleMichelson}\n# changed`,
+      initialStorage: 'Unit',
+      wallet: 'A',
+      clearanceId,
+    });
+
+    expect(response.status).toBe(412);
+    expect(response.body.error).toContain('does not match current contract code hash');
+  });
+
+  it('returns recent activity log lines for troubleshooting', async () => {
+    const logPath = join(tmpdir(), `kiln-activity-${randomUUID()}.log`);
+    await fs.writeFile(
+      logPath,
+      `${JSON.stringify({ event: 'workflow_run', approved: true })}\n${JSON.stringify({ event: 'audit_run', score: 92 })}\n`,
+      'utf8',
+    );
+
+    const app = createApiApp({
+      env: baseEnv({
+        API_AUTH_TOKEN: 'log-token',
+        KILN_ACTIVITY_LOG_PATH: logPath,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app)
+      .get('/api/kiln/activity/recent?limit=1')
+      .set('x-api-token', 'log-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.count).toBe(1);
+    expect(response.body.lines[0]).toContain('"event":"audit_run"');
   });
 
   it('runs predeploy validation with estimate checks', async () => {
@@ -248,6 +686,54 @@ describe('createApiApp', () => {
         expect.stringContaining('RPC origination estimate skipped'),
       ]),
     );
+  });
+
+  it('creates bundle export metadata through injectable exporter', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+      exportBundle: async (payload) => ({
+        bundleId: 'bundle-test',
+        exportDir: '/tmp/kiln-bundle-test',
+        zipFileName: 'bundle-test.zip',
+        zipPath: '/tmp/kiln-bundle-test.zip',
+        downloadUrl: '/api/kiln/export/download/bundle-test.zip',
+      }),
+    });
+
+    const response = await request(app).post('/api/kiln/export/bundle').send({
+      projectName: 'Bundle Test',
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      compiledMichelson: sampleMichelson,
+      initialStorage: 'Unit',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.zipFileName).toBe('bundle-test.zip');
+  });
+
+  it('downloads exported bundle archives from disk', async () => {
+    const exportDir = join(process.cwd(), 'exports');
+    await fs.mkdir(exportDir, { recursive: true });
+    const fileName = `bundle-download-${randomUUID()}.zip`;
+    const filePath = join(exportDir, fileName);
+    await fs.writeFile(filePath, 'zip-content', 'utf8');
+
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get(
+      `/api/kiln/export/download/${fileName}`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-disposition']).toContain(fileName);
+
+    await fs.rm(filePath, { force: true });
   });
 
   it('validates upload payloads', async () => {

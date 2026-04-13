@@ -1,0 +1,5 @@
+agent=codex
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Read skill, then call /api/kiln/capabilities and /api/kiln/openapi.json.
+workflow=Use workflow gate before deploy; never bypass clearance.
+goal=Deliver shadownet-tested contract(s) plus /api/kiln/export/bundle zip.

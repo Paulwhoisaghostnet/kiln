@@ -1,0 +1,6 @@
+agent=copilot
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Start with capability discovery endpoints.
+workflow=Gate deployment using workflow/audit/simulation results.
+goal=Automate build-test-deploy-test-export with traceable logs.
+

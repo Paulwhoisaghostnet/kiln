@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Activity, RefreshCw, Terminal, Upload, Wallet } from 'lucide-react';
 import DynamicRig from './components/DynamicRig';
+import GuidedContractBuilder from './components/GuidedContractBuilder';
 import {
   assignConnectedWalletAsAdmin,
   BURN_PLACEHOLDER_ADDRESS,
@@ -14,6 +15,7 @@ import type { AbiEntrypoint, WalletType } from './lib/types';
 
 type LogType = 'info' | 'error' | 'success';
 type DeployMode = 'connected' | 'puppet';
+type ContractSourceType = 'michelson' | 'smartpy';
 
 interface LogEntry {
   time: string;
@@ -64,6 +66,15 @@ interface PredeployValidationResponse {
   };
 }
 
+interface PreparedValidationResult extends PredeployValidationResponse {
+  preparedCode: string;
+  preparedInitialStorage: string;
+  sourceType: ContractSourceType;
+  clearanceId?: string;
+  auditScore?: number;
+  simulationPassed?: boolean;
+}
+
 interface E2ERunResponse {
   success: boolean;
   summary: {
@@ -87,6 +98,92 @@ interface ConnectedWalletState {
   networkName: string | null;
   rpcUrl: string | null;
   target: WalletConnectTarget;
+}
+
+interface SmartPyCompileResponse {
+  success: boolean;
+  scenario: string;
+  michelson: string;
+  initialStorage: string;
+}
+
+interface WorkflowRunResponse {
+  success: boolean;
+  sourceType: ContractSourceType;
+  compile: {
+    performed: boolean;
+    scenario?: string;
+    warnings: string[];
+  };
+  artifacts: {
+    michelson: string;
+    initialStorage: string;
+    entrypoints: string[];
+    codeHash: string;
+  };
+  validate: {
+    passed: boolean;
+    issues: string[];
+    warnings: string[];
+    estimate: PredeployValidationResponse['estimate'];
+  };
+  audit: {
+    passed: boolean;
+    score: number;
+    findings: Array<{
+      id: string;
+      severity: 'info' | 'warning' | 'error';
+      title: string;
+      description: string;
+      recommendation?: string;
+    }>;
+  };
+  simulation: {
+    success: boolean;
+    summary: {
+      total: number;
+      passed: number;
+      failed: number;
+    };
+    warnings: string[];
+  };
+  clearance: {
+    approved: boolean;
+    record?: {
+      id: string;
+      createdAt: string;
+      expiresAt: string;
+    };
+  };
+}
+
+interface BundleExportResponse {
+  success: boolean;
+  bundleId: string;
+  exportDir: string;
+  zipFileName: string;
+  zipPath: string;
+  downloadUrl: string;
+}
+
+interface SupportedNetwork {
+  id: string;
+  label: string;
+  ecosystem: 'tezos' | 'etherlink';
+  status: 'active' | 'planned';
+  defaultRpcUrl: string;
+}
+
+interface NetworksResponse {
+  success: boolean;
+  active: {
+    id: string;
+    label: string;
+    rpcUrl: string;
+    ecosystem: 'tezos' | 'etherlink';
+    status: 'active' | 'planned';
+  };
+  supported: SupportedNetwork[];
 }
 
 const puppetWalletLabels: Record<WalletType, string> = {
@@ -117,20 +214,74 @@ function safeParseJsonArray(raw: string): unknown[] {
   return parsed;
 }
 
+function looksLikeSmartPy(source: string): boolean {
+  const normalized = source.toLowerCase();
+  return (
+    normalized.includes('import smartpy as sp') ||
+    normalized.includes('@sp.module') ||
+    normalized.includes('sp.contract') ||
+    normalized.includes('@sp.entrypoint')
+  );
+}
+
+function detectContractSourceType(
+  source: string,
+  fileName?: string,
+): ContractSourceType {
+  const lowerName = fileName?.toLowerCase() ?? '';
+
+  if (
+    lowerName.endsWith('.tz') ||
+    lowerName.endsWith('.json') ||
+    lowerName.endsWith('.michelson')
+  ) {
+    return 'michelson';
+  }
+
+  if (
+    lowerName.endsWith('.smartpy') ||
+    lowerName.endsWith('.sp') ||
+    lowerName.endsWith('.txt')
+  ) {
+    return looksLikeSmartPy(source) ? 'smartpy' : 'michelson';
+  }
+
+  return looksLikeSmartPy(source) ? 'smartpy' : 'michelson';
+}
+
+function hasMichelsonSectionLocal(
+  code: string,
+  section: 'parameter' | 'storage' | 'code',
+): boolean {
+  return new RegExp(`\\b${section}\\b`, 'i').test(code);
+}
+
 export default function App() {
   const [michelsonCode, setMichelsonCode] = useState('');
+  const [contractSourceType, setContractSourceType] =
+    useState<ContractSourceType>('michelson');
   const [initialStorage, setInitialStorage] = useState('Unit');
   const [isDeploying, setIsDeploying] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [isRunningWorkflow, setIsRunningWorkflow] = useState(false);
   const [isRunningE2E, setIsRunningE2E] = useState(false);
+  const [isExportingBundle, setIsExportingBundle] = useState(false);
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [deployMode, setDeployMode] = useState<DeployMode>('connected');
   const [contractAddress, setContractAddress] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [balances, setBalances] = useState<BalancesResponse | null>(null);
+  const [balancesStatus, setBalancesStatus] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
+  const [balancesError, setBalancesError] = useState<string | null>(null);
   const [networkHealth, setNetworkHealth] = useState<
     'checking' | 'online' | 'offline'
   >('checking');
+  const [activeNetwork, setActiveNetwork] = useState<NetworksResponse['active'] | null>(
+    null,
+  );
+  const [supportedNetworks, setSupportedNetworks] = useState<SupportedNetwork[]>([]);
   const [abi, setAbi] = useState<AbiEntrypoint[]>([]);
   const [connectedWallet, setConnectedWallet] = useState<ConnectedWalletState | null>(
     null,
@@ -140,6 +291,8 @@ export default function App() {
     useState(true);
   const [e2eEntrypoint, setE2EEntrypoint] = useState('');
   const [e2eArgs, setE2EArgs] = useState('[]');
+  const [clearanceId, setClearanceId] = useState<string | null>(null);
+  const [lastWorkflow, setLastWorkflow] = useState<WorkflowRunResponse | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const contractUploadInputRef = useRef<HTMLInputElement>(null);
@@ -166,6 +319,7 @@ export default function App() {
 
   useEffect(() => {
     void checkHealth();
+    void fetchNetworkCatalog();
     void fetchBalances();
     void hydrateConnectedWallet();
   }, []);
@@ -175,6 +329,10 @@ export default function App() {
       setE2EEntrypoint(abi[0]?.name ?? '');
     }
   }, [abi, e2eEntrypoint]);
+
+  useEffect(() => {
+    setClearanceId(null);
+  }, [michelsonCode, initialStorage, contractSourceType]);
 
   const hydrateConnectedWallet = async () => {
     try {
@@ -198,17 +356,62 @@ export default function App() {
     }
   };
 
+  const fetchNetworkCatalog = async () => {
+    try {
+      const res = await fetch('/api/networks', {
+        headers: buildHeaders(),
+      });
+      if (!res.ok) {
+        return;
+      }
+      const payload = (await res.json()) as NetworksResponse;
+      setActiveNetwork(payload.active);
+      setSupportedNetworks(payload.supported);
+    } catch {
+      // Optional metadata for UX only.
+    }
+  };
+
   const fetchBalances = async () => {
+    setBalancesStatus('loading');
+    setBalancesError(null);
     try {
       const res = await fetch('/api/kiln/balances', {
         headers: buildHeaders(),
       });
-      if (res.ok) {
-        const data = (await res.json()) as BalancesResponse;
-        setBalances(data);
+      const text = await res.text();
+      let parsed: unknown = {};
+      try {
+        parsed = text ? (JSON.parse(text) as unknown) : {};
+      } catch {
+        parsed = {};
       }
+
+      if (!res.ok) {
+        const body = parsed as { error?: string };
+        const message =
+          res.status === 401
+            ? 'Bert/Ernie balances: unauthorized (401). If the API uses API_AUTH_TOKEN, rebuild the site with VITE_API_TOKEN set to the same value in Netlify (Environment variables → same value for Builds and Functions). Vite only inlines VITE_* at build time.'
+            : (body.error ??
+              `Bert/Ernie balances: request failed (HTTP ${res.status}).`);
+        setBalances(null);
+        setBalancesStatus('error');
+        setBalancesError(message);
+        addLog(message, 'error');
+        return;
+      }
+
+      const data = parsed as BalancesResponse;
+      setBalances(data);
+      setBalancesStatus('ready');
+      setBalancesError(null);
     } catch (error) {
+      const message = `Bert/Ernie balances: ${error instanceof Error ? error.message : 'network or parse error'}`;
       console.error('Failed to fetch balances', error);
+      setBalances(null);
+      setBalancesStatus('error');
+      setBalancesError(message);
+      addLog(message, 'error');
     }
   };
 
@@ -220,14 +423,27 @@ export default function App() {
 
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
-      setMichelsonCode(String(loadEvent.target?.result ?? ''));
-      addLog(`Loaded file: ${file.name}`, 'info');
+      const loadedSource = String(loadEvent.target?.result ?? '');
+      const detectedType = detectContractSourceType(loadedSource, file.name);
+      setContractSourceType(detectedType);
+      setMichelsonCode(loadedSource);
+      addLog(
+        `Loaded file: ${file.name} (${detectedType === 'smartpy' ? 'SmartPy source' : 'Michelson source'})`,
+        'info',
+      );
     };
     reader.readAsText(file);
   };
 
   const openContractFilePicker = () => {
     contractUploadInputRef.current?.click();
+  };
+
+  const applyGuidedMichelsonDraft = (code: string, storage: string) => {
+    setContractSourceType('michelson');
+    setMichelsonCode(code);
+    setInitialStorage(storage);
+    setAbi([]);
   };
 
   const connectWallet = async (target: WalletConnectTarget) => {
@@ -266,85 +482,275 @@ export default function App() {
     }
   };
 
-  const runPredeployValidation = async (): Promise<PredeployValidationResponse | null> => {
+  const downloadTextFile = (filename: string, content: string) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCurrentSource = () => {
     if (!michelsonCode.trim()) {
-      addLog('Please upload or paste Michelson code first.', 'error');
-      return null;
+      addLog('No contract source available to export.', 'error');
+      return;
+    }
+    const extension = contractSourceType === 'smartpy' ? 'smartpy' : 'tz';
+    downloadTextFile(`kiln-source.${extension}`, michelsonCode);
+    addLog(`Exported current contract source as kiln-source.${extension}.`, 'success');
+  };
+
+  const exportLatestMichelson = () => {
+    if (!lastWorkflow?.artifacts.michelson) {
+      addLog('No compiled Michelson available yet. Run workflow first.', 'error');
+      return;
+    }
+    downloadTextFile('kiln-compiled.tz', lastWorkflow.artifacts.michelson);
+    addLog('Exported compiled Michelson as kiln-compiled.tz.', 'success');
+  };
+
+  const exportMainnetBundle = async () => {
+    const workflow = lastWorkflow;
+    if (!workflow) {
+      addLog('Run full workflow before exporting a mainnet-ready bundle.', 'error');
+      return;
     }
 
-    if (!initialStorage.trim()) {
-      addLog('Please provide explicit initial storage.', 'error');
+    setIsExportingBundle(true);
+    addLog('Building mainnet-ready zip bundle from latest workflow artifacts...', 'info');
+    try {
+      const response = await fetch('/api/kiln/export/bundle', {
+        method: 'POST',
+        headers: buildHeaders(true),
+        body: JSON.stringify({
+          projectName: contractAddress
+            ? `Kiln-${contractAddress.slice(0, 8)}`
+            : 'Kiln Contract',
+          sourceType: workflow.sourceType,
+          source: michelsonCode,
+          compiledMichelson: workflow.artifacts.michelson,
+          initialStorage: workflow.artifacts.initialStorage,
+          workflow,
+          audit: workflow.audit,
+          simulation: workflow.simulation,
+          deployment: {
+            networkId: activeNetwork?.id,
+            rpcUrl: activeNetwork?.rpcUrl,
+            contractAddress: contractAddress || undefined,
+            originatedAt: contractAddress ? new Date().toISOString() : undefined,
+          },
+        }),
+      });
+      const payload = (await response.json()) as BundleExportResponse | { error?: string };
+      if (!response.ok || !('downloadUrl' in payload)) {
+        throw new Error(
+          'error' in payload && payload.error
+            ? payload.error
+            : 'Bundle export failed',
+        );
+      }
+
+      const zipResponse = await fetch(payload.downloadUrl, {
+        headers: buildHeaders(),
+      });
+      if (!zipResponse.ok) {
+        throw new Error(`Bundle export created but download failed (${zipResponse.status}).`);
+      }
+      const blob = await zipResponse.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = payload.zipFileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      addLog(`Bundle exported: ${payload.zipFileName}`, 'success');
+      addLog(`Export directory: ${payload.exportDir}`, 'info');
+    } catch (error) {
+      addLog(
+        `Bundle export error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsExportingBundle(false);
+    }
+  };
+
+  const runPredeployValidation = async (): Promise<PreparedValidationResult | null> => {
+    if (!michelsonCode.trim()) {
+      addLog('Please upload or paste contract source first.', 'error');
       return null;
     }
 
     setIsValidating(true);
-    addLog('Running pre-deployment validation suite...', 'info');
+    setIsRunningWorkflow(true);
+    addLog('Running full workflow: compile -> validate -> audit -> simulate...', 'info');
 
     try {
-      const res = await fetch('/api/kiln/predeploy/validate', {
+      let simulationArgs: unknown[] = [];
+      try {
+        simulationArgs = safeParseJsonArray(e2eArgs);
+      } catch {
+        simulationArgs = [];
+      }
+
+      const simulationEntrypoint = e2eEntrypoint.trim();
+      const simulationSteps = simulationEntrypoint
+        ? [
+            {
+              label: 'Bert simulation',
+              wallet: 'bert',
+              entrypoint: simulationEntrypoint,
+              args: simulationArgs,
+            },
+            {
+              label: 'Ernie simulation',
+              wallet: 'ernie',
+              entrypoint: simulationEntrypoint,
+              args: simulationArgs,
+            },
+          ]
+        : [];
+
+      const res = await fetch('/api/kiln/workflow/run', {
         method: 'POST',
         headers: buildHeaders(true),
-        body: JSON.stringify({ code: michelsonCode, initialStorage }),
+        body: JSON.stringify({
+          sourceType: contractSourceType,
+          source: michelsonCode,
+          initialStorage: initialStorage.trim() || undefined,
+          simulationSteps,
+        }),
       });
 
-      const payload = (await res.json()) as PredeployValidationResponse | { error?: string };
-      if (!res.ok || !('valid' in payload)) {
+      const payload = (await res.json()) as WorkflowRunResponse | { error?: string };
+      if (!res.ok || !('artifacts' in payload)) {
         throw new Error(
           'error' in payload && payload.error
             ? payload.error
-            : 'Pre-deployment validation failed',
+            : 'Workflow validation failed',
         );
       }
 
-      setAbi(payload.entrypoints);
+      setLastWorkflow(payload);
+      const parsedEntrypoints: AbiEntrypoint[] = payload.artifacts.entrypoints.map((name) => ({
+        name,
+        args: [],
+      }));
+      setAbi(parsedEntrypoints);
 
-      if (payload.issues.length > 0) {
-        for (const issue of payload.issues) {
-          addLog(`Pre-deploy issue: ${issue}`, 'error');
-        }
-      }
-
-      if (payload.warnings.length > 0) {
-        for (const warning of payload.warnings) {
-          addLog(`Pre-deploy warning: ${warning}`, 'info');
-        }
-      }
-
-      if (payload.estimate) {
+      if (payload.compile.performed) {
         addLog(
-          `Pre-deploy estimate -> gas ${payload.estimate.gasLimit}, storage ${payload.estimate.storageLimit}.`,
+          `SmartPy compiled successfully${payload.compile.scenario ? ` (scenario ${payload.compile.scenario})` : ''}.`,
+          'success',
+        );
+      }
+
+      for (const warning of payload.compile.warnings) {
+        addLog(`Compile warning: ${warning}`, 'info');
+      }
+
+      if (payload.validate.issues.length > 0) {
+        for (const issue of payload.validate.issues) {
+          addLog(`Validation issue: ${issue}`, 'error');
+        }
+      }
+      for (const warning of payload.validate.warnings) {
+        addLog(`Validation warning: ${warning}`, 'info');
+      }
+      if (payload.validate.estimate) {
+        addLog(
+          `Estimate -> gas ${payload.validate.estimate.gasLimit}, storage ${payload.validate.estimate.storageLimit}.`,
           'info',
         );
       }
 
-      if (payload.valid) {
-        addLog('Pre-deployment validation passed.', 'success');
+      addLog(
+        `Audit score ${payload.audit.score}/100 (${payload.audit.findings.length} findings).`,
+        payload.audit.passed ? 'success' : 'error',
+      );
+      for (const finding of payload.audit.findings.slice(0, 6)) {
+        addLog(`[${finding.severity}] ${finding.title}: ${finding.description}`, finding.severity === 'error' ? 'error' : 'info');
+      }
+      for (const warning of payload.simulation.warnings) {
+        addLog(`Simulation warning: ${warning}`, 'info');
+      }
+      addLog(
+        `Simulation ${payload.simulation.summary.passed}/${payload.simulation.summary.total} passed.`,
+        payload.simulation.success ? 'success' : 'error',
+      );
+
+      if (payload.clearance.approved && payload.clearance.record?.id) {
+        setClearanceId(payload.clearance.record.id);
+        addLog(
+          `Deployment clearance granted (${payload.clearance.record.id}).`,
+          'success',
+        );
       } else {
-        addLog('Pre-deployment validation failed; deployment blocked.', 'error');
+        setClearanceId(null);
+        addLog('Deployment clearance not granted. Fix findings before deploy.', 'error');
       }
 
-      return payload;
+      const preparedInitialStorage = payload.artifacts.initialStorage;
+      if (preparedInitialStorage && preparedInitialStorage !== initialStorage) {
+        setInitialStorage(preparedInitialStorage);
+      }
+
+      return {
+        success: true,
+        valid:
+          payload.validate.passed &&
+          payload.audit.passed &&
+          payload.simulation.success,
+        issues: payload.validate.issues,
+        warnings: [
+          ...payload.validate.warnings,
+          ...payload.simulation.warnings,
+        ],
+        entrypoints: parsedEntrypoints,
+        injectedCode: payload.artifacts.michelson,
+        estimate: payload.validate.estimate,
+        checks: {
+          hasParameterSection: hasMichelsonSectionLocal(payload.artifacts.michelson, 'parameter'),
+          hasStorageSection: hasMichelsonSectionLocal(payload.artifacts.michelson, 'storage'),
+          hasCodeSection: hasMichelsonSectionLocal(payload.artifacts.michelson, 'code'),
+        },
+        preparedCode: payload.artifacts.michelson,
+        preparedInitialStorage,
+        sourceType: payload.sourceType,
+        clearanceId: payload.clearance.record?.id,
+        auditScore: payload.audit.score,
+        simulationPassed: payload.simulation.success,
+      };
     } catch (error) {
       addLog(
-        `Pre-deploy validation error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Workflow error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'error',
       );
       return null;
     } finally {
       setIsValidating(false);
+      setIsRunningWorkflow(false);
     }
   };
 
   const deployWithPuppetWallet = async (
-    validation: PredeployValidationResponse,
+    validation: PreparedValidationResult,
   ) => {
     const res = await fetch('/api/kiln/upload', {
       method: 'POST',
       headers: buildHeaders(true),
       body: JSON.stringify({
-        code: michelsonCode,
+        code: validation.preparedCode,
         wallet: 'A',
-        initialStorage,
+        initialStorage: validation.preparedInitialStorage,
+        clearanceId: validation.clearanceId ?? clearanceId ?? undefined,
       }),
     });
 
@@ -361,17 +767,23 @@ export default function App() {
   };
 
   const deployWithConnectedWallet = async (
-    validation: PredeployValidationResponse,
+    validation: PreparedValidationResult,
   ) => {
     if (!connectedWallet) {
       throw new Error('Connect a shadownet wallet before deploying with user wallet mode.');
     }
 
     const storageForDeployment = useConnectedWalletAsContractAdmin
-      ? assignConnectedWalletAsAdmin(initialStorage, connectedWallet.address)
-      : initialStorage;
+      ? assignConnectedWalletAsAdmin(
+          validation.preparedInitialStorage,
+          connectedWallet.address,
+        )
+      : validation.preparedInitialStorage;
 
-    if (useConnectedWalletAsContractAdmin && storageForDeployment === initialStorage) {
+    if (
+      useConnectedWalletAsContractAdmin &&
+      storageForDeployment === validation.preparedInitialStorage
+    ) {
       addLog(
         `No template admin address (${BURN_PLACEHOLDER_ADDRESS}) in initial storage; deploying with your Micheline unchanged.`,
         'info',
@@ -395,6 +807,10 @@ export default function App() {
   const handleDeploy = async () => {
     const validation = await runPredeployValidation();
     if (!validation || !validation.valid) {
+      return;
+    }
+    if (!validation.clearanceId) {
+      addLog('Deployment blocked: workflow clearance missing.', 'error');
       return;
     }
 
@@ -543,7 +959,7 @@ export default function App() {
               Tezos Kiln
             </h1>
             <p className="text-base-content/60 mt-1">
-              Pre-deploy validation + live deployment + Bert/Ernie E2E on shadownet.
+              Pre-deploy validation + live deployment + Bert/Ernie E2E for Tezos builders.
             </p>
             <p className="text-xs text-warning mt-1">
               Bert and Ernie are puppet wallets controlled by the test suite.
@@ -561,7 +977,9 @@ export default function App() {
                       : 'bg-error'
                 }`}
               />
-              <span className="text-sm font-medium">Shadownet {networkHealth}</span>
+              <span className="text-sm font-medium">
+                {activeNetwork?.label ?? 'Network'} {networkHealth}
+              </span>
             </div>
             <button
               onClick={fetchBalances}
@@ -572,6 +990,36 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        <section className="bg-base-100 p-4 rounded-2xl shadow-lg border border-base-200 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+                Network Architecture
+              </h2>
+              <p className="text-xs text-base-content/60">
+                Shadownet is active now. Mainnet and Etherlink are modeled as planned targets.
+              </p>
+            </div>
+            {activeNetwork ? (
+              <div className="text-xs font-mono text-base-content/70">
+                Active: {activeNetwork.id} ({activeNetwork.rpcUrl})
+              </div>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {supportedNetworks.map((network) => (
+              <span
+                key={network.id}
+                className={`badge badge-sm ${
+                  network.status === 'active' ? 'badge-success' : 'badge-outline'
+                }`}
+              >
+                {network.label} · {network.status}
+              </span>
+            ))}
+          </div>
+        </section>
 
         <section className="bg-base-100 p-6 rounded-2xl shadow-lg border border-base-200 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -599,7 +1047,9 @@ export default function App() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Connect Shadownet Wallet (Beacon)</p>
+              <p className="text-sm font-semibold">
+                Connect {activeNetwork?.label ?? 'Shadownet'} Wallet (Beacon)
+              </p>
               <div className="flex flex-wrap gap-2">
                 <button
                   className="btn btn-sm btn-outline"
@@ -660,10 +1110,90 @@ export default function App() {
           </div>
         </section>
 
+        <section className="bg-base-100 p-4 rounded-2xl shadow-lg border border-base-200 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+                Workflow Gate
+              </h2>
+              <p className="text-xs text-base-content/60">
+                Deployment is gated by compile, validation, audit, and simulation clearance.
+              </p>
+              <p className="text-xs text-base-content/50">
+                You can run all workflow stages before deploying anything on shadownet.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn btn-xs btn-outline"
+                onClick={() => {
+                  void runPredeployValidation();
+                }}
+                disabled={isRunningWorkflow || isDeploying || !michelsonCode.trim()}
+              >
+                {isRunningWorkflow ? 'Running…' : 'Run Full Workflow'}
+              </button>
+              <button
+                className="btn btn-xs btn-outline"
+                onClick={exportCurrentSource}
+                disabled={!michelsonCode.trim()}
+              >
+                Export Source
+              </button>
+              <button
+                className="btn btn-xs btn-outline"
+                onClick={exportLatestMichelson}
+                disabled={!lastWorkflow?.artifacts.michelson}
+              >
+                Export Michelson
+              </button>
+              <button
+                className="btn btn-xs btn-outline"
+                onClick={() => {
+                  void exportMainnetBundle();
+                }}
+                disabled={!lastWorkflow || isExportingBundle}
+              >
+                {isExportingBundle ? 'Bundling…' : 'Export Mainnet Bundle'}
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center text-xs">
+            <span
+              className={`badge badge-sm ${
+                clearanceId ? 'badge-success' : 'badge-warning'
+              }`}
+            >
+              {clearanceId ? 'Cleared For Deployment' : 'Not Cleared'}
+            </span>
+            {clearanceId ? <span className="font-mono">{clearanceId}</span> : null}
+            {lastWorkflow ? (
+              <span className="text-base-content/60">
+                Audit: {lastWorkflow.audit.score}/100 · Simulation:{' '}
+                {lastWorkflow.simulation.summary.passed}/{lastWorkflow.simulation.summary.total}
+              </span>
+            ) : null}
+          </div>
+        </section>
+
+        {balancesStatus === 'error' && balancesError ? (
+          <div className="alert alert-error text-sm" role="alert">
+            <span>{balancesError}</span>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(['A', 'B'] as const).map((wallet) => {
             const wData = balances?.[`wallet${wallet}`];
             const label = puppetWalletLabels[wallet];
+            const addressLabel =
+              balancesStatus === 'ready' && wData?.address
+                ? wData.address
+                : balancesStatus === 'loading'
+                  ? 'Loading…'
+                  : 'Unavailable';
+            const balanceReady =
+              balancesStatus === 'ready' && typeof wData?.balance === 'number';
             return (
               <div key={wallet} className="bg-base-100 p-6 rounded-2xl shadow-lg border border-base-200 flex items-center gap-4">
                 <div className={`p-4 rounded-xl ${wallet === 'A' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'}`}>
@@ -672,12 +1202,16 @@ export default function App() {
                 <div className="flex-1 overflow-hidden">
                   <h3 className="text-lg font-bold">{label}</h3>
                   <p className="text-xs text-base-content/50">Puppet wallet</p>
-                  <p className="text-sm text-base-content/60 font-mono truncate">{wData?.address ?? 'Loading...'}</p>
+                  <p className="text-sm text-base-content/60 font-mono truncate">{addressLabel}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold font-mono">
-                    {typeof wData?.balance === 'number' ? wData.balance.toFixed(2) : '0.00'}
-                  </div>
+                <div className="text-right min-h-[2.5rem] flex flex-col items-end justify-center">
+                  {balancesStatus === 'loading' ? (
+                    <span className="loading loading-spinner loading-md text-primary" aria-label="Loading balance" />
+                  ) : (
+                    <div className="text-2xl font-bold font-mono">
+                      {balanceReady ? wData.balance.toFixed(2) : '—'}
+                    </div>
+                  )}
                   <div className="text-xs text-base-content/50 uppercase tracking-wider">XTZ</div>
                 </div>
               </div>
@@ -687,22 +1221,48 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+            <GuidedContractBuilder
+              buildHeaders={buildHeaders}
+              onApplyMichelsonDraft={applyGuidedMichelsonDraft}
+              onLog={addLog}
+            />
+
             <div className="bg-base-100 rounded-2xl shadow-lg border border-base-200 overflow-hidden flex flex-col h-[620px]">
               <div className="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
                 <h2 className="font-bold flex items-center gap-2">
                   <Upload className="w-5 h-5 text-primary" />
                   Contract Injector
                 </h2>
-                <label className="btn btn-sm btn-outline btn-primary">
-                  Upload .tz
-                  <input
-                    ref={contractUploadInputRef}
-                    type="file"
-                    accept=".tz,.json"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </label>
+                <div className="flex items-center gap-2">
+                  <div className="join">
+                    <button
+                      className={`btn btn-xs join-item ${
+                        contractSourceType === 'michelson' ? 'btn-primary' : 'btn-outline'
+                      }`}
+                      onClick={() => setContractSourceType('michelson')}
+                    >
+                      Michelson
+                    </button>
+                    <button
+                      className={`btn btn-xs join-item ${
+                        contractSourceType === 'smartpy' ? 'btn-primary' : 'btn-outline'
+                      }`}
+                      onClick={() => setContractSourceType('smartpy')}
+                    >
+                      SmartPy
+                    </button>
+                  </div>
+                  <label className="btn btn-sm btn-outline btn-primary">
+                    Upload Source
+                    <input
+                      ref={contractUploadInputRef}
+                      type="file"
+                      accept=".tz,.json,.smartpy,.sp,.txt,.md"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                </div>
               </div>
               <div className="p-4 border-b border-base-200 bg-base-100">
                 <label className="label py-1">
@@ -714,13 +1274,26 @@ export default function App() {
                   onChange={(event) => setInitialStorage(event.target.value)}
                   placeholder='Ex: Unit or Pair "tz1..." 100'
                 />
+                <p className="text-[0.7rem] text-base-content/60 mt-1">
+                  SmartPy sources can be loaded from <span className="font-mono">.smartpy</span>,{' '}
+                  <span className="font-mono">.sp</span>, or <span className="font-mono">.txt</span> files.
+                  Python <span className="font-mono">.py</span> uploads are not required.
+                </p>
               </div>
               <div className="flex-1 p-4">
                 <textarea
                   className="textarea textarea-bordered w-full h-full font-mono text-sm resize-none bg-base-300/50 focus:bg-base-300 transition-colors"
-                  placeholder="Paste Michelson code here, upload a file, or double-click to open file picker..."
+                  placeholder={
+                    contractSourceType === 'smartpy'
+                      ? 'Paste SmartPy source (.smartpy/.sp/.txt), upload a file, or double-click to open file picker...'
+                      : 'Paste Michelson code here, upload a file, or double-click to open file picker...'
+                  }
                   value={michelsonCode}
-                  onChange={(event) => setMichelsonCode(event.target.value)}
+                  onChange={(event) => {
+                    const source = event.target.value;
+                    setMichelsonCode(source);
+                    setContractSourceType(detectContractSourceType(source));
+                  }}
                   onDoubleClick={openContractFilePicker}
                 />
               </div>
@@ -730,14 +1303,20 @@ export default function App() {
                   onClick={() => {
                     void runPredeployValidation();
                   }}
-                  disabled={isValidating || isDeploying || !michelsonCode.trim()}
+                  disabled={isValidating || isRunningWorkflow || isDeploying || !michelsonCode.trim()}
                 >
-                  {isValidating ? <span className="loading loading-spinner" /> : 'Run Pre-Deploy Tests'}
+                  {isRunningWorkflow ? <span className="loading loading-spinner" /> : 'Run Workflow Tests'}
                 </button>
                 <button
                   className="btn btn-primary md:flex-1"
                   onClick={handleDeploy}
-                  disabled={isDeploying || isValidating || !michelsonCode.trim()}
+                  disabled={
+                    isDeploying ||
+                    isValidating ||
+                    isRunningWorkflow ||
+                    !michelsonCode.trim() ||
+                    !clearanceId
+                  }
                 >
                   {isDeploying ? (
                     <span className="loading loading-spinner" />

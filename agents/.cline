@@ -1,0 +1,6 @@
+agent=cline
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Consume this profile and shared skill before actions.
+workflow=Always run predeploy workflow and e2e checks.
+goal=Ready contract artifacts for mainnet signoff package.
+

@@ -1,6 +1,7 @@
 import { TezosToolkit } from '@taquito/taquito';
 import { InMemorySigner } from '@taquito/signer';
 import { getEnv, getWalletSecret, type AppEnv } from './env.js';
+import { resolveNetworkConfig } from './networks.js';
 import type { ContractCallResult, WalletType } from './types.js';
 
 const SAFE_ORIGINATION_GAS_LIMIT = 600_000;
@@ -64,9 +65,15 @@ export class TezosService implements TezosServiceLike {
   private activeChainId?: string;
 
   constructor(walletType: WalletType, env: AppEnv = getEnv()) {
-    const rpcUrl = env.TEZOS_RPC_URL;
+    const network = resolveNetworkConfig({
+      networkId: env.KILN_NETWORK,
+      rpcUrl: env.TEZOS_RPC_URL,
+      chainId: env.TEZOS_CHAIN_ID,
+    });
+
+    const rpcUrl = network.rpcUrl;
     this.tezos = new TezosToolkit(rpcUrl);
-    this.expectedChainId = env.TEZOS_CHAIN_ID;
+    this.expectedChainId = network.chainId;
 
     const secretKey = getWalletSecret(env, walletType);
 

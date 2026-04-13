@@ -1,0 +1,5 @@
+agent=windsurf
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Load this profile and shared skill as first step.
+workflow=Respect deployment clearance and user-controlled wallet authority.
+goal=Generate tested, audited, zipped outputs ready for mainnet review.

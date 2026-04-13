@@ -16,6 +16,7 @@
     "test:shadownet": "vitest run tests/shadownet.smoke.test.ts",
     "compile:tokens": "bash scripts/compile-token-contracts.sh",
     "deploy:dummy-tokens": "tsx scripts/deploy-dummy-tokens.ts",
+    "kiln:cli": "tsx scripts/kiln-cli.ts",
     "netlify:dev": "npx netlify dev",
     "netlify:deploy:preview": "npx netlify deploy",
     "netlify:deploy:prod": "npx netlify deploy --prod",

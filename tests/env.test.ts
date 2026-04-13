@@ -9,9 +9,11 @@ describe('getEnv', () => {
 
     expect(env.NODE_ENV).toBe('development');
     expect(env.PORT).toBe(3000);
+    expect(env.KILN_NETWORK).toBe('tezos-shadownet');
     expect(env.API_RATE_LIMIT_WINDOW_MS).toBe(60_000);
     expect(env.API_RATE_LIMIT_MAX).toBe(30);
     expect(env.API_JSON_LIMIT).toBe('10mb');
+    expect(env.KILN_REQUIRE_SIM_CLEARANCE).toBe(true);
   });
 
   it('throws when TEZOS_RPC_URL is invalid', () => {
@@ -34,6 +36,15 @@ describe('getEnv', () => {
 
     expect(env.KILN_TOKEN_BRONZE).toBe('KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj');
     expect(env.KILN_TOKEN_DIAMOND).toBe('KT1JAaj2EUjGBfWmJGy3Z5UsoGus7iGVkvEG');
+  });
+
+  it('parses boolean env toggles safely', () => {
+    const env = getEnv({
+      TEZOS_RPC_URL: 'https://rpc.shadownet.teztnets.com',
+      KILN_REQUIRE_SIM_CLEARANCE: 'false',
+    });
+
+    expect(env.KILN_REQUIRE_SIM_CLEARANCE).toBe(false);
   });
 });
 

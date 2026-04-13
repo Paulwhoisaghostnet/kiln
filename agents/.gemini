@@ -1,0 +1,6 @@
+agent=gemini
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Load skill and discover Kiln API endpoints first.
+workflow=Prefer /api/kiln/workflow/run over ad hoc validation logic.
+goal=Return audited/tested contracts and exported bundle artifacts.
+

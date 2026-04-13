@@ -1,6 +1,7 @@
 import { NetworkType } from '@airgap/beacon-dapp';
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { TezosToolkit } from '@taquito/taquito';
+import { getNetworkProfile, type KilnNetworkId } from './networks.js';
 
 export type WalletConnectTarget = 'temple' | 'kukai';
 
@@ -16,9 +17,12 @@ export interface ConnectedOriginationResult {
   level: number | null;
 }
 
-const SHADOWNET_RPC_URL = 'https://rpc.shadownet.teztnets.com';
-const SHADOWNET_CHAIN_ID = 'NetXsqzbfFenSTS';
-const SHADOWNET_NETWORK_NAME = 'shadownet';
+const ACTIVE_BROWSER_NETWORK_ID: KilnNetworkId = 'tezos-shadownet';
+const ACTIVE_BROWSER_NETWORK = getNetworkProfile(ACTIVE_BROWSER_NETWORK_ID);
+const ACTIVE_NETWORK_RPC_URL = ACTIVE_BROWSER_NETWORK.defaultRpcUrl;
+const ACTIVE_NETWORK_CHAIN_ID = ACTIVE_BROWSER_NETWORK.chainId;
+const ACTIVE_NETWORK_NAME =
+  ACTIVE_BROWSER_NETWORK.beaconNetworkName ?? 'shadownet';
 const KUKAI_SHADOWNET_URL = 'https://shadownet.kukai.app';
 const TEMPLE_WALLET_URL = 'https://templewallet.com';
 /** Fixed address used in compiled storage as admin placeholder until deploy (Tezos ecosystem convention). */
@@ -72,13 +76,13 @@ async function ensureWallet(): Promise<BeaconWallet> {
         iconUrl: '/favicon.ico',
         network: {
           type: networkType as never,
-          name: SHADOWNET_NETWORK_NAME,
-          rpcUrl: SHADOWNET_RPC_URL,
+          name: ACTIVE_NETWORK_NAME,
+          rpcUrl: ACTIVE_NETWORK_RPC_URL,
         },
       });
 
       if (!tezosToolkit) {
-        tezosToolkit = new TezosToolkit(SHADOWNET_RPC_URL);
+        tezosToolkit = new TezosToolkit(ACTIVE_NETWORK_RPC_URL);
       }
       tezosToolkit.setWalletProvider(wallet);
       beaconWallet = wallet;
@@ -96,7 +100,7 @@ function openWalletTarget(target: WalletConnectTarget): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-async function assertShadownetNetwork(wallet: BeaconWallet): Promise<void> {
+async function assertExpectedNetwork(wallet: BeaconWallet): Promise<void> {
   if (!tezosToolkit) {
     throw new Error('Tezos toolkit is not initialized.');
   }
@@ -105,22 +109,26 @@ async function assertShadownetNetwork(wallet: BeaconWallet): Promise<void> {
   const networkName = account?.network?.name?.toLowerCase() ?? null;
   const networkRpc = account?.network?.rpcUrl?.toLowerCase() ?? null;
 
-  if (networkName && !networkName.includes(SHADOWNET_NETWORK_NAME)) {
+  if (networkName && !networkName.includes(ACTIVE_NETWORK_NAME)) {
     throw new Error(
       `Wallet connected to ${networkName}. Please switch to Shadownet and reconnect.`,
     );
   }
 
-  if (networkRpc && !networkRpc.includes(SHADOWNET_NETWORK_NAME)) {
+  if (networkRpc && !networkRpc.includes(ACTIVE_NETWORK_NAME)) {
     throw new Error(
       `Wallet RPC is ${networkRpc}. Kukai users must use ${KUKAI_SHADOWNET_URL}.`,
     );
   }
 
+  if (!ACTIVE_NETWORK_CHAIN_ID) {
+    return;
+  }
+
   const chainId = await tezosToolkit.rpc.getChainId();
-  if (chainId !== SHADOWNET_CHAIN_ID) {
+  if (chainId !== ACTIVE_NETWORK_CHAIN_ID) {
     throw new Error(
-      `Chain mismatch detected. Expected ${SHADOWNET_CHAIN_ID}, got ${chainId}.`,
+      `Chain mismatch detected. Expected ${ACTIVE_NETWORK_CHAIN_ID}, got ${chainId}.`,
     );
   }
 }
@@ -157,12 +165,11 @@ export async function connectShadownetWallet(
 ): Promise<ConnectedWalletState> {
   openWalletTarget(target);
   const wallet = await ensureWallet();
-  const networkType = resolveNetworkType();
 
   await wallet.clearActiveAccount();
   await wallet.requestPermissions();
 
-  await assertShadownetNetwork(wallet);
+  await assertExpectedNetwork(wallet);
 
   const activeAccount = await wallet.client.getActiveAccount();
   if (!activeAccount?.address) {
@@ -204,7 +211,7 @@ export async function originateWithConnectedWallet(
     throw new Error('Tezos toolkit is not initialized.');
   }
 
-  await assertShadownetNetwork(wallet);
+  await assertExpectedNetwork(wallet);
 
   const operation = await tezosToolkit.wallet
     .originate({ code, init: initialStorage })

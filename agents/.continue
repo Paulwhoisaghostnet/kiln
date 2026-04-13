@@ -1,0 +1,6 @@
+agent=continue
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Discover capabilities and apply workflow policy.
+workflow=Compile/audit/simulate first, deploy second, export last.
+goal=Hand off a complete, reproducible contract release package.
+

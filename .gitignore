@@ -1,6 +1,8 @@
 node_modules
 dist
 coverage
+logs
+exports
 reference/
 .DS_Store
 .env

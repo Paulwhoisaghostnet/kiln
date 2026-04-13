@@ -1,0 +1,6 @@
+agent=aider
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Read skill and verify runtime network.
+workflow=Do not mark complete without shadownet + bundle evidence.
+goal=Deliver deterministic contract lifecycle outputs.
+

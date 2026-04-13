@@ -1,0 +1,6 @@
+agent=chatgpt
+skill=./KILN_AGENT_SKILL.md
+bootstrap=Read skill and honor human-first explanations.
+workflow=Do not deploy unless clearance is approved.
+goal=Contract family tested on shadownet and zipped for mainnet release.
+
