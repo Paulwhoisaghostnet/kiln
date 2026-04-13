@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, Loader2 } from 'lucide-react';
+import { useKilnView } from '../context/KilnViewProvider';
 import type { AbiEntrypoint, WalletType } from '../lib/types';
 
 interface DynamicRigProps {
@@ -14,6 +15,7 @@ const puppetWalletLabels: Record<WalletType, string> = {
 };
 
 export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicRigProps) {
+  const { mode, t, tip } = useKilnView();
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [selectedWallet, setSelectedWallet] = useState<WalletType>('A');
@@ -40,8 +42,11 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
 
   if (!contractAddress) {
     return (
-      <div className="p-8 text-center text-base-content/50 border-2 border-dashed border-base-300 rounded-xl">
-        Deploy a contract to generate the test rig.
+      <div
+        className={`p-8 text-center text-base-content/50 border-2 border-dashed border-base-300 rounded-xl ${mode === 'eli5' && tip('dynamicRigEmptyState') ? 'cursor-help underline decoration-dotted decoration-base-content/30 underline-offset-4' : ''}`}
+        title={mode === 'eli5' ? tip('dynamicRigEmptyState') : undefined}
+      >
+        {t('dynamicRigEmptyState')}
       </div>
     );
   }
@@ -50,11 +55,21 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
     <div className="space-y-6">
       <div className="flex items-center justify-between bg-base-200 p-4 rounded-lg">
         <div>
-          <h3 className="text-sm font-semibold text-base-content/70 uppercase tracking-wider">Active Contract</h3>
+          <h3
+            className={`text-sm font-semibold text-base-content/70 uppercase tracking-wider ${mode === 'eli5' && tip('dynamicRigActiveContract') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+            title={mode === 'eli5' ? tip('dynamicRigActiveContract') : undefined}
+          >
+            {t('dynamicRigActiveContract')}
+          </h3>
           <p className="font-mono text-primary">{contractAddress}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-base-content/70">Execute as puppet wallet:</span>
+          <span
+            className={`text-sm text-base-content/70 ${mode === 'eli5' && tip('dynamicRigExecuteAs') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+            title={mode === 'eli5' ? tip('dynamicRigExecuteAs') : undefined}
+          >
+            {t('dynamicRigExecuteAs')}
+          </span>
           <select 
             className="select select-sm select-bordered"
             value={selectedWallet}
@@ -89,12 +104,16 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
                 ))}
 
                 {(entrypoint.args?.length ?? 0) === 0 && (
-                  <p className="text-xs text-base-content/60 font-mono">
-                    No arguments required for this entrypoint.
+                  <p
+                    className={`text-xs text-base-content/60 font-mono ${mode === 'eli5' && tip('dynamicRigNoArgs') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+                    title={mode === 'eli5' ? tip('dynamicRigNoArgs') : undefined}
+                  >
+                    {t('dynamicRigNoArgs')}
                   </p>
                 )}
 
-                <button 
+                <button
+                  title={tip('dynamicRigExecute') ?? undefined}
                   className="btn btn-sm btn-primary w-full mt-2"
                   onClick={() => handleExecute(entrypoint.name, entrypoint.args?.length || 0)}
                   disabled={loadingMap[entrypoint.name]}
@@ -104,7 +123,7 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
                   ) : (
                     <Play className="w-4 h-4" />
                   )}
-                  Execute
+                  {t('dynamicRigExecute')}
                 </button>
               </div>
             </div>
@@ -112,8 +131,11 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
         ))}
         
         {abi.length === 0 && (
-          <div className="text-center p-4 text-base-content/50">
-            No entrypoints found or ABI parsing not implemented for this format.
+          <div
+            className={`text-center p-4 text-base-content/50 ${mode === 'eli5' && tip('dynamicRigNoEntrypoints') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+            title={mode === 'eli5' ? tip('dynamicRigNoEntrypoints') : undefined}
+          >
+            {t('dynamicRigNoEntrypoints')}
           </div>
         )}
       </div>

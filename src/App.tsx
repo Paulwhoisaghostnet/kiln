@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Activity, RefreshCw, Terminal, Upload, Wallet } from 'lucide-react';
 import DynamicRig from './components/DynamicRig';
 import GuidedContractBuilder from './components/GuidedContractBuilder';
+import { KilnCopy, useKilnView } from './context/KilnViewProvider';
 import {
   assignConnectedWalletAsAdmin,
   BURN_PLACEHOLDER_ADDRESS,
@@ -259,6 +260,7 @@ function hasMichelsonSectionLocal(
 }
 
 export default function App() {
+  const { mode, setMode, t, tip } = useKilnView();
   const [michelsonCode, setMichelsonCode] = useState('');
   const [contractSourceType, setContractSourceType] =
     useState<ContractSourceType>('michelson');
@@ -960,15 +962,28 @@ export default function App() {
               <Activity className="w-8 h-8 text-primary" />
               Tezos Kiln
             </h1>
-            <p className="text-base-content/60 mt-1">
-              Pre-deploy validation + live deployment + Bert/Ernie E2E for Tezos builders.
-            </p>
-            <p className="text-xs text-warning mt-1">
-              Bert and Ernie are puppet wallets controlled by the test suite.
-            </p>
+            <KilnCopy k="headerTagline" as="p" className="text-base-content/60 mt-1" />
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            <div className="join join-horizontal shrink-0">
+              <button
+                type="button"
+                title={tip('viewModeBuilder')}
+                className={`btn btn-xs join-item ${mode === 'builder' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
+                onClick={() => setMode('builder')}
+              >
+                {t('viewModeBuilder')}
+              </button>
+              <button
+                type="button"
+                title={tip('viewModeEli5')}
+                className={`btn btn-xs join-item ${mode === 'eli5' ? 'btn-secondary' : 'btn-ghost border border-base-300'}`}
+                onClick={() => setMode('eli5')}
+              >
+                {t('viewModeEli5')}
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <div
                 className={`w-3 h-3 rounded-full ${
@@ -997,11 +1012,9 @@ export default function App() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
-                Network Architecture
+                <KilnCopy k="networkArchTitle" />
               </h2>
-              <p className="text-xs text-base-content/60">
-                Shadownet is active now. Mainnet and Etherlink are modeled as planned targets.
-              </p>
+              <KilnCopy k="networkArchBody" as="p" className="text-xs text-base-content/60" />
             </div>
             {activeNetwork ? (
               <div className="text-xs font-mono text-base-content/70">
@@ -1026,31 +1039,38 @@ export default function App() {
         <section className="bg-base-100 p-6 rounded-2xl shadow-lg border border-base-200 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold">Deployment Control</h2>
-              <p className="text-sm text-base-content/60">
-                Deploy from your connected wallet (admin-safe) or with puppet wallet Bert.
-              </p>
+              <h2 className="text-lg font-bold">
+                <KilnCopy k="deploymentTitle" />
+              </h2>
+              <KilnCopy k="deploymentBody" as="p" className="text-sm text-base-content/60" />
             </div>
             <div className="join">
               <button
+                title={tip('deployModeConnected')}
                 className={`btn btn-sm join-item ${deployMode === 'connected' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setDeployMode('connected')}
               >
-                Connected Wallet
+                {t('deployModeConnected')}
               </button>
               <button
+                title={tip('deployModePuppet')}
                 className={`btn btn-sm join-item ${deployMode === 'puppet' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setDeployMode('puppet')}
               >
-                Puppet Wallet (Bert)
+                {t('deployModePuppet')}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <p className="text-sm font-semibold">
-                Connect {activeNetwork?.label ?? 'Shadownet'} Wallet (Beacon)
+              <p
+                className={`text-sm font-semibold ${mode === 'eli5' && tip('connectWalletHeading') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+                title={mode === 'eli5' ? tip('connectWalletHeading') : undefined}
+              >
+                {mode === 'builder'
+                  ? `Connect ${activeNetwork?.label ?? 'Shadownet'} Wallet (Beacon)`
+                  : `${t('connectWalletHeading')} (${activeNetwork?.label ?? 'Shadownet'})`}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1071,13 +1091,32 @@ export default function App() {
                   Disconnect
                 </button>
               </div>
-              <p className="text-xs text-base-content/60">
-                Kukai users: keep Kukai opened on <span className="font-mono">shadownet.kukai.app</span> before approving.
-              </p>
+              <KilnCopy
+                k="kukaiNote"
+                as="p"
+                className="text-xs text-base-content/60"
+              >
+                {mode === 'builder' ? (
+                  <>
+                    Kukai users: keep Kukai opened on{' '}
+                    <span className="font-mono">shadownet.kukai.app</span> before approving.
+                  </>
+                ) : (
+                  <>
+                    {t('kukaiNote')}{' '}
+                    <span className="font-mono">shadownet.kukai.app</span>
+                  </>
+                )}
+              </KilnCopy>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Connected Wallet Status</p>
+              <p
+                className={`text-sm font-semibold ${mode === 'eli5' && tip('connectedWalletHeading') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+                title={mode === 'eli5' ? tip('connectedWalletHeading') : undefined}
+              >
+                {t('connectedWalletHeading')}
+              </p>
               {connectedWallet ? (
                 <div className="text-xs space-y-1 font-mono">
                   <div>Address: {connectedWallet.address}</div>
@@ -1085,7 +1124,7 @@ export default function App() {
                   <div>RPC: {connectedWallet.rpcUrl ?? 'unknown'}</div>
                 </div>
               ) : (
-                <p className="text-xs text-base-content/60">No wallet connected yet.</p>
+                <KilnCopy k="noWalletConnected" as="p" className="text-xs text-base-content/60" />
               )}
               <label className="label cursor-pointer items-start gap-3 py-1">
                 <input
@@ -1095,17 +1134,36 @@ export default function App() {
                   onChange={(event) => setUseConnectedWalletAsContractAdmin(event.target.checked)}
                 />
                 <span className="label-text text-xs space-y-1 block">
-                  <span className="font-medium text-base-content">
-                    Set my connected wallet as the contract admin in initial storage
-                  </span>
-                  <span className="block text-base-content/60 leading-snug">
-                    Only for <strong>Deploy with Connected Wallet</strong>. Compiled Kiln token
-                    storage leaves a fixed <span className="font-medium">admin</span> address in
-                    the Micheline; with this on, that address is replaced by your Beacon{' '}
-                    <span className="font-mono">tz1…</span> before origination so your wallet holds
-                    admin. Uncheck if you already set admin yourself. Match is literal:{' '}
-                    <code className="text-[0.65rem] bg-base-200 px-1 rounded">{BURN_PLACEHOLDER_ADDRESS}</code>
-                  </span>
+                  <KilnCopy
+                    k="adminCheckboxTitle"
+                    as="span"
+                    className="font-medium text-base-content block"
+                  />
+                  <KilnCopy
+                    k="adminCheckboxDetail"
+                    as="span"
+                    className="block text-base-content/60 leading-snug"
+                  >
+                    {mode === 'builder' ? (
+                      <>
+                        Only for <strong>Deploy with Connected Wallet</strong>. Compiled Kiln token
+                        storage leaves a fixed <span className="font-medium">admin</span> address in
+                        the Micheline; with this on, that address is replaced by your Beacon{' '}
+                        <span className="font-mono">tz1…</span> before origination so your wallet holds
+                        admin. Uncheck if you already set admin yourself. Match is literal:{' '}
+                        <code className="text-[0.65rem] bg-base-200 px-1 rounded">
+                          {BURN_PLACEHOLDER_ADDRESS}
+                        </code>
+                      </>
+                    ) : (
+                      <>
+                        {t('adminCheckboxDetail')}{' '}
+                        <code className="text-[0.65rem] bg-base-200 px-1 rounded">
+                          {BURN_PLACEHOLDER_ADDRESS}
+                        </code>
+                      </>
+                    )}
+                  </KilnCopy>
                 </span>
               </label>
             </div>
@@ -1116,57 +1174,60 @@ export default function App() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
-                Workflow Gate
+                <KilnCopy k="workflowGateTitle" />
               </h2>
-              <p className="text-xs text-base-content/60">
-                Deployment is gated by compile, validation, audit, and simulation clearance.
-              </p>
-              <p className="text-xs text-base-content/50">
-                You can run all workflow stages before deploying anything on shadownet.
-              </p>
+              <KilnCopy k="workflowGateLine1" as="p" className="text-xs text-base-content/60" />
+              <KilnCopy k="workflowGateLine2" as="p" className="text-xs text-base-content/50" />
             </div>
             <div className="flex flex-wrap gap-2">
               <button
+                title={tip('runFullWorkflow')}
                 className="btn btn-xs btn-outline"
                 onClick={() => {
                   void runPredeployValidation();
                 }}
                 disabled={isRunningWorkflow || isDeploying || !michelsonCode.trim()}
               >
-                {isRunningWorkflow ? 'Running…' : 'Run Full Workflow'}
+                {isRunningWorkflow ? 'Running…' : t('runFullWorkflow')}
               </button>
               <button
+                title={tip('exportSource')}
                 className="btn btn-xs btn-outline"
                 onClick={exportCurrentSource}
                 disabled={!michelsonCode.trim()}
               >
-                Export Source
+                {t('exportSource')}
               </button>
               <button
+                title={tip('exportMichelson')}
                 className="btn btn-xs btn-outline"
                 onClick={exportLatestMichelson}
                 disabled={!lastWorkflow?.artifacts.michelson}
               >
-                Export Michelson
+                {t('exportMichelson')}
               </button>
               <button
+                title={tip('exportMainnetBundle')}
                 className="btn btn-xs btn-outline"
                 onClick={() => {
                   void exportMainnetBundle();
                 }}
                 disabled={!lastWorkflow || isExportingBundle}
               >
-                {isExportingBundle ? 'Bundling…' : 'Export Mainnet Bundle'}
+                {isExportingBundle ? 'Bundling…' : t('exportMainnetBundle')}
               </button>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 items-center text-xs">
             <span
+              title={
+                clearanceId ? tip('clearedForDeployment') ?? undefined : tip('notCleared') ?? undefined
+              }
               className={`badge badge-sm ${
                 clearanceId ? 'badge-success' : 'badge-warning'
               }`}
             >
-              {clearanceId ? 'Cleared For Deployment' : 'Not Cleared'}
+              {clearanceId ? t('clearedForDeployment') : t('notCleared')}
             </span>
             {clearanceId ? <span className="font-mono">{clearanceId}</span> : null}
             {lastWorkflow ? (
@@ -1183,6 +1244,12 @@ export default function App() {
             <span>{balancesError}</span>
           </div>
         ) : null}
+
+        <KilnCopy
+          k="bertErnieNearWallets"
+          as="p"
+          className={`text-xs mt-1 ${mode === 'builder' ? 'text-warning' : 'text-base-content/80'}`}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(['A', 'B'] as const).map((wallet) => {
@@ -1203,7 +1270,11 @@ export default function App() {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <h3 className="text-lg font-bold">{label}</h3>
-                  <p className="text-xs text-base-content/50">Puppet wallet</p>
+                  <KilnCopy
+                    k={wallet === 'A' ? 'bertWalletSubtitle' : 'ernieWalletSubtitle'}
+                    as="p"
+                    className="text-xs text-base-content/50"
+                  />
                   <p className="text-sm text-base-content/60 font-mono truncate">{addressLabel}</p>
                 </div>
                 <div className="text-right min-h-[2.5rem] flex flex-col items-end justify-center">
@@ -1233,29 +1304,31 @@ export default function App() {
               <div className="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
                 <h2 className="font-bold flex items-center gap-2">
                   <Upload className="w-5 h-5 text-primary" />
-                  Contract Injector
+                  <KilnCopy k="contractInjectorTitle" />
                 </h2>
                 <div className="flex items-center gap-2">
                   <div className="join">
                     <button
+                      title={tip('michelsonModeBtn')}
                       className={`btn btn-xs join-item ${
                         contractSourceType === 'michelson' ? 'btn-primary' : 'btn-outline'
                       }`}
                       onClick={() => setContractSourceType('michelson')}
                     >
-                      Michelson
+                      {t('michelsonModeBtn')}
                     </button>
                     <button
+                      title={tip('smartpyModeBtn')}
                       className={`btn btn-xs join-item ${
                         contractSourceType === 'smartpy' ? 'btn-primary' : 'btn-outline'
                       }`}
                       onClick={() => setContractSourceType('smartpy')}
                     >
-                      SmartPy
+                      {t('smartpyModeBtn')}
                     </button>
                   </div>
-                  <label className="btn btn-sm btn-outline btn-primary">
-                    Upload Source
+                  <label className="btn btn-sm btn-outline btn-primary" title={tip('uploadSource')}>
+                    {t('uploadSource')}
                     <input
                       ref={contractUploadInputRef}
                       type="file"
@@ -1268,7 +1341,12 @@ export default function App() {
               </div>
               <div className="p-4 border-b border-base-200 bg-base-100">
                 <label className="label py-1">
-                  <span className="label-text text-xs uppercase tracking-wider">Initial Storage</span>
+                  <span
+                    className={`label-text text-xs uppercase tracking-wider ${mode === 'eli5' && tip('initialStorageLabel') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+                    title={mode === 'eli5' ? tip('initialStorageLabel') : undefined}
+                  >
+                    {t('initialStorageLabel')}
+                  </span>
                 </label>
                 <input
                   className="input input-bordered w-full font-mono"
@@ -1276,20 +1354,26 @@ export default function App() {
                   onChange={(event) => setInitialStorage(event.target.value)}
                   placeholder='Ex: Unit or Pair "tz1..." 100'
                 />
-                <p className="text-[0.7rem] text-base-content/60 mt-1">
-                  SmartPy sources can be loaded from <span className="font-mono">.py</span>,{' '}
-                  <span className="font-mono">.smartpy</span>, <span className="font-mono">.sp</span>, or{' '}
-                  <span className="font-mono">.txt</span> files. The workflow compiles SmartPy to Michelson
-                  server-side when SmartPy mode is active or auto-detected.
-                </p>
+                <KilnCopy k="smartpyHelpBlurb" as="p" className="text-[0.7rem] text-base-content/60 mt-1">
+                  {mode === 'builder' ? (
+                    <>
+                      SmartPy sources can be loaded from <span className="font-mono">.py</span>,{' '}
+                      <span className="font-mono">.smartpy</span>, <span className="font-mono">.sp</span>, or{' '}
+                      <span className="font-mono">.txt</span> files. The workflow compiles SmartPy to Michelson
+                      server-side when SmartPy mode is active or auto-detected.
+                    </>
+                  ) : (
+                    <>{t('smartpyHelpBlurb')}</>
+                  )}
+                </KilnCopy>
               </div>
               <div className="flex-1 p-4">
                 <textarea
                   className="textarea textarea-bordered w-full h-full font-mono text-sm resize-none bg-base-300/50 focus:bg-base-300 transition-colors"
                   placeholder={
                     contractSourceType === 'smartpy'
-                      ? 'Paste SmartPy source (.py/.smartpy/.sp/.txt), upload a file, or double-click to open file picker...'
-                      : 'Paste Michelson code here, upload a file, or double-click to open file picker...'
+                      ? t('placeholderSmartpy')
+                      : t('placeholderMichelson')
                   }
                   value={michelsonCode}
                   onChange={(event) => {
@@ -1302,15 +1386,21 @@ export default function App() {
               </div>
               <div className="p-4 border-t border-base-200 bg-base-200/50 flex flex-col md:flex-row gap-3">
                 <button
+                  title={tip('runWorkflowTests')}
                   className="btn btn-outline md:flex-1"
                   onClick={() => {
                     void runPredeployValidation();
                   }}
                   disabled={isValidating || isRunningWorkflow || isDeploying || !michelsonCode.trim()}
                 >
-                  {isRunningWorkflow ? <span className="loading loading-spinner" /> : 'Run Workflow Tests'}
+                  {isRunningWorkflow ? <span className="loading loading-spinner" /> : t('runWorkflowTests')}
                 </button>
                 <button
+                  title={
+                    deployMode === 'connected'
+                      ? tip('deployWithConnected') ?? undefined
+                      : tip('deployWithBert') ?? undefined
+                  }
                   className="btn btn-primary md:flex-1"
                   onClick={handleDeploy}
                   disabled={
@@ -1324,9 +1414,9 @@ export default function App() {
                   {isDeploying ? (
                     <span className="loading loading-spinner" />
                   ) : deployMode === 'connected' ? (
-                    'Deploy with Connected Wallet'
+                    t('deployWithConnected')
                   ) : (
-                    'Inject & Deploy with Bert'
+                    t('deployWithBert')
                   )}
                 </button>
               </div>
@@ -1335,7 +1425,12 @@ export default function App() {
             <div className="bg-neutral rounded-2xl shadow-lg overflow-hidden h-[300px] flex flex-col border border-neutral-focus">
               <div className="bg-neutral-focus p-3 flex items-center gap-2 border-b border-black/20">
                 <Terminal className="w-4 h-4 text-neutral-content/50" />
-                <span className="text-xs font-mono text-neutral-content/70 uppercase tracking-wider">Kiln Terminal</span>
+                <span
+                  className={`text-xs font-mono text-neutral-content/70 uppercase tracking-wider ${mode === 'eli5' && tip('kilnTerminalLabel') ? 'cursor-help underline decoration-dotted decoration-neutral-content/40 underline-offset-2' : ''}`}
+                  title={mode === 'eli5' ? tip('kilnTerminalLabel') : undefined}
+                >
+                  {t('kilnTerminalLabel')}
+                </span>
               </div>
               <div className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-2">
                 {logs.length === 0 && <div className="text-neutral-content/30 italic">Waiting for operations...</div>}
@@ -1362,11 +1457,16 @@ export default function App() {
             <div className="p-4 border-b border-base-200 bg-base-200/50 space-y-3">
               <h2 className="font-bold flex items-center gap-2">
                 <Activity className="w-5 h-5 text-secondary" />
-                Dynamic Test Rig
+                <KilnCopy k="dynamicRigTitle" />
               </h2>
               <div className="space-y-2">
                 <label className="label py-0">
-                  <span className="label-text text-xs uppercase tracking-wider">Post-deploy E2E Entrypoint</span>
+                  <span
+                    className={`label-text text-xs uppercase tracking-wider ${mode === 'eli5' && tip('e2eEntrypointLabel') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+                    title={mode === 'eli5' ? tip('e2eEntrypointLabel') : undefined}
+                  >
+                    {t('e2eEntrypointLabel')}
+                  </span>
                 </label>
                 <input
                   className="input input-sm input-bordered w-full font-mono"
@@ -1375,7 +1475,12 @@ export default function App() {
                   placeholder="Ex: transfer"
                 />
                 <label className="label py-0">
-                  <span className="label-text text-xs uppercase tracking-wider">Args (JSON Array)</span>
+                  <span
+                    className={`label-text text-xs uppercase tracking-wider ${mode === 'eli5' && tip('e2eArgsLabel') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
+                    title={mode === 'eli5' ? tip('e2eArgsLabel') : undefined}
+                  >
+                    {t('e2eArgsLabel')}
+                  </span>
                 </label>
                 <input
                   className="input input-sm input-bordered w-full font-mono"
@@ -1384,11 +1489,12 @@ export default function App() {
                   placeholder='Ex: [] or ["tz1...", "1"]'
                 />
                 <button
+                  title={tip('runBertErnieE2e')}
                   className="btn btn-sm btn-secondary w-full"
                   onClick={runPostDeployE2E}
                   disabled={isRunningE2E || !contractAddress}
                 >
-                  {isRunningE2E ? <span className="loading loading-spinner" /> : 'Run Bert + Ernie E2E'}
+                  {isRunningE2E ? <span className="loading loading-spinner" /> : t('runBertErnieE2e')}
                 </button>
               </div>
             </div>

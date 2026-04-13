@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Sparkles, Wand2 } from 'lucide-react';
+import type { CopyKey } from '../lib/kiln-view-copy';
+import { KilnCopy, useKilnView } from '../context/KilnViewProvider';
 
 type LogType = 'info' | 'error' | 'success';
 
@@ -59,11 +61,32 @@ const contractTypeLabel: Record<ContractType, string> = {
   marketplace: 'Marketplace',
 };
 
+function GuidedLabel({
+  k,
+  className,
+}: {
+  k: CopyKey;
+  className?: string;
+}) {
+  const { mode, t, tip } = useKilnView();
+  const title = mode === 'eli5' ? tip(k) : undefined;
+  const hint = Boolean(title);
+  return (
+    <span
+      className={[className, hint ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''].filter(Boolean).join(' ')}
+      title={title}
+    >
+      {t(k)}
+    </span>
+  );
+}
+
 export default function GuidedContractBuilder({
   buildHeaders,
   onApplyMichelsonDraft,
   onLog,
 }: GuidedContractBuilderProps) {
+  const { mode, t, tip } = useKilnView();
   const [contractType, setContractType] = useState<ContractType>('fa2_fungible');
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('smartpy');
   const [projectName, setProjectName] = useState('My Kiln Contract');
@@ -88,10 +111,17 @@ export default function GuidedContractBuilder({
 
   const primaryLabel = useMemo(() => {
     if (outputFormat === 'michelson_stub') {
-      return 'Generate Deployable Michelson Stub';
+      return t('primaryGenerateMichelsonStub');
     }
-    return 'Generate SmartPy Scaffold';
-  }, [outputFormat]);
+    return t('primaryGenerateSmartpy');
+  }, [outputFormat, t]);
+
+  const primaryTip = useMemo(() => {
+    if (outputFormat === 'michelson_stub') {
+      return tip('primaryGenerateMichelsonStub');
+    }
+    return tip('primaryGenerateSmartpy');
+  }, [outputFormat, tip]);
 
   useEffect(() => {
     let ignore = false;
@@ -249,17 +279,17 @@ export default function GuidedContractBuilder({
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Wand2 className="w-5 h-5 text-primary" />
-            Guided Contract Creator (Optional)
+            <KilnCopy k="guidedTitle" />
           </h2>
-          <p className="text-sm text-base-content/60">
-            Builder-first wizard for laymen and pros: choose contract shape, entrypoints, and output mode.
-          </p>
+          <KilnCopy k="guidedIntro" as="p" className="text-sm text-base-content/60" />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <label className="form-control">
-          <span className="label-text text-xs uppercase tracking-wider">Contract Type</span>
+          <span className="label-text text-xs uppercase tracking-wider">
+            <GuidedLabel k="labelContractType" />
+          </span>
           <select
             className="select select-sm select-bordered"
             value={contractType}
@@ -272,7 +302,9 @@ export default function GuidedContractBuilder({
         </label>
 
         <label className="form-control">
-          <span className="label-text text-xs uppercase tracking-wider">Output</span>
+          <span className="label-text text-xs uppercase tracking-wider">
+            <GuidedLabel k="labelOutput" />
+          </span>
           <select
             className="select select-sm select-bordered"
             value={outputFormat}
@@ -284,7 +316,9 @@ export default function GuidedContractBuilder({
         </label>
 
         <label className="form-control">
-          <span className="label-text text-xs uppercase tracking-wider">Project Name</span>
+          <span className="label-text text-xs uppercase tracking-wider">
+            <GuidedLabel k="labelProjectName" />
+          </span>
           <input
             className="input input-sm input-bordered"
             value={projectName}
@@ -294,7 +328,9 @@ export default function GuidedContractBuilder({
         </label>
 
         <label className="form-control">
-          <span className="label-text text-xs uppercase tracking-wider">Admin Address (optional)</span>
+          <span className="label-text text-xs uppercase tracking-wider">
+            <GuidedLabel k="labelAdminAddress" />
+          </span>
           <input
             className="input input-sm input-bordered font-mono"
             value={adminAddress}
@@ -308,7 +344,9 @@ export default function GuidedContractBuilder({
         {contractType === 'fa2_fungible' && (
           <>
             <label className="form-control">
-              <span className="label-text text-xs uppercase tracking-wider">Symbol</span>
+              <span className="label-text text-xs uppercase tracking-wider">
+                <GuidedLabel k="labelSymbol" />
+              </span>
               <input
                 className="input input-sm input-bordered"
                 value={symbol}
@@ -317,7 +355,9 @@ export default function GuidedContractBuilder({
               />
             </label>
             <label className="form-control">
-              <span className="label-text text-xs uppercase tracking-wider">Decimals</span>
+              <span className="label-text text-xs uppercase tracking-wider">
+                <GuidedLabel k="labelDecimals" />
+              </span>
               <input
                 className="input input-sm input-bordered"
                 type="number"
@@ -328,7 +368,9 @@ export default function GuidedContractBuilder({
               />
             </label>
             <label className="form-control">
-              <span className="label-text text-xs uppercase tracking-wider">Initial Supply</span>
+              <span className="label-text text-xs uppercase tracking-wider">
+                <GuidedLabel k="labelInitialSupply" />
+              </span>
               <input
                 className="input input-sm input-bordered"
                 type="number"
@@ -343,7 +385,9 @@ export default function GuidedContractBuilder({
         {contractType === 'nft_collection' && (
           <>
             <label className="form-control">
-              <span className="label-text text-xs uppercase tracking-wider">Max Collection Size</span>
+              <span className="label-text text-xs uppercase tracking-wider">
+                <GuidedLabel k="labelMaxCollection" />
+              </span>
               <input
                 className="input input-sm input-bordered"
                 type="number"
@@ -353,7 +397,9 @@ export default function GuidedContractBuilder({
               />
             </label>
             <label className="form-control">
-              <span className="label-text text-xs uppercase tracking-wider">Default Royalties (bps)</span>
+              <span className="label-text text-xs uppercase tracking-wider">
+                <GuidedLabel k="labelRoyaltiesBps" />
+              </span>
               <input
                 className="input input-sm input-bordered"
                 type="number"
@@ -368,7 +414,9 @@ export default function GuidedContractBuilder({
 
         {contractType === 'marketplace' && (
           <label className="form-control">
-            <span className="label-text text-xs uppercase tracking-wider">Marketplace Fee (bps)</span>
+            <span className="label-text text-xs uppercase tracking-wider">
+              <GuidedLabel k="labelMarketplaceFeeBps" />
+            </span>
             <input
               className="input input-sm input-bordered"
               type="number"
@@ -389,7 +437,9 @@ export default function GuidedContractBuilder({
             checked={includeMint}
             onChange={(event) => setIncludeMint(event.target.checked)}
           />
-          <span className="label-text text-xs">Mint</span>
+          <span className="label-text text-xs">
+            <GuidedLabel k="checkMint" />
+          </span>
         </label>
         <label className="label cursor-pointer justify-start gap-2">
           <input
@@ -398,7 +448,9 @@ export default function GuidedContractBuilder({
             checked={includeBurn}
             onChange={(event) => setIncludeBurn(event.target.checked)}
           />
-          <span className="label-text text-xs">Burn</span>
+          <span className="label-text text-xs">
+            <GuidedLabel k="checkBurn" />
+          </span>
         </label>
         <label className="label cursor-pointer justify-start gap-2">
           <input
@@ -407,7 +459,9 @@ export default function GuidedContractBuilder({
             checked={includePause}
             onChange={(event) => setIncludePause(event.target.checked)}
           />
-          <span className="label-text text-xs">Pause</span>
+          <span className="label-text text-xs">
+            <GuidedLabel k="checkPause" />
+          </span>
         </label>
         <label className="label cursor-pointer justify-start gap-2">
           <input
@@ -416,19 +470,28 @@ export default function GuidedContractBuilder({
             checked={includeAdminTransfer}
             onChange={(event) => setIncludeAdminTransfer(event.target.checked)}
           />
-          <span className="label-text text-xs">Admin Transfer</span>
+          <span className="label-text text-xs">
+            <GuidedLabel k="checkAdminTransfer" />
+          </span>
         </label>
       </div>
 
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-wider text-base-content/70">
-          Reference-Sliced Elements
+          <GuidedLabel k="referenceElementsTitle" />
         </p>
-        <p className="text-xs text-base-content/60">
-          These options are mined from real contracts in <span className="font-mono">reference/</span> and stitched into your guided draft.
-        </p>
+        <KilnCopy k="referenceElementsIntro" as="p" className="text-xs text-base-content/60">
+          {mode === 'builder' ? (
+            <>
+              These options are mined from real contracts in <span className="font-mono">reference/</span> and stitched
+              into your guided draft.
+            </>
+          ) : (
+            <>{t('referenceElementsIntro')}</>
+          )}
+        </KilnCopy>
         {isLoadingElements ? (
-          <div className="text-xs text-base-content/60">Loading reference elements...</div>
+          <KilnCopy k="loadingReferenceElements" as="div" className="text-xs text-base-content/60" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {referenceElements.map((element) => {
@@ -447,9 +510,14 @@ export default function GuidedContractBuilder({
                       onChange={(event) => toggleElement(element.id, event.target.checked)}
                     />
                   </div>
-                  <p className="text-base-content/60 leading-snug">{element.description}</p>
+                  <p
+                    className={`text-base-content/60 leading-snug ${mode === 'eli5' ? 'cursor-help' : ''}`}
+                    title={mode === 'eli5' ? `Technical detail: ${element.description}` : undefined}
+                  >
+                    {element.description}
+                  </p>
                   <p className="text-base-content/50">
-                    Evidence: {element.evidenceContracts.length} reference contracts
+                    {t('evidencePrefix')} {element.evidenceContracts.length} {t('evidenceSuffix')}
                   </p>
                 </label>
               );
@@ -459,27 +527,40 @@ export default function GuidedContractBuilder({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button className="btn btn-sm btn-primary" onClick={generateDraft} disabled={isGenerating}>
+        <button
+          title={primaryTip ?? undefined}
+          className="btn btn-sm btn-primary"
+          onClick={generateDraft}
+          disabled={isGenerating}
+        >
           {isGenerating ? <span className="loading loading-spinner" /> : <Sparkles className="w-4 h-4" />}
           {primaryLabel}
         </button>
-        <button className="btn btn-sm btn-outline" onClick={copyDraftCode} disabled={!draft}>
+        <button
+          title={tip('copyOutput') ?? undefined}
+          className="btn btn-sm btn-outline"
+          onClick={copyDraftCode}
+          disabled={!draft}
+        >
           <Copy className="w-4 h-4" />
-          Copy Output
+          {t('copyOutput')}
         </button>
         <button
+          title={tip('useInInjector') ?? undefined}
           className="btn btn-sm btn-secondary"
           onClick={applyMichelsonToInjector}
           disabled={!draft || draft.outputFormat !== 'michelson_stub'}
         >
-          Use In Contract Injector
+          {t('useInInjector')}
         </button>
       </div>
 
       {draft && (
         <div className="space-y-2">
           <p className="text-xs text-base-content/60">
-            Generated {draft.outputFormat === 'smartpy' ? 'SmartPy scaffold' : 'Michelson stub'} with entrypoints:{' '}
+            {draft.outputFormat === 'smartpy'
+              ? t('generatedSummarySmartpy')
+              : t('generatedSummaryMichelson')}{' '}
             <span className="font-mono">{draft.entrypoints.join(', ')}</span>
           </p>
           <textarea
@@ -488,7 +569,7 @@ export default function GuidedContractBuilder({
             readOnly
           />
           <p className="text-xs text-base-content/60 font-mono">
-            Initial storage hint: {draft.initialStorage}
+            {t('initialStorageHintLabel')} {draft.initialStorage}
           </p>
         </div>
       )}
