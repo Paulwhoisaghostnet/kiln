@@ -1,0 +1,240 @@
+3js projects/adrift/progress.md
+Bowers/.claude/SETTINGS-REFERENCE.md
+Bowers/.cursor/rules/tezos-contract-deployment.md
+Bowers/@walletconnect/core/README.md
+Bowers/@walletconnect/core/package.json
+Bowers/@walletconnect/environment/README.md
+Bowers/@walletconnect/environment/package.json
+Bowers/@walletconnect/events/package.json
+Bowers/@walletconnect/heartbeat/README.md
+Bowers/@walletconnect/heartbeat/package.json
+Bowers/@walletconnect/jsonrpc-provider/package.json
+Bowers/@walletconnect/jsonrpc-types/package.json
+Bowers/@walletconnect/jsonrpc-utils/package.json
+Bowers/@walletconnect/jsonrpc-ws-connection/package.json
+Bowers/@walletconnect/logger/README.md
+Bowers/@walletconnect/logger/package.json
+Bowers/@walletconnect/relay-api/README.md
+Bowers/@walletconnect/relay-api/package.json
+Bowers/@walletconnect/relay-auth/README.md
+Bowers/@walletconnect/relay-auth/package.json
+Bowers/@walletconnect/safe-json/README.md
+Bowers/@walletconnect/safe-json/package.json
+Bowers/@walletconnect/sign-client/README.md
+Bowers/@walletconnect/sign-client/package.json
+Bowers/@walletconnect/time/README.md
+Bowers/@walletconnect/time/package.json
+Bowers/@walletconnect/types/README.md
+Bowers/@walletconnect/types/package.json
+Bowers/@walletconnect/utils/README.md
+Bowers/@walletconnect/utils/package.json
+Bowers/@walletconnect/window-getters/README.md
+Bowers/@walletconnect/window-getters/package.json
+Bowers/@walletconnect/window-metadata/README.md
+Bowers/@walletconnect/window-metadata/package.json
+Bowers/BOWERS_MEMORY.md
+Bowers/DEPLOY.md
+Bowers/README.md
+Bowers/attached_assets/key-differences.md
+Bowers/attached_assets/reference-contracts/README.md
+Bowers/benchmark_workspace/report.md
+Bowers/docs/AGENT_REPORT_BOWERS.md
+Bowers/docs/Agent_report_bowers (1).docx
+Bowers/docs/Agent_report_bowers.docx
+Bowers/docs/CONTRACT_AUDIT_PLAN_BOWERS.md
+Bowers/docs/DEPLOYMENT-GUIDE.md
+Bowers/docs/README.md
+Bowers/docs/REPORT_REMEDIATION_PLAN.md
+Bowers/e2e/utils/contracts.ts
+Bowers/package.json
+Bowers/scripts/compile-contracts.sh
+Bowers/shared/contract-styles.ts
+Bowers/test/step_001_cont_0_contract.json
+Bowers/test/step_001_cont_0_contract.tz
+Conflict-Atlas/README.md
+Conflict-Atlas/package.json
+Discord Bots/COMMANDS.md
+Discord Bots/DJ_GUIDE.md
+Discord Bots/DJ_QUICKSTART.md
+Discord Bots/FFMPEG_INSTALL.md
+Discord Bots/PROJECT_STRUCTURE.md
+Discord Bots/QUICKSTART.md
+Discord Bots/README.md
+Discord Bots/SETUP.md
+Discord Bots/cogs/core_agent.py
+Discord Bots/cogs/dj_agent.py
+Discord Bots/cogs/image_challenge_agent.py
+Discord Bots/cogs/trait_ideas_agent.py
+Discord Bots/requirements.txt
+Guidance/README.md
+Guidance/README_AI_AGENTS.md
+Guidance/data/research/BANDOG_API_RESEARCH.md
+Guidance/data/research/GUIDANCE_DATA_GAPS_AND_MAPPINGS.md
+Guidance/data/research/objkt_recent_500_marketplace_contracts.txt
+Guidance/data/research/objkt_recent_500_token_contracts.txt
+Guidance/package.json
+Image-Battle-Arena/.continue/prompts/new-prompt.md
+Image-Battle-Arena/client/requirements.md
+Image-Battle-Arena/package.json
+Lil Guys/README.md
+Lil Guys/trait_combinations_analysis.md
+Objkt-Advisor/SCORING_METHODOLOGY.md
+Objkt-Advisor/client/requirements.md
+Objkt-Advisor/docs/objkt-api-schema.md
+Objkt-Advisor/package.json
+Particle Painting/particle-studio/NETLIFY_DEPLOYMENT.md
+Particle Painting/particle-studio/README.md
+Particle Painting/particle-studio/USER_MANUAL.md
+Particle Painting/particle-studio/WALLET_MINT_GUIDE.md
+Particle Painting/particle-studio/audio-engine-changes-log.md
+Particle Painting/particle-studio/package.json
+README-agent.md
+SANDBOX_PROJECTS_APPENDIX.md
+Tezos-Intel/package.json
+Tezos-Intel/replit.md
+Tezos-Scout/client/requirements.md
+Tezos-Scout/package.json
+WTF/README.md
+WTF/package.json
+WTF/scripts/test-marketplace-contract.sh
+WTF/security_best_practices_report.md
+agent.py
+album packager/compiled/analbumpacker-interactive-token/README.md
+album packager/package.json
+album packager/progress.md
+bootloader-project/README.md
+color wars/AUDIT_REPORT.md
+color wars/DEBUG_AUDIT.md
+color wars/README.md
+color wars/package.json
+color wars/progress.md
+dweet-bootloader/README.md
+fafo tax/README.md
+fafo tax/SETUP_COMPLETE.md
+fafo tax/backend/requirements-basic.txt
+fafo tax/backend/requirements-local.txt
+fafo tax/backend/requirements-minimal.txt
+fafo tax/backend/requirements-simple.txt
+fafo tax/backend/requirements.txt
+fafo tax/frontend/package.json
+greetings.md
+ledger-village/README.md
+ledger-village/package.json
+ledger-village/progress.md
+local-video-review-lab/README.md
+local-video-review-lab/pyproject.toml
+local-video-review-lab/requirements.txt
+model-match-lab/README.md
+model-match-lab/package.json
+model-match-lab/shared/contracts.ts
+objkt-owned-editions-sorter/README.md
+p5js/README.md
+p5js/package.json
+p5js/progress.md
+porcupin-slideshow/README.md
+progress.md
+projects/Sandbox/Artcessible Studios/PROJECT_SUMMARY.md
+projects/Sandbox/Artcessible Studios/README.md
+projects/Sandbox/Breadfond 501c/README.md
+projects/Sandbox/Lil Guys Platformer/IN-GAME-RIGGING-SUMMARY.md
+projects/Sandbox/Lil Guys Platformer/PROJECT_SUMMARY.md
+projects/Sandbox/Lil Guys Platformer/README.md
+projects/Sandbox/Visualize Anything/ARCHITECTURE_AUDIT.md
+projects/Sandbox/Visualize Anything/BONE_SYSTEM_REDESIGN.md
+projects/Sandbox/Visualize Anything/BUILD_COMPLETE.md
+projects/Sandbox/Visualize Anything/DEBUG_BLANK_SCREEN.md
+projects/Sandbox/Visualize Anything/GETTING_STARTED.md
+projects/Sandbox/Visualize Anything/MVP_TEST_GUIDE.md
+projects/Sandbox/Visualize Anything/PROJECT_SUMMARY.md
+projects/Sandbox/Visualize Anything/README.md
+projects/Sandbox/Visualize Anything/RENDERER_OPTIONS_ANALYSIS.md
+projects/Sandbox/Visualize Anything/TESTING_STATUS.md
+projects/Sandbox/Visualize Anything/UPDATE_COMPLETE.md
+projects/Sandbox/Visualize Anything/WORKFLOW_REDESIGN.md
+projects/Sandbox/Visualize Anything/package.json
+projects/Sandbox/lil guy app/PROJECT_SUMMARY.md
+projects/Sandbox/lil guy app/QUICKSTART.md
+projects/Sandbox/lil guy app/README.md
+projects/Sandbox/lil guy app/TESTING_ADDED.md
+projects/Sandbox/lil guy app/TESTING_QUICKSTART.md
+projects/Sandbox/lil guy app/TEST_GUIDE.md
+projects/Sandbox/lil guy app/package.json
+projects/Sandbox/mafiabot/README.md
+projects/Sandbox/mafiabot/package.json
+r00t/.cursor/agents/charlie.md
+r00t/.cursor/agents/code-reviewer.md
+r00t/.cursor/agents/skrib.md
+r00t/.cursor/agents/test-writer.md
+r00t/.cursor/agents/tezos-expert.md
+r00t/.cursor/agents/verifier.md
+r00t/DEPLOY.md
+r00t/GOALS.md
+r00t/RULE.md
+r00t/app/README.md
+r00t/app/package.json
+r00t/arb/README.md
+r00t/arb/package.json
+r00t/docs/arb-bot-research.md
+r00t/docs/data-strategy.md
+r00t/docs/subagents.md
+r00t/docs/tezos-bible.md
+r00t/docs/tezos-expert-review-arb-signer.md
+r00t/docs/user-questions.md
+r00t/nimrod/charlie-chore-list.md
+r00t/nimrod/charlie-ghostnet-wallets.md
+r00t/nimrod/charlie-test-log.md
+r00t/nimrod/decisions.md
+r00t/nimrod/external-interactions.md
+r00t/nimrod/internal-actions.md
+r00t/nimrod/journal.md
+r00t/nimrod/ledger.md
+r00t/nimrod/moral-compass.md
+r00t/nimrod/reference-review.md
+r00t/nimrod/revenue-register.md
+r00t/nimrod/self-definition.md
+r00t/nimrod/skr1b3-triggers.md
+r00t/reference/Objkt-Advisor/SCORING_METHODOLOGY.md
+r00t/reference/Objkt-Advisor/package.json
+r00t/reference/taxmaster/README.md
+r00t/reference/taxmaster/package.json
+r00t/reference/tezpulse/README.md
+r00t/reference/tezpulse/TZKT_API_CHEATSHEET.md
+r00t/reference/tezpulse/package.json
+r00t/reference/web3 simulator/README.md
+r00t/reference/web3 simulator/package.json
+r00t/signer/README.md
+r00t/signer/package.json
+receipt finder/README.md
+receipt finder/requirements.txt
+requirements-agent.txt
+skllz/00_project_inventory.md
+smartpy-test-platform/README.md
+taxmaster/README.md
+taxmaster/package.json
+tezpulse/README.md
+tezpulse/TZKT_API_CHEATSHEET.md
+tezpulse/package.json
+tezpulse/src/components/ContractPieChart.css
+tezpulse/src/components/ContractPieChart.tsx
+tui_tools-main/README.md
+tui_tools-main/SECURITY.md
+tui_tools-main/pyproject.toml
+tui_tools-main/requirements.txt
+videozine-editor/README.md
+videozine-editor/install/README.md
+videozine-editor/requirements.txt
+vlm-video-archivist/INSTALL VIDEOSPEECH/README.md
+vlm-video-archivist/MODEL_CHEATSHEET.md
+vlm-video-archivist/README.md
+vlm-video-archivist/pyproject.toml
+vlm-video-archivist/requirements.txt
+vlm-video-archivist/src/vlm_video_archivist/agent.py
+vlm-video-archivist/token_demo/README.md
+wallet-constellations/README.md
+wallet-constellations/package.json
+web3 simulator/README.md
+web3 simulator/nft-pipeline/README.md
+web3 simulator/nft-pipeline/docs/tzkt-cheatsheet.md
+web3 simulator/nft-pipeline/package.json
+web3 simulator/nft-pipeline/src/contract_checker.ts
+web3 simulator/package.json

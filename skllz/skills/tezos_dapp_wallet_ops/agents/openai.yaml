@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tezos dApp Wallet Ops"
+  short_description: "Harden Tezos wallet connect and operation flows"
+  default_prompt: "Use $tezos_dapp_wallet_ops to harden this wallet connection and operation flow with chain-safe checks."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,31 @@
+name: Tezos Kiln Shadownet Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run shadownet smoke
+        run: npm run test:shadownet
+        env:
+          RUN_SHADOWNET_TESTS: "true"
+          TEZOS_RPC_URL: ${{ secrets.TEZOS_RPC_URL }}
+          TEZOS_CHAIN_ID: ${{ secrets.TEZOS_CHAIN_ID }}
+          WALLET_A_SECRET_KEY: ${{ secrets.WALLET_A_SECRET_KEY }}
+          WALLET_B_SECRET_KEY: ${{ secrets.WALLET_B_SECRET_KEY }}

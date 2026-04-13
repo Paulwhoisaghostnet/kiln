@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tezos Data to Supabase"
+  short_description: "Build reliable Tezos ingestion into Supabase"
+  default_prompt: "Use $tezos_data_to_supabase_pipeline to extract Tezos indexer data and load it into Supabase with idempotent checkpoints."
+
+policy:
+  allow_implicit_invocation: true

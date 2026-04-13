@@ -1,0 +1,11550 @@
+# Headings and Structured Lines by Directory
+
+## 3js projects/adrift/progress.md
+
+## Bowers/.claude/SETTINGS-REFERENCE.md
+ - 1:# Claude Code + AIWG Settings Reference
+ - 5:## Current Config
+ - 17:## Why These Matter for AIWG
+ - 19:- **BASH_*_TIMEOUT_MS**: Ralph loops run verification commands (`npm test`, etc.). If those take >2 min (Claude default), they get killed. 10 min default allows builds and E2E tests to finish.
+ - 20:- **maxOutputTokens**: 1024 — Ralph needs enough tokens to emit tool calls and reasoning. Too low and responses get cut off.
+ - 21:- **CLAUDE_CODE_SIMPLE**: Keeps system prompt smaller so the 9B model has more room for context.
+ - 23:## If Requests Time Out
+ - 27:1. **LM Studio server timeout** — Check LM Studio server settings; some builds have a request timeout.
+ - 28:2. **Context too large** — With 184 skills + rules, prompts can exceed 20k tokens. The model may need >5 min to respond. Options:
+ - 32:## If JSON Parse Errors
+ - 39:## Restoring Defaults
+
+## Bowers/.cursor/rules/tezos-contract-deployment.md
+ - 1:# Tezos Contract Deployment — Agent Reference
+ - 8:## Quick summary
+ - 16:## Network configuration
+ - 25:### Beacon SDK and Shadownet
+ - 31:### Network safety: chain ID verification
+ - 37:## The canonical origination pattern (Taquito Wallet API)
+ - 65:- **Do NOT pass `gasLimit`, `storageLimit`, or `fee`** into `wallet.originate()`.
+ - 69:- **Do NOT use `Tezos.contract.originate()`** for wallet-connected dApps. That
+ - 79:## Two Taquito APIs — when to use which
+ - 91:## The BeaconSigner adapter (required for `Tezos.estimate`)
+ - 116:## Singleton BeaconWallet — critical
+ - 155:## Wallet-linking and contract visibility
+ - 160:1. `contracts.userId = currentUser.id` (direct ownership)
+ - 161:2. `contracts.ownerAddress IN (user's linked wallet addresses)` (wallet-linked ownership)
+ - 167:## Import existing contract
+ - 172:1. User provides `{ kt1Address, network }`
+ - 173:2. Server fetches contract storage from TzKT API
+ - 174:3. Server reads the `admin` field from on-chain storage
+ - 175:4. Server compares admin address against the user's linked wallet addresses
+ - 176:5. If match → contract row created; if mismatch → 403 Forbidden
+ - 178:## Wallet compatibility for origination
+ - 185:### What happens inside Kukai during origination
+ - 187:1. dApp sends `requestOperation` via Beacon with `kind: "origination"`.
+ - 188:2. Kukai receives it (with or without explicit `gas_limit`).
+ - 189:3. Kukai **always** re-runs its own estimation by calling
+ - 191:4. Kukai's simulation request contains `"gas_limit": "0"`.
+ - 192:5. Protocol 024 rejects: `insufficient_gas_for_manager`.
+ - 193:6. Kukai shows an internal error, user cannot proceed, and closes the dialog.
+ - 194:7. dApp receives `ABORTED_ERROR` (or `UNKNOWN_ERROR` in older flows).
+ - 196:### Approaches that do NOT work around this
+ - 205:### The only working approach
+ - 226:## Contract code format
+ - 231:1. `{ "prim": "storage", "args": [ … ] }` — storage type definition
+ - 232:2. `{ "prim": "parameter", "args": [ … ] }` — parameter type definition
+ - 233:3. `{ "prim": "code", "args": [ [ … ] ] }` — contract logic
+ - 234:4. (optional) `{ "prim": "view", "args": [ … ] }` — on-chain views
+ - 240:## Tezos protocol limits (as of protocol 024 — Tallinn)
+ - 251:## File layout in this project
+ - 278:## Common errors and their causes
+ - 293:## References
+
+## Bowers/.smartpy-env/lib/python3.12/site-packages/idna-3.11.dist-info/licenses/LICENSE.md
+ - 10:1. Redistributions of source code must retain the above copyright
+ - 13:2. Redistributions in binary form must reproduce the above copyright
+ - 17:3. Neither the name of the copyright holder nor the names of its
+
+## Bowers/@walletconnect/core/README.md
+ - 1:# @walletconnect/core
+ - 5:## License
+
+## Bowers/@walletconnect/environment/README.md
+ - 1:# environment [![npm version](https://badge.fury.io/js/%40pedrouid%2Fenvironment.svg)](https://badge.fury.io/js/%40pedrouid%2Fenvironment)
+ - 5:## Description
+ - 9:## Usage
+ - 24:## License
+
+## Bowers/@walletconnect/heartbeat/README.md
+ - 1:# heartbeat [![npm version](https://badge.fury.io/js/%40pedrouid%2Fheartbeat.svg)](https://badge.fury.io/js/%40pedrouid%2Fheartbeat)
+
+## Bowers/@walletconnect/logger/README.md
+ - 1:# @walletconnect/logger [![npm version](https://badge.fury.io/js/%40walletconnect%2Flogger.svg)](https://badge.fury.io/js/%40walletconnect%2Flogger)
+
+## Bowers/@walletconnect/relay-api/README.md
+ - 1:# relay-api [![npm version](https://badge.fury.io/js/relay-api.svg)](https://badge.fury.io/js/relay-api)
+
+## Bowers/@walletconnect/relay-auth/README.md
+ - 1:# relay-auth [![npm version](https://badge.fury.io/js/relay-auth.svg)](https://badge.fury.io/js/relay-auth)
+
+## Bowers/@walletconnect/safe-json/README.md
+ - 1:# safe-json-utils [![npm version](https://badge.fury.io/js/safe-json-utils.svg)](https://badge.fury.io/js/safe-json-utils)
+ - 5:## API
+
+## Bowers/@walletconnect/sign-client/README.md
+ - 1:# @walletconnect/sign-client
+ - 5:## Description
+ - 9:## Documentation
+ - 15:## License
+
+## Bowers/@walletconnect/time/README.md
+ - 1:# time [![npm version](https://badge.fury.io/js/%40pedrouid%2Ftime.svg)](https://badge.fury.io/js/%40pedrouid%2Ftime)
+
+## Bowers/@walletconnect/types/README.md
+ - 1:# @walletconnect/types
+
+## Bowers/@walletconnect/utils/README.md
+ - 1:# @walletconnect/utils
+
+## Bowers/@walletconnect/window-getters/README.md
+ - 1:# window-getters [![npm version](https://badge.fury.io/js/window-getters.svg)](https://badge.fury.io/js/window-getters)
+ - 5:## API
+
+## Bowers/@walletconnect/window-metadata/README.md
+ - 1:# window-metadata [![npm version](https://badge.fury.io/js/window-metadata.svg)](https://badge.fury.io/js/window-metadata)
+ - 5:## API
+
+## Bowers/BOWERS_MEMORY.md
+ - 1:# Bowers Project — Memory / Index
+ - 7:## Current state
+ - 9:- **Contracts (SmartPy v2, in `attached_assets/`):**
+ - 21:- **Compilation:** Scripts in `scripts/`: `compile_marketplace.py`, `compile_open_edition.py`, `compile_allowlist.py`, `compile_bonding_curve.py`, `compile_unified.py`, `compile_mint_open_edition.py`, `compile_mint_allowlist.py`, `compile_mint_bonding_curve.py`. Run `bash scripts/compile-contracts.sh` (requires SmartPy with `@sp.module` support). Output: `build/smartpy/<ScenarioName>/`; JSON copied to `client/src/lib/tezos/michelson/`; `generate-michelson-ts.cjs` writes `.ts` modules.
+ - 23:- **Style resolution:** `shared/contract-styles.ts` — Presets include mint-only styles. `resolveStyleFromModules()` for custom: 2+ mint models → `bowers-unified`; else bonding-curve → `bowers-bonding-curve`; allowlist+open-edition → `bowers-allowlist`; open-edition only → `bowers-open-edition`; else → `bowers-marketplace`.
+ - 27:## Issues reported (user)
+ - 35:## Actions taken
+ - 37:- **Supervisor audit (full code review):** See changelog entry below for all fixes.
+ - 41:## How to use Ollama for audits (instruction for Cursor agent)
+ - 43:- **One terminal, one chat:** Run `ollama run qwen2.5-coder:7b-instruct-q4_K_M` **once** at the start. That terminal becomes the chat session with qwen.
+ - 44:- **Feeding content:** After that, do **not** call `ollama run` again in that terminal. Feed text by pasting whole files or using `echo` / redirecting a file into the process (e.g. prepare a prompt file, then in the same session you can pipe: `cat prompt.txt | ollama run ...` is one way—but that starts a *new* run). So for a **single** audit: run `ollama run qwen2.5-coder:7b-instruct-q4_K_M < scripts/ollama_audit_prompt.txt` (stdin from file = first user message; qwen replies; process exits when stdin closes). For a **multi-turn** chat you keep the process running and type/paste in that terminal.
+ - 45:- **Model:** Always use `qwen2.5-coder:7b-instruct-q4_K_M`.
+ - 49:## Ollama audit log
+ - 51:- **BowersAllowlistFA2.py** — Ran `ollama run qwen2.5-coder:7b-instruct-q4_K_M < scripts/ollama_audit_prompt.txt` (prompt = audit instructions + full contract). Qwen’s response (summary):
+ - 61:## Contract rules (Tezos / SmartPy / FA2)
+ - 65:1. **FA2 (TZIP-12):**
+ - 72:2. **Marketplace (Trilitech-style):**
+ - 78:3. **SmartPy v2:**
+ - 84:4. **Bowers-specific:**
+ - 91:5. **Safety:**
+ - 98:## Changelog (memory updates)
+ - 101:- **Restructure (contract blocklist + mint-only):** (1) All five existing contracts: added `contract_blocklist` storage; admin entrypoints `block_address`, `unblock_address`; enforcement in `transfer` (from_/to_), `buy`, `make_offer`, `accept_offer`, `mint_editions` (to_). (2) Three new mint-only contracts: BowersMintOpenEdition, BowersMintAllowlist, BowersMintBondingCurve (no marketplace; claimable + withdraw for mint payments). (3) Compile scripts and `compile-contracts.sh` updated; frontend: new styles in contract-styles.ts, originate.ts storage for mint-only and contract_blocklist, create-collection wizard grouped (Mint only / Mint + marketplace / Marketplace only / Custom) and blocklist info in configure step. (4) Contract rules in memory updated with blocklist behaviour.
+ - 102:- **Supervisor audit + UI refinement:** Fixed critical bugs:
+ - 114:- **octez.connect transition:** Beacon SDK is sunsetting; Trillitech's octez.connect (`@tezos-x/octez.connect-sdk`) is the approved successor. Implemented dual-provider architecture:
+
+## Bowers/DEPLOY.md
+ - 1:# Bowers Deployment Guide
+ - 5:## Prerequisites (all routes)
+ - 7:1. **Build the production bundle:**
+ - 14:2. **Database:** You need a PostgreSQL instance. Options:
+ - 19:3. **Environment variables** (set these in your deployment platform):
+ - 29:4. **IPFS:** Get a free Pinata JWT at https://app.pinata.cloud (free tier: 1GB storage, 100 pins).
+ - 33:## Route 1: Cloudflare Pages + Workers (Recommended)
+ - 37:### Steps
+ - 39:1. **Install Wrangler:**
+ - 45:2. **Create a `wrangler.toml`** in the project root:
+ - 58:3. **Deploy:**
+ - 70:4. **Custom domain:** In the Cloudflare dashboard, go to Workers & Pages > your project > Settings > Domains, and add your domain.
+ - 72:### Free tier includes
+ - 78:### Alternative: Cloudflare Pages (static + Functions)
+ - 83:## Route 2: Render
+ - 87:### Steps
+ - 89:1. **Create a Render account** at https://render.com
+ - 91:2. **Create a PostgreSQL database:**
+ - 96:3. **Create a Web Service:**
+ - 105:4. **Set environment variables** in the Render dashboard:
+ - 114:5. **Deploy:** Push to your connected repo or trigger a manual deploy.
+ - 116:### Free tier includes
+ - 125:## Route 3: Fly.io
+ - 129:### Steps
+ - 131:1. **Install flyctl:**
+ - 137:2. **Create a `Dockerfile`** in the project root:
+ - 155:3. **Launch the app:**
+ - 161:4. **Set secrets:**
+ - 169:5. **Deploy:**
+ - 174:6. **Custom domain:**
+ - 180:### Free tier includes
+ - 189:## Switching to Mainnet
+ - 193:1. **In the UI:** Click the network badge in the sidebar to toggle between Shadownet and Mainnet. The wallet, RPC, and explorer links all switch automatically.
+ - 195:2. **CSP headers:** The server already allows both `shadownet.tezos.ecadinfra.com` and `mainnet.ecadinfra.com` in its Content Security Policy.
+ - 197:3. **Wallet reconnection:** When switching networks, users need to reconnect their wallet — the Beacon SDK creates network-specific sessions.
+ - 199:4. **No code changes required** — the network context propagates through the entire stack.
+ - 203:## Post-Deployment Checklist
+ - 205:- [ ] Verify the site loads at your deployment URL
+ - 206:- [ ] Test wallet connection (install Temple or Kukai wallet extension)
+ - 207:- [ ] Create a test collection on Shadownet
+ - 208:- [ ] Verify the contract appears on [shadownet.tzkt.io](https://shadownet.tzkt.io)
+ - 209:- [ ] Test minting a token
+ - 210:- [ ] Test the blocklist feature (block/unblock an address)
+ - 211:- [ ] Test withdrawal of claimable balance
+ - 212:- [ ] Verify IPFS uploads work (check Pinata dashboard)
+
+## Bowers/README.md
+ - 1:# Bowers
+ - 5:## Database setup
+ - 9:### Option A: Docker (recommended)
+ - 11:1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) if needed.
+ - 12:2. Start the database:
+ - 16:3. Create tables:
+ - 21:### Option B: Local PostgreSQL
+ - 23:1. Install and start PostgreSQL (e.g. `brew install postgresql@16 && brew services start postgresql@16`).
+ - 24:2. Create user and database:
+ - 29:3. Ensure `.env` has:
+ - 33:4. Create tables:
+ - 38:## Run the app
+ - 47:## Validation checks
+ - 55:## Deployment and network docs
+
+## Bowers/attached_assets/key-differences.md
+ - 1:# Key Differences: Bowers vs HEN (Hic et Nunc) Minting
+ - 7:## HEN Mint Flow (Reference)
+ - 11:- **Editions:** User chooses 1–10,000; all minted to the specified address.
+ - 12:- **Metadata:** Points to an IPFS artifact created during the mint flow. The frontend uploads the image, builds a metadata JSON (title, description, artifact URI), pins it to IPFS, and passes that metadata URI to the contract.
+ - 13:- **Royalties:** 0–25% (0–250 in HEN’s /1000 scale).
+ - 14:- **Title & description:** In the metadata JSON at the URI, not as separate contract params.
+ - 15:- **No symbol, no decimals:** NFT-focused; not fungible tokens for degen markets.
+ - 19:## Where Bowers Mint Flow Fails to Mirror HEN
+ - 21:### 1. Metadata handling (frontend)
+ - 32:### 2. Mint recipient
+ - 42:### 3. Token info: decimals and symbol
+ - 50:### 4. One-call vs two-phase flows
+ - 61:## Mint Flow by Contract Type
+ - 63:### HEN-like (not yet in Bowers)
+ - 70:### Bowers admin mint (`mint`)
+ - 77:### Bowers OE / BC / allowlist (`create_token` + `mint_editions`)
+ - 79:- **Phase 1:** Creator calls `create_token` with metadata_uri, mint_price (or BC params), max_supply, allowlist, etc. Token is created but not minted.
+ - 80:- **Phase 2:** Users call `mint_editions(token_id, qty, to_)` with payment. Tokens go to `to_` (user’s wallet).
+ - 87:## Architecture
+ - 97:## Minting Flow
+ - 99:### HEN
+ - 101:1. User calls `mint_OBJKT(address, amount, metadata, royalties)` on objkt-swap.
+ - 102:2. objkt-swap calls `objkt.mint()` on fa2_objkts (as admin).
+ - 103:3. FA2 assigns next `objkt_id`; metadata and royalties stored in objkt-swap.
+ - 104:4. No payment; mint is free.
+ - 105:5. One artwork = one `token_id`; 1–10,000 editions per mint.
+ - 107:### Bowers
+ - 109:1. **Admin mint:** Admin calls `mint(metadata_uri, supply, royalty_recipient, royalty_bps, min_offer_per_unit_mutez)`. Token created and minted in one step.
+ - 110:2. **Open edition / bonding curve:** Admin calls `create_token(...)`; then anyone calls `mint_editions(token_id, qty, to_)` with payment.
+ - 111:3. Payment required for OE/BC (mutez).
+ - 112:4. One artwork = one `token_id`; editions minted over time via `mint_editions`.
+ - 116:## Access Control
+ - 127:## Pricing & Economics
+ - 137:## Token Configuration
+ - 148:## Marketplace Integration
+ - 159:## SmartPy Version
+ - 168:## Summary
+ - 170:- **HEN:** Permissionless, free mint; one call creates + mints; metadata URI points to JSON built during mint; royalties, title, description in metadata; no symbol/decimals; NFT-focused.
+ - 171:- **Bowers:** Admin-controlled token creation; OE/BC/allowlist use two-phase flow (creator sets template, users pay to mint); single integrated contract; blocklist, allowlist, bonding curve; mint proceeds to creator; full marketplace with offers.
+ - 175:## Remediation Priorities
+
+## Bowers/attached_assets/reference-contracts/README.md
+ - 1:# Reference Contracts — Tezos NFT Projects
+ - 7:## Sources
+ - 9:### versum-docs (Versum Platform Docs)
+ - 11:- **index.md** — Versum intro, UX, Tezos rationale  
+ - 12:- **faq/** — boards, contracts, fees, kyc, materia, minting, slippage, verification  
+ - 13:- **market/** — auctions, offers, swaps (simple, advanced, timed)  
+ - 14:- **community-tools.md, contributing.md**  
+ - 17:### tezos-mirror (Octez Michelson Test Scripts)
+ - 19:- **michelson/big_maps/** — counter.tz, option.tz, originator.tz, receiver_store.tz, sender_fresh.tz  
+ - 20:- **michelson/entrypoints/** — big_map_entrypoints.tz, simple_entrypoints.tz, manager.tz  
+ - 21:- **michelson/mini_scenarios/** — always_fails.tz, 999_constant.tz, add_clear_tickets.tz  
+ - 22:- **script-inputs-README.md** — CI/script-inputs overview  
+ - 25:### hen2000 (Hic et Nunc)
+ - 27:- **hicetnuncDAO/** — FA2.py, FA2.tz, hDAO.py, hDAO.tz  
+ - 30:- **hicetnuncNFTs/** — hicetnuncNFTs.tz (early HEN NFT contract)  
+ - 33:- **objkt-swap/** — OBJKT marketplace (SmartPy + Michelson)  
+ - 38:### teia (Teia Community — HEN successor)
+ - 40:- **marketplace.py** — Teia marketplace (swap/collect/cancel, FA2 allowlist)  
+ - 43:- **README.md, compile.sh, Makefile** — Build tooling  
+ - 46:### fxhash
+ - 48:- **README.md** — fxhash token boilerplate docs  
+ - 51:## Not Recovered
+ - 53:- **8bidou** — No public contract source; platform uses on-chain storage, contract may be proprietary.
+ - 54:- **Versum contracts** — No public contract source; only platform docs (see versum-docs above).
+ - 56:## Notes
+
+## Bowers/attached_assets/reference-contracts/fxhash/README.md
+ - 13:# Installation
+ - 20:# fxhash snippet
+ - 50:# How do Generative Tokens work
+ - 60:## fx(params) types
+ - 75:### Base Attributes
+ - 89:### Randomization
+ - 93:### Type specific options
+ - 95:#### `number`
+ - 108:#### `bigint`
+ - 120:#### `boolean`
+ - 129:#### `color`
+ - 138:#### `string`
+ - 150:#### `select`
+ - 161:### Transformation
+ - 165:#### `number`
+ - 168:#### `bigint`
+ - 171:#### `boolean`
+ - 174:#### `string`
+ - 178:#### `color`
+ - 201:# Publish your token
+ - 210:# Rules to follow
+
+## Bowers/attached_assets/reference-contracts/hen2000/hicetnuncDAO/README.md
+
+## Bowers/attached_assets/reference-contracts/teia/README.md
+ - 1:# Teia Community smart contracts
+ - 34:## SmartPy installation
+ - 42:## Compile the contracts
+ - 75:## Execute the tests
+
+## Bowers/attached_assets/reference-contracts/tezos-mirror/README.md
+ - 1:# Tezos Octez Michelson Test Scripts
+ - 5:- **big_maps/** — Big_map usage patterns (counter, option, originator, receiver/sender)
+ - 6:- **entrypoints/** — Entrypoint routing examples
+ - 7:- **mini_scenarios/** — Minimal Michelson snippets for opcode testing
+
+## Bowers/attached_assets/reference-contracts/tezos-mirror/script-inputs-README.md
+
+## Bowers/attached_assets/reference-contracts/versum-docs/README.md
+ - 1:# Versum Platform Documentation
+
+## Bowers/attached_assets/reference-contracts/versum-docs/community-tools.md
+
+## Bowers/attached_assets/reference-contracts/versum-docs/contributing.md
+ - 5:# Contributing
+ - 7:## Join the conversation
+ - 21:## Contribute to the help docs
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/boards.md
+ - 4:# Boards
+ - 11:## Private boards
+ - 15:## Public boards
+ - 19:## Creating a board!
+ - 23:### Add items
+ - 27:### Remove items
+ - 31:## Changing board privacy
+ - 35:## Deleting a board
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/contracts.md
+ - 4:# Contract addresses
+ - 13:## Materia
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/fees.md
+ - 4:# Fees & Royalties
+ - 8:## Royalties
+ - 14:## Marketplace fees
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/kyc.md
+ - 4:# What is KYC?
+ - 8:# Why do I need to do KYC?
+ - 12:# How does KYC work on Versum?
+ - 20:# How do I get approved for KYC on Versum?
+ - 24:1. Go to https://tezid.net/ and connect your wallet
+ - 25:2. Select "Government Proof"
+ - 26:3. Click "Register". TezID charges a fee of around $10 in tez at this step.
+ - 27:4. Ensure that the "KYC" checkbox is enabled
+ - 28:5. Select Versum from the list of providers to share KYC registration status with
+ - 29:6. Click "Verify" to complete identity verification
+ - 34:## Read more about how KYC affects cryptocurrency marketplaces
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/materia.md
+ - 5:# Materia
+ - 12:## How to claim Materia
+ - 16:## Airdrops
+ - 20:## Using Materia
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/minting.md
+ - 5:# Minting
+ - 7:## I'm a new user to Versum. Can I mint straight away?
+ - 13:## What type of tokens can I mint?
+ - 28:## What information is needed to mint?
+ - 43:## Cover images
+ - 47:## What types of licenses are available?
+ - 57:## What's the maximum filesize that can be minted?
+ - 61:## What royalties can be specified?
+ - 65:## Are there any restrictions on how many collaborators I can nominate on my mint?
+ - 69:## What tags should I use?
+ - 75:## How can I share the proceeds with another wallet, for example for a fundraiser?
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/slippage.md
+
+## Bowers/attached_assets/reference-contracts/versum-docs/faq/verification.md
+ - 5:# Verification
+ - 9:## Unverified Users
+ - 13:## Claiming funds on escrow
+ - 19:## To Receive Verification
+
+## Bowers/attached_assets/reference-contracts/versum-docs/index.md
+ - 5:# Introduction
+ - 7:## What is Versum?
+ - 11:## Why is Versum different?
+ - 25:## How is Versum improving the user experience?
+ - 41:## How can I discover new content organically?
+ - 57:## Can I do collaborations with other artists?
+ - 61:## How does verification work?
+ - 65:## What is Tezos?
+ - 71:## Why is Versum launching on Tezos first?
+
+## Bowers/attached_assets/reference-contracts/versum-docs/market/auctions.md
+ - 7:## What are auctions?
+ - 12:## How do I create an auction?
+ - 18:1. Navigate to the token's Market tab
+ - 19:2. Click "Create Auction"
+ - 20:3. Select the currency ("Tezos") and enter the start price (which is also the reserve price)
+ - 21:4. Enter the duration in hours. The minimum duration is 1 hour, the maximum is 168 hours (1 week)
+ - 22:5. Click Confirm
+ - 23:6. Confirm the auction in your Wallet
+ - 30:## How do I cancel an auction?
+ - 34:1. Navigate to your dashboard
+ - 35:2. Select the auction you wish to cancel
+ - 36:3. Click "Cancel" button on the Auction tab
+ - 37:4. Confirm the cancellation in your Wallet
+ - 43:## Can I change an auction once it starts?
+ - 48:## As a seller or bidder, how can I view my auctions in progress?
+ - 52:## How do I get notified of bids or the auction ending? 
+ - 63:## How can I find auctions to bid on?
+ - 69:## How do I bid on a token?
+ - 78:## What happens when an auction finishes?
+
+## Bowers/attached_assets/reference-contracts/versum-docs/market/index.md
+ - 7:## How can tokens be traded?
+ - 17:## What collections can I trade on Versum?
+ - 24:## What currency can I use to purchase a token?
+
+## Bowers/attached_assets/reference-contracts/versum-docs/market/offers.md
+ - 7:## How do I make an offer on a token on Versum?
+ - 12:## How do I accept an offer made on a token on Versum?
+ - 20:## How do I withdraw an offer?
+ - 25:## How do I amend how much I want to offer?
+ - 29:## Which marketplaces' offers are shown on Versum?
+
+## Bowers/attached_assets/reference-contracts/versum-docs/market/swaps/advanced.md
+ - 7:## What is an Advanced Swap?
+ - 19:## How do I calculate what my prices should be?
+ - 40:## How do I list my tokens using an incrementing sales price?
+ - 50:1. Navigate to the token's Market tab
+ - 51:2. Click "Create Swap"
+ - 52:3. Select "Advanced Swap" tab
+ - 53:4. Enter the quantity of tokens to sell
+ - 54:5. Select the currency ("Tezos")
+ - 55:6. Enter the start price
+ - 56:7. Enter the end price
+ - 57:8. Click Confirm
+ - 58:9. Confirm the swap in your Wallet
+ - 60:## How do I see what tokens I have listed for sale using Advanced Swap?
+ - 65:## How do I cancel the sales listing?
+ - 69:1. Navigate to your dashboard
+ - 70:2. Check all the boxes against the token(s) you wish to cancel the sales listings for
+ - 71:3. Click "Cancel Selected" button at the bottom of the table
+ - 72:4. Confirm the cancellation in your Wallet
+ - 75:## How do I change the pricing for my Advanced Swap sales listing?
+ - 79:## Slippage
+
+## Bowers/attached_assets/reference-contracts/versum-docs/market/swaps/simple.md
+ - 7:## Why are they called swaps?
+ - 12:## How do I list my token at a fixed price?
+ - 16:1. Navigate to the token's Market tab
+ - 17:2. Click "Create Swap"
+ - 18:3. Select "Simple Swap"
+ - 19:4. Enter the quantity (if applicable)
+ - 20:5. Select the currency ("Tezos") and enter the price
+ - 21:6. Click Confirm
+ - 22:7. Confirm the swap in your Wallet
+ - 25:## How do I see what tokens I have listed for sale?
+ - 30:## How do I cancel the sales listing?
+ - 34:1. Navigate to your dashboard
+ - 35:2. Check all the boxes against the token(s) you wish to cancel the sales listings for
+ - 36:3. Click "Cancel Selected" button at the bottom of the table
+ - 37:4. Confirm the cancellation in your Wallet
+ - 40:## How do I change the price of my sales listing?
+ - 45:## Where will be my Versum swaps be listed?
+ - 54:## Which marketplaces' listings are shown on Versum?
+
+## Bowers/attached_assets/reference-contracts/versum-docs/market/swaps/timed.md
+ - 7:## What is a Timed Swap?
+ - 11:## How do I list my token at with a time-limited swap?
+ - 15:1. Navigate to the token's Market tab
+ - 16:2. Click "Create Swap"
+ - 17:3. Select "Time-limited"
+ - 18:4. Enter the quantity of tokens to sell (if applicable)
+ - 19:5. Select the currency ("Tezos")
+ - 20:6. Enter the price
+ - 21:7. Enter the time in hours
+ - 22:8. Click Confirm
+ - 23:9. Confirm the swap in your Wallet
+ - 30:## How do I see what tokens I have listed for sale?
+ - 35:## How do I cancel the sales listing?
+ - 39:1. Navigate to your dashboard
+ - 40:2. Check all the boxes against the token(s) you wish to cancel the sales listings for
+ - 41:3. Click "Cancel Selected" button at the bottom of the table
+ - 42:4. Confirm the cancellation in your Wallet
+ - 45:## How do I change the price or duration of my sales listing?
+ - 49:## What happens when a timed swap finishes?
+
+## Bowers/benchmark_workspace/report.md
+ - 1:# Benchmark Report
+ - 3:## Purpose
+ - 7:- **input.txt**: Sample data file for testing file reading operations
+ - 8:- **app.py**: A script that reads and processes the input file
+ - 9:- **report.md**: This summary document
+ - 11:## Files
+ - 19:## Validation
+ - 23:## Execution
+
+## Bowers/docs/AGENT_REPORT_BOWERS.md
+ - 1:# Agent Report: Bowers (Canonical)
+ - 3:## Metadata
+ - 14:## Canonicalization Decision
+ - 17:## Normalized Summary
+ - 22:## Week 1 Scope Completion
+ - 23:- [x] Canonicalized report documentation to a single in-repo source of truth.
+ - 24:- [x] Added explicit metadata fields required for governance: `as_of_date`, `source_commit`, and `owner`.
+ - 25:- [x] Preserved raw source artifacts with hash-based provenance.
+
+## Bowers/docs/CONTRACT_AUDIT_PLAN_BOWERS.md
+ - 1:# Bowers Contract Audit Plan: Deployment Reliability + Correct NFT Mint Flow
+ - 3:## Scope
+ - 5:1. Some Bowers styles do not deploy or are fragile to deploy.
+ - 6:2. Mint flow does not consistently follow NFT metadata and model semantics.
+ - 10:## References Reviewed (Required)
+ - 18:## Key Reference-Derived Rules
+ - 23:## Current Findings
+ - 25:### F1. Token metadata URI is wrong in mint path (critical)
+ - 29:### F2. Unified create flow is incompatible with contract signature (critical)
+ - 33:### F3. Token/offer/config parsing mismatches on server (critical)
+ - 39:### F4. Mint UI does not model style-specific parameters accurately (high)
+ - 44:### F5. Symbol/decimals confusion with NFT semantics (high)
+ - 48:### F6. Deployment robustness gaps (medium)
+ - 52:### F7. Custom module resolution inconsistency (medium)
+ - 55:## Target State (Acceptance Criteria)
+ - 64:## Precise Changes By Contract Type
+ - 66:### 1) `bowers-marketplace` (`attached_assets/BowersFA2_partial_fill_offer_1771139881452.py`)
+ - 84:### 2) `bowers-open-edition` (`attached_assets/BowersOpenEditionFA2_v5_fa2complete_1771143451660.py`)
+ - 96:### 3) `bowers-allowlist` (`attached_assets/BowersAllowlistFA2.py`)
+ - 108:### 4) `bowers-bonding-curve` (`attached_assets/BowersBondingCurveFA2.py`)
+ - 121:### 5) `bowers-unified` (`attached_assets/BowersUnifiedFA2.py`)
+ - 141:### 6) `bowers-mint-oe` (`attached_assets/BowersMintOpenEdition.py`)
+ - 152:### 7) `bowers-mint-allowlist` (`attached_assets/BowersMintAllowlist.py`)
+ - 164:### 8) `bowers-mint-bonding-curve` (`attached_assets/BowersMintBondingCurve.py`)
+ - 176:## Cross-Cutting Required Changes
+ - 178:### A) Correct NFT metadata pipeline
+ - 191:### B) Fix TzKT parsing to match Bowers on-chain schema
+ - 202:### C) Style-aware mint behavior in UI components
+ - 213:### D) Symbol/decimals semantics cleanup
+ - 224:### E) Deployment reliability hardening
+ - 235:### F) Custom module resolution consistency
+ - 245:## Execution Plan (Phased)
+ - 247:### Phase 1: Metadata + parser correctness (highest priority)
+ - 248:1. Implement metadata JSON pinning and pass metadata URI on-chain.
+ - 249:2. Fix `server/tzkt.ts` schema mismatches.
+ - 250:3. Add tests for metadata rendering and offer/config parsing.
+ - 252:### Phase 2: Unified + style-specific mint payloads
+ - 253:1. Add unified mint-model UI and payload builder.
+ - 254:2. Replace BC hardcoded params with user-configured fields.
+ - 255:3. Ensure mint-only vs marketplace style payload segregation.
+ - 257:### Phase 3: Contract semantics cleanup
+ - 258:1. Remove `decimals` from all mint/create token metadata maps.
+ - 259:2. Add optional `to_` recipient for admin mint flows (marketplace + unified).
+ - 260:3. Enforce stricter unified create param validation for model consistency.
+ - 262:### Phase 4: Deployment robustness + style resolver cleanup
+ - 263:1. Integrate and document global-constant deployment path.
+ - 264:2. Add per-style originate smoke matrix.
+ - 265:3. Fix custom module resolution for allowlist/bonding combinations.
+ - 267:### Phase 5: Regression + E2E expansion
+ - 268:1. E2E per-style matrix: create token, mint/buy/offer flows where applicable.
+ - 269:2. Confirm all styles deploy and at least one token lifecycle works end-to-end.
+ - 273:## Definition of Done
+
+## Bowers/docs/DEPLOYMENT-GUIDE.md
+ - 1:# Bowers Deployment Guide — Lessons Learned
+ - 10:## Table of Contents
+ - 12:1. [The Correct Deployment Pathway](#the-correct-deployment-pathway)
+ - 13:2. [Wallet Choice: Why Temple, Not Kukai](#wallet-choice-why-temple-not-kukai)
+ - 14:3. [The Kukai Bug — Full Explanation](#the-kukai-bug--full-explanation)
+ - 15:4. [The Accidental Mainnet Deploy](#the-accidental-mainnet-deploy)
+ - 16:5. [Beacon SDK Lifecycle Pitfalls](#beacon-sdk-lifecycle-pitfalls)
+ - 17:6. [The "Preparing Transaction Forever" Problem](#the-preparing-transaction-forever-problem)
+ - 18:7. [Why Contracts Didn't Appear in My Contracts](#why-contracts-didnt-appear-in-my-contracts)
+ - 19:8. [Network Migration: Ghostnet to Shadownet](#network-migration-ghostnet-to-shadownet)
+ - 20:9. [Importing Existing Contracts](#importing-existing-contracts)
+ - 21:10. [Quick Reference](#quick-reference)
+ - 25:## The Correct Deployment Pathway
+ - 29:### Prerequisites
+ - 31:1. **Install Temple Wallet** — the browser extension from [templewallet.com](https://templewallet.com).
+ - 35:2. **Create a Shadownet account in Temple** — open Temple, go to Settings, and switch
+ - 38:3. **Fund your account** — visit the [Shadownet faucet](https://faucet.shadownet.teztnets.com)
+ - 41:### Deployment Steps
+ - 43:1. **Log in to Bowers** and navigate to the dashboard.
+ - 44:2. **Connect your wallet** — click "Connect Wallet" and select Temple in the Beacon dialog.
+ - 46:3. **Create a new collection** — click "New Collection" and walk through the wizard:
+ - 50:4. **Click Deploy** — the app will:
+ - 54:5. **Wait for Temple to prompt** — contract origination is a heavy operation. It can
+ - 58:6. **Approve in Temple** — review the fee and click Confirm.
+ - 59:7. **Wait for on-chain confirmation** — the app waits up to 120 seconds for the
+ - 67:## Wallet Choice: Why Temple, Not Kukai
+ - 90:## The Kukai Bug — Full Explanation
+ - 95:1. Receive the operation payload
+ - 96:2. Simulate it against an RPC node to estimate gas and storage costs
+ - 97:3. Show the user a confirmation dialog with the estimated fees
+ - 98:4. Sign and inject the operation
+ - 117:### What we tried (and why it didn't work)
+ - 130:## The Accidental Mainnet Deploy
+ - 135:1. The Beacon SDK `requestPermissions()` call did not explicitly specify
+ - 137:2. Temple wallet was set to mainnet internally.
+ - 138:3. When `Tezos.wallet.originate().send()` is called, the Beacon SDK
+ - 142:4. So even though TezosToolkit was configured with a testnet RPC, Temple
+ - 145:### The fix: chain ID verification
+ - 157:### Lesson learned
+ - 166:## Beacon SDK Lifecycle Pitfalls
+ - 170:### Multiple instances crash the SDK
+ - 180:### Don't destroy the adapter on reconnect
+ - 192:### Stale pairings in localStorage
+ - 204:## The "Preparing Transaction Forever" Problem
+ - 221:## Why Contracts Didn't Appear in My Contracts
+ - 227:### Root cause
+ - 232:1. Looked up the user's **linked wallets** from the `wallets` table
+ - 233:2. Returned contracts whose `ownerAddress` matched one of those wallets
+ - 239:### Fix (applied)
+ - 241:1. **Auto-link on deploy:** When a contract is created, the server automatically
+ - 244:2. **Query by userId too:** `getContractsByUserId()` now also returns contracts
+ - 250:## Network Migration: Ghostnet to Shadownet
+ - 269:## Importing Existing Contracts
+ - 274:1. Go to the **My Contracts** dashboard
+ - 275:2. Click **Import Existing**
+ - 276:3. Enter the KT1 address and select the network (Shadownet or Mainnet)
+ - 277:4. Click **Import Contract**
+ - 290:## Quick Reference
+
+## Bowers/docs/README.md
+ - 1:# Documentation Index
+ - 3:## Canonical Reports
+ - 7:## Provenance Artifacts
+
+## Bowers/docs/REPORT_REMEDIATION_PLAN.md
+ - 1:# Bowers Report Remediation Plan
+ - 5:## Completed in this pass
+ - 7:### 1) Deployment readiness hardening
+ - 16:### 2) Network clarity and consistency
+ - 29:### 3) UI contract-style coverage guardrails
+ - 40:### 4) Type-safety cleanup discovered during validation
+ - 44:## Verification run
+ - 49:## Added in this continuation pass
+ - 51:### 5) Expanded e2e safety net
+ - 63:### 6) CI pre-deploy quality gate
+ - 72:## Remaining follow-up items (outside this pass)
+ - 77:## Added in this continuation pass (week 1 follow-through)
+ - 79:### 7) Auth session stability under production-mode smoke
+ - 85:### 8) Additional e2e coverage for protected routes and dashboard import UX
+ - 98:## Verification run (updated)
+
+## Conflict-Atlas/README.md
+ - 1:# Conflict Atlas
+ - 5:## What it does
+ - 18:## Run locally
+ - 36:## API endpoints
+ - 48:## Data model
+ - 59:## Current classification strategy
+ - 75:## Practical fallback if headline-only is insufficient
+ - 79:1. **Headline stage (existing):** detect candidate conflict items quickly.
+ - 80:2. **Selective enrichment stage:** only fetch full article text for low-confidence or high-impact events.
+
+## Discord Bots/COMMANDS.md
+ - 1:# Command Reference
+ - 5:## 👤 User Commands (Everyone)
+ - 7:### Stats & Progress
+ - 17:### Leaderboards
+ - 24:### Image Challenges
+ - 30:### Trait Ideas
+ - 44:## 🛡️ Moderator Commands
+ - 48:### XP Management
+ - 55:### Image Challenges
+ - 62:### Trait Management
+ - 67:### Tezos Verification
+ - 75:## 🎵 DJ Commands (Music Playback)
+ - 79:### Basic Playback
+ - 90:### Queue & Info
+ - 98:### Playback Modes
+ - 106:### Playlists
+ - 120:## 👑 Admin Commands
+ - 124:### Advanced XP Management
+ - 129:### Bot Management
+ - 137:## 💡 Quick Tips
+ - 139:### For Users
+ - 140:- **Earn XP by being active**: Send messages, react to posts, join voice channels
+ - 141:- **Complete challenges**: Respond to image challenges for bonus XP
+ - 142:- **Submit ideas**: Suggest traits that might get adopted for big rewards
+ - 143:- **Check progress often**: Use `!stats` to see how close you are to leveling up
+ - 144:- **Compete**: Check `!leaderboard` to see how you rank
+ - 146:### For Moderators
+ - 147:- **Review promptly**: Check the moderator review channel regularly
+ - 148:- **Be generous**: Reward quality contributions to encourage engagement
+ - 149:- **Verify holders**: Use `!verifytezos` to give token holders their badge
+ - 150:- **Adopt good traits**: Use `!adoptrait` to reward creative ideas
+ - 152:### For Admins
+ - 153:- **Monitor stats**: Use `!botstats` to track engagement
+ - 154:- **Balance XP**: Adjust values in `.env` if leveling is too fast/slow
+ - 155:- **Reload on updates**: Use `!reload <cog>` to update without downtime
+ - 156:- **Backup regularly**: Copy `bot_database.db` periodically
+ - 160:## 📊 XP Earning Rates (Default)
+ - 177:## 🎮 Command Aliases
+ - 187:## ❓ Help
+ - 203:## 🎯 Common Workflows
+ - 205:### Posting a Challenge
+ - 207:1. !postchallenge https://imgur.com/image.png shadow too dark, lighting off
+ - 208:2. Users respond via button or !respond command
+ - 209:3. Review responses in moderator channel
+ - 210:4. Click bonus buttons to award extra XP
+ - 213:### Managing Trait Ideas
+ - 215:1. User: !suggest "Holographic Wings" Shimmering color-changing wings
+ - 216:2. View all traits: !alltraits pending
+ - 217:3. Adopt the good ones: !adoptrait 5
+ - 218:4. User automatically gets bonus XP and notification
+ - 221:### Verifying Token Holders
+ - 223:1. User proves ownership (your verification method)
+ - 224:2. !verifytezos @user
+ - 225:3. User gets role + 50 XP bonus
+ - 226:4. Shows up with 💎 badge on leaderboard
+
+## Discord Bots/DJ_GUIDE.md
+ - 1:# DJ Agent Guide
+ - 5:## 🎵 Overview
+ - 14:## 📋 Requirements
+ - 16:### 1. FFmpeg
+ - 20:- **macOS**: `brew install ffmpeg`
+ - 21:- **Windows**: `choco install ffmpeg` or [manual install](FFMPEG_INSTALL.md)
+ - 22:- **Linux**: `sudo apt install ffmpeg`
+ - 26:### 2. Voice Channel Permissions
+ - 32:### 3. Music Source Channel
+ - 35:## ⚙️ Configuration
+ - 40:# Channel IDs
+ - 44:# DJ Settings
+ - 53:### Configuration Options
+ - 66:## 🎮 Commands
+ - 68:### Basic Playback
+ - 80:### Queue Management
+ - 89:### Music Library
+ - 97:### Playback Modes
+ - 106:### Playlist Management
+ - 119:## 📚 Usage Examples
+ - 121:### Basic Playback
+ - 136:### Creating a Playlist
+ - 154:### 24/7 Random Mode
+ - 166:## 🎯 Workflows
+ - 168:### Setting Up Music Library
+ - 170:1. **Create Channel**
+ - 175:2. **Configure Bot**
+ - 180:3. **Upload Music**
+ - 185:4. **Verify Library**
+ - 190:### Setting Up 24/7 Music
+ - 192:1. **Create Dedicated Voice Channel**
+ - 197:2. **Configure**
+ - 204:3. **Start Playback**
+ - 211:4. **Bot will:**
+ - 216:### Creating Themed Playlists
+ - 218:1. **Browse Library**
+ - 223:2. **Create Playlist**
+ - 228:3. **Add Songs**
+ - 235:4. **Play Later**
+ - 240:## 🔧 Advanced Features
+ - 242:### Music Caching
+ - 249:### Auto Library Scanning
+ - 255:### Smart Queue Management
+ - 261:### Play Count Tracking
+ - 266:## 🎨 Customization
+ - 268:### Volume Presets
+ - 276:### Playlist Themes
+ - 278:- **Chill Lofi** - Relaxing background music
+ - 279:- **Hype Tracks** - Energy boosters
+ - 280:- **Study Music** - Focus music
+ - 281:- **Community Favorites** - Most played tracks
+ - 282:- **New Arrivals** - Recently added songs
+ - 284:## 📊 Statistics
+ - 293:## ⚠️ Troubleshooting
+ - 295:### Bot won't play music
+ - 296:1. Check FFmpeg is installed: `ffmpeg -version`
+ - 297:2. Verify bot has voice permissions
+ - 298:3. Check if bot is in a voice channel: `!join`
+ - 299:4. Ensure music library isn't empty: `!library`
+ - 301:### "No songs found"
+ - 302:1. Upload MP3 files to "HEY DJ!" channel
+ - 303:2. Run `!scan` to index them
+ - 304:3. Check channel ID is configured correctly
+ - 306:### Music stuttering/laggy
+ - 307:1. Lower volume: `!volume 40`
+ - 308:2. Check server connection
+ - 309:3. Enable caching: `DJ_CACHE_MUSIC=true`
+ - 310:4. Reduce cache size limit if disk space low
+ - 312:### Bot disconnects frequently
+ - 313:1. Enable auto-reconnect: `DJ_AUTO_RECONNECT=true`
+ - 314:2. Set default voice channel: `DJ_VOICE_CHANNEL_ID`
+ - 315:3. Check bot has stable connection
+ - 317:### "Permission denied" errors
+ - 318:1. Verify bot has Connect + Speak permissions
+ - 319:2. Check voice channel isn't user-limited
+ - 320:3. Ensure bot role can access voice channel
+ - 322:## 🎵 Tips & Best Practices
+ - 324:### For Server Admins
+ - 331:### For Users
+ - 338:### For 24/7 Operation
+ - 345:## 🚀 Advanced Configuration
+ - 347:### Custom Music Cache Location
+ - 353:### Scan Interval
+ - 360:### Queue Size in Random Mode
+ - 366:## 📈 Future Enhancements
+ - 369:- [ ] Playlist shuffle
+ - 370:- [ ] Queue export/import
+ - 371:- [ ] Music requests with votes
+ - 372:- [ ] DJ role restrictions
+ - 373:- [ ] Audio effects/filters
+ - 374:- [ ] Lyrics display
+ - 375:- [ ] Song recommendations
+ - 376:- [ ] Crossfade between tracks
+ - 377:- [ ] DJ statistics dashboard
+
+## Discord Bots/DJ_QUICKSTART.md
+ - 1:# DJ Quick Start
+ - 5:## ✅ Prerequisites
+ - 7:1. **Install FFmpeg**
+ - 19:2. **Install Python dependencies**
+ - 24:## 🎵 Setup Steps
+ - 26:### 1. Create "HEY DJ!" Channel
+ - 29:### 2. Get Channel ID
+ - 37:### 3. Upload Music
+ - 42:### 4. Start Playing
+ - 50:## 🎮 Essential Commands
+ - 52:### Join & Play
+ - 62:### Queue
+ - 69:### Modes
+ - 76:### Playlists
+ - 84:## 🔥 Pro Tips
+ - 86:### 24/7 Music Server
+ - 88:# In .env
+ - 99:# Bot plays continuously!
+ - 102:### Organize Your Music
+ - 108:### Performance
+ - 113:## ❓ Troubleshooting
+ - 130:## 📚 Learn More
+
+## Discord Bots/FFMPEG_INSTALL.md
+ - 1:# FFmpeg Installation Guide
+ - 5:## macOS
+ - 7:### Using Homebrew (Recommended)
+ - 12:### Verify Installation
+ - 17:## Windows
+ - 19:### Option 1: Using Chocolatey (Recommended)
+ - 24:### Option 2: Manual Installation
+ - 25:1. Download FFmpeg from https://ffmpeg.org/download.html
+ - 26:2. Extract the files to `C:\ffmpeg`
+ - 27:3. Add `C:\ffmpeg\bin` to your system PATH:
+ - 34:### Verify Installation
+ - 39:## Linux
+ - 41:### Ubuntu/Debian
+ - 47:### Fedora
+ - 52:### Arch Linux
+ - 57:### Verify Installation
+ - 62:## Troubleshooting
+ - 64:### "ffmpeg not found" error
+ - 69:### Permission errors on Linux/Mac
+ - 74:### Python can't find ffmpeg
+
+## Discord Bots/PROJECT_STRUCTURE.md
+ - 1:# Project Structure
+ - 5:## 📁 File Structure
+ - 36:## 🏗️ Architecture
+ - 38:### Master Bot (`bot.py`)
+ - 44:### Configuration (`config.py`)
+ - 49:### Database Layer (`database.py`)
+ - 55:### Agent System (`cogs/`)
+ - 57:#### Core Agent
+ - 65:#### Image Challenge Agent
+ - 74:#### Trait Ideas Agent
+ - 82:#### Admin Commands
+ - 90:#### Leaderboard
+ - 98:## 🗄️ Database Schema
+ - 100:### `users`
+ - 113:### `point_transactions`
+ - 125:### `image_challenges`
+ - 137:### `challenge_responses`
+ - 151:### `trait_ideas`
+ - 164:### `level_roles`
+ - 172:## 🔄 Data Flow
+ - 174:### XP Award Flow
+ - 176:1. Event occurs (message, reaction, etc.)
+ - 178:2. Agent validates event
+ - 180:3. Agent calls db.add_xp()
+ - 182:4. Database updates XP and calculates new level
+ - 184:5. Transaction logged
+ - 186:6. If level up: announcement sent
+ - 188:7. Return result to agent
+ - 191:### Challenge Flow
+ - 193:1. Admin posts challenge → database
+ - 195:2. User submits response → database
+ - 197:3. Base XP awarded immediately
+ - 199:4. Response sent to moderator channel
+ - 201:5. Moderator reviews → awards bonus
+ - 203:6. Bonus XP added → database
+ - 205:7. User notified of bonus
+ - 208:### Trait Adoption Flow
+ - 210:1. User submits trait → database (5 XP)
+ - 212:2. Moderator reviews submissions
+ - 214:3. Moderator adopts trait
+ - 216:4. Database marks as adopted (100 XP)
+ - 218:5. Check adoption count
+ - 220:6. If ≥3: Award Trait Master role
+ - 222:7. User notified
+ - 225:## 🔌 Extension Points
+ - 227:### Adding New Agents
+ - 229:1. **Create cog file**: `cogs/my_agent.py`
+ - 246:2. **Register in bot.py**:
+ - 255:3. **Reload without restart**:
+ - 260:### Adding Database Tables
+ - 262:1. **Add to `database.py`**:
+ - 275:2. **Add query methods**:
+ - 285:### Adding Configuration
+ - 287:1. **Add to `config.example.env`**:
+ - 292:2. **Add to `config.py`**:
+ - 297:3. **Use in agents**:
+ - 303:## 🔐 Security Considerations
+ - 305:### Token Security
+ - 310:### Role-Based Access
+ - 315:### Database Safety
+ - 320:### Rate Limiting
+ - 325:## 📊 Performance
+ - 327:### Efficiency Features
+ - 333:### Scalability
+ - 339:## 🔧 Maintenance
+ - 341:### Regular Tasks
+ - 347:### Monitoring
+ - 352:### Updates
+ - 357:## 🎯 Design Principles
+ - 359:1. **Modularity**: Each agent is independent
+ - 360:2. **Extensibility**: Easy to add new features
+ - 361:3. **Transparency**: All XP changes logged
+ - 362:4. **Simplicity**: Clear command structure
+ - 363:5. **Engagement**: Reward active participation
+ - 364:6. **Fairness**: Cooldowns prevent abuse
+ - 366:## 📚 Dependencies
+ - 368:### Core
+ - 369:- **discord.py**: Discord API wrapper
+ - 370:- **aiosqlite**: Async SQLite
+ - 371:- **python-dotenv**: Environment management
+ - 373:### Built-in Python
+ - 378:## 🚀 Future Enhancements
+ - 382:- [ ] Web dashboard
+ - 383:- [ ] Slash commands
+ - 384:- [ ] Multi-server support
+ - 385:- [ ] Scheduled challenges
+ - 386:- [ ] Automated backups
+ - 387:- [ ] More challenge types
+ - 388:- [ ] Achievement system
+ - 389:- [ ] Streak tracking
+ - 390:- [ ] Economy system (redeem XP)
+ - 391:- [ ] Seasonal events
+
+## Discord Bots/QUICKSTART.md
+ - 1:# Quick Start Guide
+ - 5:## ⚡ Fast Setup
+ - 7:### 1. Install Dependencies
+ - 9:# Python packages
+ - 12:# FFmpeg for music playback
+ - 13:# macOS: brew install ffmpeg
+ - 14:# Windows: choco install ffmpeg  
+ - 15:# Linux: sudo apt install ffmpeg
+ - 18:### 2. Create Your Bot
+ - 19:1. Go to https://discord.com/developers/applications
+ - 20:2. Click "New Application"
+ - 21:3. Go to "Bot" → "Add Bot"
+ - 22:4. Enable ALL three intents under "Privileged Gateway Intents"
+ - 23:5. Copy the bot token
+ - 25:### 3. Configure
+ - 38:### 4. Invite Bot
+ - 44:### 5. Run
+ - 49:## 🎮 Test It Out
+ - 65:## 📖 Next Steps
+ - 67:- **Full setup**: See [SETUP.md](SETUP.md)
+ - 68:- **All commands**: See [COMMANDS.md](COMMANDS.md)
+ - 69:- **Full docs**: See [README.md](README.md)
+ - 71:## 🎯 Key Features to Try
+ - 73:### 1. DJ Music
+ - 83:### 2. Image Challenge
+ - 89:### 3. Trait Ideas
+ - 98:### 4. Tezos Verification
+ - 103:## ⚙️ Adjust XP Values
+ - 108:# Faster leveling
+ - 112:# Slower leveling  
+ - 117:## 🐛 Common Issues
+ - 134:## 🎉 You're Ready!
+
+## Discord Bots/README.md
+ - 1:# Discord XP & Engagement Bot System
+ - 2:## Complete User Manual
+ - 8:## 📖 Table of Contents
+ - 10:### Getting Started
+ - 11:1. [Overview](#-overview)
+ - 12:2. [Features](#-features)
+ - 13:3. [Requirements](#-requirements)
+ - 14:4. [Installation](#-installation)
+ - 15:5. [Configuration](#-configuration)
+ - 16:6. [First Time Setup](#-first-time-setup)
+ - 18:### Core Systems
+ - 19:7. [XP & Leveling System](#-xp--leveling-system-detailed)
+ - 20:8. [DJ Music System](#-dj-music-system-detailed)
+ - 21:9. [Image Challenge System](#-image-challenge-system-detailed)
+ - 22:10. [Trait Ideas System](#-trait-ideas-system-detailed)
+ - 23:11. [Tezos Verification](#-tezos-verification-detailed)
+ - 24:12. [Leaderboards & Stats](#-leaderboards--stats-detailed)
+ - 26:### User Guides
+ - 27:13. [For Server Members](#-for-server-members)
+ - 28:14. [For Moderators](#-for-moderators)
+ - 29:15. [For Administrators](#-for-administrators)
+ - 31:### Reference
+ - 32:16. [All Commands](#-complete-command-reference)
+ - 33:17. [Configuration Options](#-configuration-reference)
+ - 34:18. [Database Schema](#-database-schema-detailed)
+ - 35:19. [Troubleshooting](#-troubleshooting-guide)
+ - 36:20. [Best Practices](#-best-practices--tips)
+ - 37:21. [FAQs](#-frequently-asked-questions)
+ - 39:### Advanced
+ - 40:22. [Customization](#-customization--extension)
+ - 41:23. [Architecture](#-technical-architecture)
+ - 42:24. [Security](#-security-considerations)
+ - 43:25. [Performance](#-performance-optimization)
+ - 47:## 🎯 Overview
+ - 51:- **Engagement Rewards**: Users earn XP through natural Discord activities
+ - 52:- **Music Entertainment**: 24/7 music playback from community-uploaded songs
+ - 53:- **Interactive Challenges**: Creative tasks with rewards
+ - 54:- **Community Input**: Trait suggestion system for projects
+ - 55:- **Token Integration**: Special benefits for token holders
+ - 66:## 🌟 Features
+ - 68:### Core XP System
+ - 69:- **Automatic XP Tracking**: Earn XP from messages, reactions, and voice channel activity
+ - 70:- **Level Progression**: Dynamic leveling system with configurable XP requirements
+ - 71:- **Cooldown Management**: Prevent spam with message cooldown system
+ - 72:- **Real-time Announcements**: Celebrate level-ups instantly
+ - 74:### 🎵 DJ Music System
+ - 75:- **Music Playback**: Play MP3 files from dedicated "HEY DJ!" channel
+ - 76:- **Playlist Management**: Create, edit, and share custom playlists
+ - 77:- **24/7 Random Mode**: Continuous random playback with auto-reconnect
+ - 78:- **Smart Queue**: Automatic queue management and track caching
+ - 79:- **Music Library**: Automatic scanning and indexing of uploaded songs
+ - 80:- **Full Controls**: Play, pause, skip, volume, loop, and more
+ - 82:### 🎯 Image Challenge Agent
+ - 89:### 💡 Trait Ideas Agent
+ - 96:### 💎 Tezos Verification System
+ - 101:### 🏆 Leaderboards & Stats
+ - 107:### 🛠️ Admin Controls
+ - 115:## 📋 Requirements
+ - 123:## 🚀 Quick Start
+ - 125:### 1. Installation
+ - 128:# Clone or download this repository
+ - 131:# Install dependencies
+ - 134:# Install FFmpeg for music playback
+ - 135:# macOS: brew install ffmpeg
+ - 136:# Windows: choco install ffmpeg
+ - 137:# Linux: sudo apt install ffmpeg
+ - 138:# See FFMPEG_INSTALL.md for details
+ - 141:### 2. Configuration
+ - 143:1. Copy the example environment file:
+ - 148:2. Edit `.env` with your settings:
+ - 155:### 3. Create Your Discord Bot
+ - 157:1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+ - 158:2. Create a New Application
+ - 159:3. Go to the "Bot" section
+ - 160:4. Click "Add Bot"
+ - 161:5. Enable these Intents:
+ - 165:6. Copy the bot token to your `.env` file
+ - 167:### 4. Invite the Bot
+ - 174:### 5. Run the Bot
+ - 182:## 📊 XP & Leveling System (Detailed)
+ - 184:### How XP Works
+ - 188:#### **Message XP**
+ - 189:- **Amount**: 1 XP per message (configurable)
+ - 190:- **Cooldown**: 60 seconds between XP awards (prevents spam)
+ - 191:- **How it works**: Users earn XP for sending messages in any channel
+ - 192:- **Example**: User sends "Hello!" → Earns 1 XP (must wait 60s for next XP)
+ - 194:#### **Reaction XP**
+ - 195:- **Amount**: 2 XP per reaction (configurable)
+ - 196:- **Trigger**: Reacting to bot or agent messages
+ - 197:- **How it works**: Encourages engagement with bot-posted content
+ - 198:- **Example**: User reacts 👍 to challenge post → Earns 2 XP
+ - 200:#### **Voice Channel XP**
+ - 201:- **Amount**: 5 XP per minute (configurable)
+ - 202:- **Tracking**: Automatic while in any voice channel
+ - 203:- **How it works**: Bot tracks join/leave times
+ - 204:- **Example**: User in voice for 10 minutes → Earns 50 XP
+ - 206:#### **Challenge Response XP**
+ - 207:- **Base**: 10 XP for submitting (configurable)
+ - 208:- **Bonus**: 0-50 XP from moderator review (configurable)
+ - 209:- **How it works**: Submit responses to image challenges
+ - 210:- **Example**: User submits answer → 10 XP immediate + potential 25 XP bonus
+ - 212:#### **Trait Submission XP**
+ - 213:- **Submission**: 5 XP per trait idea (configurable)
+ - 214:- **Adoption**: 100 XP when trait is adopted (configurable)
+ - 215:- **How it works**: Submit creative ideas for the project
+ - 216:- **Example**: User suggests "Fire Wings" → 5 XP, if adopted → 100 XP bonus
+ - 218:#### **Tezos Verification Bonus**
+ - 219:- **Amount**: 50 XP one-time bonus
+ - 220:- **How it works**: Moderator verifies token ownership
+ - 221:- **Example**: User proves token ownership → 50 XP + role + badge
+ - 223:### Level Progression
+ - 228:- **Level 2**: 100 XP total
+ - 229:- **Level 3**: 250 XP total (+150 from Level 2)
+ - 230:- **Level 4**: 475 XP total (+225 from Level 3)
+ - 231:- **Level 5**: 812 XP total (+337 from Level 4)
+ - 232:- **Level 10**: ~5,000 XP total
+ - 233:- **Level 20**: ~300,000 XP total
+ - 241:### Level-Up Announcements
+ - 258:### Viewing Your Progress
+ - 282:### Transaction History
+ - 298:## 🎵 DJ Music System (Detailed)
+ - 300:### Setup Process
+ - 302:#### 1. Install FFmpeg
+ - 322:#### 2. Create Music Channel
+ - 332:#### 3. Configure Bot
+ - 342:#### 4. Optional: 24/7 Voice Channel
+ - 351:### Music Library
+ - 353:#### Uploading Music
+ - 356:1. Click the + button in the channel
+ - 357:2. Upload MP3 file
+ - 358:3. Bot automatically detects and indexes it (within 30 minutes)
+ - 359:4. Or moderator can run `!scan` for immediate indexing
+ - 376:#### Automatic Scanning
+ - 390:#### Browsing the Library
+ - 407:### Playback Controls
+ - 409:#### Basic Commands
+ - 445:#### Volume Control
+ - 460:- **20-30%**: Background ambiance
+ - 461:- **40-60%**: Normal listening
+ - 462:- **70-90%**: Party mode
+ - 463:- **100%**: Maximum (may cause audio distortion)
+ - 465:#### Now Playing
+ - 482:### Queue Management
+ - 484:#### Viewing the Queue
+ - 500:#### Queue Behavior
+ - 517:### Playback Modes
+ - 519:#### Random/Shuffle Mode
+ - 543:#### Loop Mode
+ - 560:### Playlists
+ - 562:#### Creating Playlists
+ - 576:#### Managing Playlists
+ - 600:#### Adding/Removing Tracks
+ - 618:#### Playing Playlists
+ - 635:#### Deleting Playlists
+ - 646:### 24/7 Music Setup
+ - 675:### Music Caching
+ - 678:1. First play: Downloads from Discord CDN
+ - 679:2. Saves to `music_cache/` folder
+ - 680:3. Subsequent plays: Uses cached file
+ - 681:4. Much faster, less bandwidth
+ - 700:### DJ Statistics
+ - 714:## 🎯 Image Challenge System (Detailed)
+ - 716:### Purpose
+ - 725:### Creating Challenges (Moderators)
+ - 727:#### Step 1: Prepare Your Image
+ - 736:#### Step 2: Identify Known Issues
+ - 743:#### Step 3: Post Challenge
+ - 763:#### Optional: Dedicated Channel
+ - 772:### Responding to Challenges (Users)
+ - 774:#### Method 1: Interactive Button
+ - 776:1. Click "Submit Response" button on challenge
+ - 777:2. Modal appears with text box
+ - 778:3. Type your answer
+ - 779:4. Submit
+ - 786:#### Method 2: Command
+ - 797:### User Rewards
+ - 809:### Moderator Review Process
+ - 811:#### Review Queue
+ - 827:#### Awarding Bonus Points
+ - 837:1. Click "Custom Amount" button
+ - 838:2. Enter value (0-500)
+ - 839:3. Submit
+ - 846:#### Response Evaluation
+ - 865:### Challenge Statistics
+ - 878:### Best Practices for Challenges
+ - 882:1. **Quality Images**: Use high-resolution, clear images
+ - 883:2. **Clear Goals**: Specify what users should look for
+ - 884:3. **Timely Reviews**: Review responses within 24 hours
+ - 885:4. **Fair Bonuses**: Reward genuine effort and new insights
+ - 886:5. **Variety**: Mix difficulty levels
+ - 890:1. **Be Thorough**: Look carefully at entire image
+ - 891:2. **Be Specific**: "Shadow is off" < "Shadow angle doesn't match light source position"
+ - 892:3. **Be Original**: Try to find issues not obvious to everyone
+ - 893:4. **Be Constructive**: Frame as helpful feedback
+ - 894:5. **Be Timely**: Respond while challenge is fresh
+ - 896:### Configuration
+ - 920:## 💡 Trait Ideas System (Detailed)
+ - 922:### Purpose
+ - 926:### Submitting Ideas (Users)
+ - 948:### Viewing Trait Ideas
+ - 992:### Adopting Traits (Moderators)
+ - 1001:1. **User Notification:**
+ - 1006:2. **Channel Announcement:**
+ - 1012:3. **Database Update:**
+ - 1018:4. **Trait Master Role:**
+ - 1024:### Trait Master Role
+ - 1042:1. Server Settings → Roles
+ - 1043:2. Create "Trait Master"  
+ - 1044:3. Set color, icon, permissions
+ - 1045:4. Copy ID to config
+ - 1047:### Use Cases
+ - 1065:### Best Practices
+ - 1069:1. **Be Creative**: Think outside the box
+ - 1070:2. **Be Clear**: Good descriptions help
+ - 1071:3. **Be Original**: Check existing traits first
+ - 1072:4. **Quality > Quantity**: Few great ideas > many mediocre
+ - 1073:5. **Be Persistent**: Not all ideas will be adopted
+ - 1077:1. **Review Regularly**: Check `!alltraits pending`
+ - 1078:2. **Communicate**: Explain why traits are/aren't adopted
+ - 1079:3. **Be Fair**: Adopt based on merit, not favorites
+ - 1080:4. **Credit Properly**: Use `!adoptrait` to ensure proper credit
+ - 1081:5. **Celebrate**: Make adoptions feel special
+ - 1083:### Configuration
+ - 1114:## 💎 Tezos Verification (Detailed)
+ - 1116:### Purpose
+ - 1120:### Verification Process
+ - 1123:1. User proves token ownership (your verification method)
+ - 1124:2. Could be:
+ - 1132:1. Verify proof is legitimate
+ - 1133:2. Run command:
+ - 1140:1. **Database Update**:
+ - 1144:2. **Role Assignment**:
+ - 1151:3. **XP Bonus**:
+ - 1155:4. **User Notification**:
+ - 1160:5. **Leaderboard Badge**:
+ - 1164:### Removing Verification
+ - 1179:### Configuration
+ - 1187:1. Server Settings → Roles
+ - 1188:2. Create "Tezos Holder"
+ - 1189:3. Set color (suggested: gold/blue)
+ - 1190:4. Set permissions (channel access, etc.)
+ - 1191:5. Copy ID to config
+ - 1195:# In config.py, modify the verification bonus in admin_commands.py
+ - 1199:### Holder Benefits
+ - 1210:### Verification Methods
+ - 1229:### Best Practices
+ - 1233:1. **Clear Process**: Document how users get verified
+ - 1234:2. **Quick Turnaround**: Verify within 24 hours
+ - 1235:3. **Privacy**: Don't share wallet addresses publicly
+ - 1236:4. **Audit**: Keep records of verifications
+ - 1237:5. **Regular Checks**: Re-verify periodically if needed
+ - 1241:1. **Follow Instructions**: Use the specified verification method
+ - 1242:2. **Be Patient**: Verification takes time
+ - 1243:3. **Provide Clear Proof**: Make it easy for mods
+ - 1244:4. **Keep Proof**: May need to re-verify later
+ - 1245:5. **Respect Privacy**: Don't share others' wallet info
+ - 1247:### Verification Security
+ - 1258:## 🏆 Leaderboards & Stats (Detailed)
+ - 1260:### Global Leaderboard
+ - 1301:4. Dave
+ - 1305:### Personal Stats
+ - 1319:1. **Level & XP**:
+ - 1324:2. **Progress Bar**:
+ - 1329:3. **Server Rank**:
+ - 1333:4. **Verification Status**:
+ - 1353:### Checking Your Rank
+ - 1368:### Comparing Users
+ - 1408:### Leveling System Information
+ - 1417:1. **All XP Sources**:
+ - 1425:2. **Level Requirements**:
+ - 1429:3. **Helpful Commands**:
+ - 1432:### Transaction History
+ - 1451:1. +100 XP [TraitIdeasAgent]
+ - 1455:2. +10 XP [ImageChallengeAgent]
+ - 1459:3. +1 XP [CoreAgent]
+ - 1464:### Leaderboard Dynamics
+ - 1477:### Statistics for Admins
+ - 1503:## 📊 Bot Architecture
+ - 1520:### Database Schema
+ - 1533:## 🎮 Commands
+ - 1535:### User Commands
+ - 1537:#### Core Commands
+ - 1544:#### Image Challenges
+ - 1548:#### Trait Ideas
+ - 1554:#### DJ Music
+ - 1566:### Moderator Commands
+ - 1579:### Admin Commands
+ - 1587:## ⚙️ Configuration Guide
+ - 1589:### XP Values
+ - 1606:### Leveling Formula
+ - 1621:### Role Setup
+ - 1625:1. **Moderator Role** - Can award bonuses, verify users
+ - 1626:2. **Admin Role** - Full bot control
+ - 1627:3. **Tezos Holder Role** - Given to verified token holders
+ - 1628:4. **Trait Master Role** - Given to users with 3+ adopted traits
+ - 1631:1. Enable Developer Mode in Discord (User Settings > Advanced)
+ - 1632:2. Right-click the role > Copy ID
+ - 1634:### Channel Setup
+ - 1638:- **Moderator Review Channel** - Where challenge responses are reviewed
+ - 1639:- **Image Challenge Channel** - Where challenges are posted
+ - 1640:- **Trait Ideas Channel** - Where trait submissions are announced
+ - 1641:- **Leaderboard Channel** - For automated leaderboard updates (future)
+ - 1642:- **HEY DJ! Channel** - Where users upload MP3 files for the music library
+ - 1644:## 🎵 DJ Music Workflow
+ - 1646:1. **Create "HEY DJ!" channel:**
+ - 1649:2. **Users upload music:**
+ - 1653:3. **Play music:**
+ - 1661:4. **Create playlists:**
+ - 1668:5. **24/7 Mode:**
+ - 1678:## 🎯 Image Challenge Workflow
+ - 1680:1. **Admin posts challenge:**
+ - 1685:2. **Users respond:**
+ - 1690:3. **Moderator reviews:**
+ - 1695:## 💡 Trait Ideas Workflow
+ - 1697:1. **User submits idea:**
+ - 1703:2. **Moderator adopts trait:**
+ - 1711:3. **View contributions:**
+ - 1718:## 🔧 Customization
+ - 1720:### Adding New Agents
+ - 1724:1. Create a new file in `cogs/` (e.g., `cogs/my_agent.py`)
+ - 1725:2. Follow the cog structure:
+ - 1750:3. Add to `bot.py` agent list:
+ - 1759:### Database Access
+ - 1790:## 👥 For Server Members
+ - 1794:### Getting Started
+ - 1797:1. Join the Discord server
+ - 1798:2. Start participating naturally
+ - 1799:3. Check your stats: `!stats`
+ - 1800:4. View how to earn XP: `!levels`
+ - 1801:5. See leaderboard: `!leaderboard`
+ - 1803:### Earning XP
+ - 1819:### Using the Bot
+ - 1844:### Leveling Strategy
+ - 1847:1. **Morning Routine** (5 min):
+ - 1852:2. **Throughout Day**:
+ - 1857:3. **Evening Check** (5 min):
+ - 1867:### Community Participation
+ - 1883:### Getting Verified
+ - 1886:1. Prepare proof of token ownership
+ - 1887:2. Follow server's verification process
+ - 1888:3. Submit to moderators
+ - 1889:4. Wait for approval
+ - 1890:5. Receive role + 50 XP bonus
+ - 1891:6. Get 💎 badge on leaderboard
+ - 1899:### Playlists Guide
+ - 1902:1. Browse library: `!library`
+ - 1903:2. Note song IDs you like
+ - 1904:3. Create playlist: `!playlist create My Mix`
+ - 1905:4. Add songs: `!playlist add 1 5` (playlist 1, song 5)
+ - 1906:5. Play it: `!playlist play 1`
+ - 1915:### Maximizing Your XP
+ - 1941:- **Daily total: 395 XP**
+ - 1943:### Understanding Levels
+ - 1946:- **Level 5** (~800 XP): Active member
+ - 1947:- **Level 10** (~5,000 XP): Committed member
+ - 1948:- **Level 15** (~15,000 XP): Core community
+ - 1949:- **Level 20** (~50,000 XP): Top contributor
+ - 1958:### Music System Guide
+ - 1961:1. Find your favorite MP3
+ - 1962:2. Go to #hey-dj channel
+ - 1963:3. Upload file
+ - 1964:4. Bot indexes it automatically
+ - 1978:### FAQs for Members
+ - 2003:## 🛡️ For Moderators
+ - 2007:### Your Responsibilities
+ - 2021:### Image Challenge Management
+ - 2026:1. Find/create high-quality image
+ - 2027:2. Identify 3-5 clear issues
+ - 2028:3. Upload to hosting service
+ - 2029:4. Get direct URL
+ - 2050:1. Read response
+ - 2051:2. Compare to known issues
+ - 2052:3. Check for new insights
+ - 2053:4. Click bonus button (10/25/50 XP)
+ - 2054:5. Or click "No Bonus" if basic
+ - 2057:- **50 XP**: Found multiple new issues, detailed analysis
+ - 2058:- **25 XP**: Found 1-2 new issues or very thorough
+ - 2059:- **10 XP**: Good effort, slight new perspective
+ - 2060:- **0 XP**: Only repeated known issues
+ - 2067:### Trait Management
+ - 2099:### Tezos Verification
+ - 2137:### XP Management
+ - 2170:### DJ Management
+ - 2190:### Moderator Commands Reference
+ - 2221:### Monitoring Engagement
+ - 2250:### Mod Best Practices
+ - 2278:### Handling Issues
+ - 2309:## 👑 For Administrators
+ - 2313:### Initial Setup
+ - 2351:### Configuration Tuning
+ - 2405:### Admin Commands
+ - 2428:### Monitoring & Analytics
+ - 2457:### Troubleshooting
+ - 2460:1. Check `.env` file exists
+ - 2461:2. Verify Discord token is valid
+ - 2462:3. Check Python version (3.8+)
+ - 2463:4. Install missing dependencies
+ - 2464:5. Check console for errors
+ - 2467:1. Verify intents enabled
+ - 2468:2. Check bot permissions
+ - 2469:3. Verify role IDs in config
+ - 2470:4. Check command prefix
+ - 2471:5. Review console logs
+ - 2474:1. Check cooldown settings
+ - 2475:2. Verify user isn't a bot
+ - 2476:3. Check agent is loaded
+ - 2477:4. Review console errors
+ - 2478:5. Test with `!addxp`
+ - 2481:1. Verify FFmpeg installed
+ - 2482:2. Check voice permissions
+ - 2483:3. Test with `!join`
+ - 2484:4. Verify music library not empty
+ - 2485:5. Check console for errors
+ - 2488:1. Check write permissions
+ - 2489:2. Verify file not corrupted
+ - 2490:3. Backup then delete `bot_database.db`
+ - 2491:4. Restart bot (recreates)
+ - 2492:5. Restore from backup if needed
+ - 2494:### Security Management
+ - 2519:### Backup & Recovery
+ - 2523:# Daily backup
+ - 2526:# Weekly backup
+ - 2532:# Cron job (daily at 2 AM)
+ - 2538:# Restore from backup
+ - 2541:# Restart bot
+ - 2558:### Scaling & Performance
+ - 2588:### Advanced Configuration
+ - 2605:### Bot Updates
+ - 2609:# Backup first
+ - 2612:# Pull new code
+ - 2615:# Install new dependencies
+ - 2618:# Hot-reload cogs (if minor)
+ - 2621:# Or restart (if major)
+ - 2622:# Ctrl+C then python bot.py
+ - 2632:### Community Management
+ - 2635:1. Set up bot completely
+ - 2636:2. Test all features
+ - 2637:3. Create announcement
+ - 2638:4. Explain features
+ - 2639:5. Host launch event
+ - 2655:### Support & Documentation
+ - 2680:## 🐛 Troubleshooting Guide
+ - 2682:### Bot won't start
+ - 2687:### Commands not working
+ - 2692:### Database errors
+ - 2696:### XP not being awarded
+ - 2701:## ❓ Frequently Asked Questions
+ - 2703:### General Questions
+ - 2720:### Setup Questions
+ - 2740:### XP & Leveling Questions
+ - 2766:### Music Questions
+ - 2792:### Challenge Questions
+ - 2812:### Trait Questions
+ - 2829:### Verification Questions
+ - 2843:### Technical Questions
+ - 2866:### Troubleshooting Questions
+ - 2883:### Performance Questions
+ - 2897:### Feature Requests
+ - 2916:## 📈 Best Practices & Tips
+ - 2918:### For All Users
+ - 2921:1. **Consistency** - Daily participation beats sporadic bursts
+ - 2922:2. **Quality** - Thoughtful contributions earn more respect and bonuses
+ - 2923:3. **Community** - Help others, celebrate together, build culture
+ - 2924:4. **Balance** - Don't burn out chasing XP, enjoy naturally
+ - 2925:5. **Communication** - Ask questions, give feedback, participate
+ - 2928:1. **Protect Info** - Don't share wallet private keys ever
+ - 2929:2. **Verify Carefully** - Follow proper verification processes
+ - 2930:3. **Report Issues** - Alert mods to bugs or abuse
+ - 2931:4. **Privacy** - Respect others' information
+ - 2932:5. **Be Safe** - Standard Discord safety practices apply
+ - 2934:### For Moderators
+ - 2937:1. Morning: Check overnight challenge responses (10 min)
+ - 2938:2. Midday: Scan trait submissions, answer questions (10 min)
+ - 2939:3. Evening: Post new challenge if needed, verify users (15 min)
+ - 2940:4. **Total: ~35 min/day**
+ - 2943:1. Review `!botstats` for health metrics
+ - 2944:2. Post 2-3 new challenges
+ - 2945:3. Check pending traits
+ - 2946:4. Plan themed events
+ - 2947:5. Adjust any issues
+ - 2955:### For Administrators
+ - 2958:1. Configure thoroughly before launch
+ - 2959:2. Test every feature personally
+ - 2960:3. Train moderator team
+ - 2961:4. Create documentation/FAQ
+ - 2962:5. Plan launch event
+ - 2965:1. Weekly stats review
+ - 2966:2. Monthly backups minimum
+ - 2967:3. Update bot when new versions release
+ - 2968:4. Monitor resource usage
+ - 2969:5. Gather community feedback
+ - 2972:1. Celebrate milestones
+ - 2973:2. Host XP competitions
+ - 2974:3. Feature top contributors
+ - 2975:4. Themed challenge weeks
+ - 2976:5. Regular engagement initiatives
+ - 2979:1. Tune XP values based on activity
+ - 2980:2. Adjust leveling speed for your community
+ - 2981:3. Balance features (disable unused ones)
+ - 2982:4. Monitor and optimize performance
+ - 2983:5. Keep documentation current
+ - 2987:## 🎯 Quick Reference Card
+ - 2989:### Essential Commands
+ - 3019:### XP At A Glance
+ - 3032:### Configuration Quick Guide
+ - 3035:# Essential
+ - 3041:# Optional Features
+ - 3047:# Tune XP
+ - 3054:### Troubleshooting Checklist
+ - 3057:- [ ] Python 3.8+ installed
+ - 3058:- [ ] Dependencies installed
+ - 3059:- [ ] `.env` file exists
+ - 3060:- [ ] Discord token valid
+ - 3061:- [ ] Intents enabled
+ - 3064:- [ ] Bot has permissions
+ - 3065:- [ ] Role IDs configured
+ - 3066:- [ ] Message content intent
+ - 3067:- [ ] Bot online in server
+ - 3068:- [ ] Correct command prefix
+ - 3071:- [ ] FFmpeg installed
+ - 3072:- [ ] DJ_ENABLED=true
+ - 3073:- [ ] Bot in voice channel
+ - 3074:- [ ] Music library not empty
+ - 3075:- [ ] Voice permissions granted
+ - 3077:### Emergency Procedures
+ - 3080:1. Rotate Discord bot token immediately
+ - 3081:2. Check `.env` file security
+ - 3082:3. Review recent commands/changes
+ - 3083:4. Backup database
+ - 3084:5. Audit permissions
+ - 3087:1. Stop bot immediately
+ - 3088:2. Backup current database
+ - 3089:3. Try to recover data
+ - 3090:4. Restore from backup if needed
+ - 3091:5. Investigate cause
+ - 3094:1. Use `!removexp` to penalize
+ - 3095:2. Consider message cooldown increase
+ - 3096:3. Warn/mute/ban offender
+ - 3097:4. Review transaction history
+ - 3098:5. Adjust XP values if needed
+ - 3101:1. Data persists (tied to user IDs)
+ - 3102:2. They keep XP if they return
+ - 3103:3. Leaderboard adjusts automatically
+ - 3104:4. No action needed unless cleaning database
+ - 3108:## 💡 Pro Tips & Secrets
+ - 3110:### Hidden Features
+ - 3112:1. **Transaction Transparency**: Every XP change is logged with reason
+ - 3113:2. **Voice Tracking**: Works even if user doesn't speak
+ - 3114:3. **Challenge Buttons**: Faster than commands, private submissions
+ - 3115:4. **Playlist Sharing**: Anyone can play any playlist
+ - 3116:5. **Level Math**: Use config.py functions to calculate exact XP needs
+ - 3118:### Power User Strategies
+ - 3139:### Admin Secrets
+ - 3163:## 📚 Additional Resources
+ - 3165:### Documentation Files
+ - 3167:- **[SETUP.md](SETUP.md)** - Detailed setup walkthrough
+ - 3168:- **[COMMANDS.md](COMMANDS.md)** - Complete command reference
+ - 3169:- **[DJ_GUIDE.md](DJ_GUIDE.md)** - Music system deep dive
+ - 3170:- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start
+ - 3171:- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Code architecture
+ - 3172:- **[FFMPEG_INSTALL.md](FFMPEG_INSTALL.md)** - FFmpeg installation
+ - 3174:### Community
+ - 3180:### Related Technologies
+ - 3182:- [Discord.py Documentation](https://discordpy.readthedocs.io/)
+ - 3183:- [Discord Developer Portal](https://discord.com/developers)
+ - 3184:- [Python 3 Documentation](https://docs.python.org/3/)
+ - 3185:- [SQLite Documentation](https://www.sqlite.org/docs.html)
+ - 3186:- [FFmpeg Documentation](https://ffmpeg.org/documentation.html)
+ - 3188:### Inspiration & Ideas
+ - 3198:## 🤝 Contributing
+ - 3211:## 📜 Changelog
+ - 3215:### Features
+ - 3227:### Roadmap
+ - 3228:- [ ] Slash Commands
+ - 3229:- [ ] Web Dashboard
+ - 3230:- [ ] XP Redemption System
+ - 3231:- [ ] Achievement Badges
+ - 3232:- [ ] Multi-Guild Support
+ - 3233:- [ ] Automated Challenges
+ - 3234:- [ ] Voice Activity Details
+ - 3235:- [ ] Economy System
+ - 3236:- [ ] Scheduled Events
+ - 3237:- [ ] Statistics Export
+ - 3241:## 1. **Set appropriate cooldowns** - Prevent spam without frustrating users
+ - 3242:2. **Balance XP values** - Make engagement rewarding but level-ups achievable
+ - 3243:3. **Review regularly** - Check challenge responses promptly to maintain engagement
+ - 3244:4. **Celebrate milestones** - Use level-up announcements to build excitement
+ - 3245:5. **Be transparent** - Use `!levels` command to show users how to earn XP
+ - 3246:6. **Backup religiously** - Database is your community's history
+ - 3247:7. **Listen to feedback** - Adjust based on what your community wants
+ - 3248:8. **Start conservative** - Easier to increase XP than decrease
+ - 3249:9. **Document clearly** - Help channel with pinned commands
+ - 3250:10. **Engage personally** - Admins/mods should actively use features
+ - 3252:## 🔒 Security
+ - 3259:## 📝 Database Backup
+ - 3271:## 🚀 Future Enhancements
+ - 3275:- [ ] Automated leaderboard updates in dedicated channel
+ - 3276:- [ ] Weekly/Monthly XP competitions
+ - 3277:- [ ] Streak bonuses for daily activity
+ - 3278:- [ ] Redeemable rewards system
+ - 3279:- [ ] Multi-guild support
+ - 3280:- [ ] Web dashboard
+ - 3281:- [ ] Slash commands support
+ - 3282:- [ ] More challenge types (polls, quizzes, etc.)
+ - 3283:- [ ] Achievements system
+ - 3284:- [ ] DJ song requests with voting
+ - 3285:- [ ] Audio effects and filters
+ - 3286:- [ ] Lyrics display integration
+ - 3287:- [ ] Role rewards at specific levels
+ - 3289:## 📄 License
+ - 3293:## 💬 Support
+ - 3296:1. Check this README thoroughly
+ - 3297:2. Review error messages in console
+ - 3298:3. Verify configuration in `.env`
+ - 3299:4. Check Discord bot permissions
+ - 3301:## 🎉 Credits
+ - 3304:- [discord.py](https://discordpy.readthedocs.io/) - Discord API wrapper
+ - 3305:- [aiosqlite](https://aiosqlite.omnilib.dev/) - Async SQLite
+ - 3306:- [python-dotenv](https://pypi.org/project/python-dotenv/) - Environment management
+
+## Discord Bots/SETUP.md
+ - 1:# Setup Guide
+ - 5:## Step 1: Create Discord Bot
+ - 7:1. Go to https://discord.com/developers/applications
+ - 8:2. Click "New Application"
+ - 9:3. Give it a name (e.g., "XP Master Bot")
+ - 10:4. Go to "Bot" tab in left sidebar
+ - 11:5. Click "Add Bot" → "Yes, do it!"
+ - 12:6. Under "Token", click "Reset Token" and copy it (save for later)
+ - 14:## Step 2: Enable Intents
+ - 18:1. Scroll down to "Privileged Gateway Intents"
+ - 19:2. Enable these three intents:
+ - 23:3. Click "Save Changes"
+ - 25:## Step 3: Get Your Server ID
+ - 27:1. Open Discord
+ - 28:2. Go to User Settings → Advanced
+ - 29:3. Enable "Developer Mode"
+ - 30:4. Right-click your server icon → "Copy ID"
+ - 31:5. Save this ID for later
+ - 33:## Step 4: Create Roles (In Discord)
+ - 37:1. **Admin** - For full bot control
+ - 38:2. **Moderator** - For reviewing challenges and verifying users
+ - 39:3. **Tezos Holder** - Auto-assigned to verified token holders
+ - 40:4. **Trait Master** - Auto-assigned after 3 adopted traits
+ - 47:## Step 5: Create Channels (Optional)
+ - 51:1. **#moderator-review** - Private channel for reviewing challenge responses
+ - 52:2. **#image-challenges** - Public channel for posting challenges
+ - 53:3. **#trait-ideas** - Public channel for trait submissions
+ - 54:4. **#leaderboard** - Public channel for stats (future use)
+ - 59:## Step 6: Install Python Dependencies
+ - 71:## Step 7: Configure Environment
+ - 73:1. Copy the example config:
+ - 78:2. Edit `.env` with your favorite text editor:
+ - 81:# Required Settings
+ - 85:# Required for full functionality
+ - 89:# Optional but recommended
+ - 96:# XP Settings (adjust to your preference)
+ - 108:# Leveling (default is good for most)
+ - 113:## Step 8: Invite Bot to Server
+ - 115:1. Go back to Discord Developer Portal
+ - 116:2. Click on your application
+ - 117:3. Go to "OAuth2" → "URL Generator"
+ - 118:4. Select scopes:
+ - 120:5. Select permissions:
+ - 131:6. Copy the generated URL at bottom
+ - 132:7. Open in browser and select your server
+ - 133:8. Click "Authorize"
+ - 135:## Step 9: Set Bot Permissions in Discord
+ - 137:1. In your Discord server, go to Server Settings → Roles
+ - 138:2. Drag the bot's role ABOVE the roles it needs to manage:
+ - 140:3. This is crucial for the bot to assign roles!
+ - 142:## Step 10: Run the Bot
+ - 164:## Step 11: Test Basic Commands
+ - 176:## Step 12: Test Admin Commands
+ - 187:## Troubleshooting
+ - 189:### Bot doesn't respond
+ - 195:### Can't use admin commands
+ - 200:### Bot crashes on startup
+ - 205:### Database errors
+ - 209:## Quick Reference
+ - 228:## Next Steps
+ - 230:1. **Customize XP values** in `.env` to match your community's activity level
+ - 231:2. **Announce the bot** to your community with `!levels` info
+ - 232:3. **Post your first challenge** with `!postchallenge`
+ - 233:4. **Monitor engagement** with `!botstats`
+ - 234:5. **Adjust and iterate** based on community feedback
+ - 236:## Getting Help
+ - 240:1. Check console output for error messages
+ - 241:2. Review this guide again
+ - 242:3. Verify all IDs in `.env` are correct
+ - 243:4. Try with minimal config (only TOKEN and GUILD_ID)
+ - 244:5. Check Discord API status: https://discordstatus.com/
+
+## Guidance/README.md
+ - 1:# Guidance
+ - 5:- **Objkt-Advisor**: creator-level scoring and deeper market signal interpretation.
+ - 6:- **TezPulse**: fast, contract-centric activity scanning across major marketplaces.
+ - 7:- **web3 simulator / nft-pipeline**: local-first archival architecture with replayable analytics.
+ - 9:## What Guidance does
+ - 11:1. Archives Tezos marketplace activity into a local SQLite database.
+ - 12:2. Pulls Objkt sales plus marketplace lifecycle events via GraphQL for creator scoring and event-state analytics.
+ - 13:3. Tracks marketplace contracts with confidence-scored discovery (static list + creator/alias inference).
+ - 14:4. Derives deeper analytics:
+ - 19:5. Supports scheduled sync jobs and retention controls.
+ - 20:6. Imports existing historical data from other local Sandbox projects.
+ - 21:7. Serves a browser dashboard with tabbed views for Network Health, NFT Market, Objkt Focus, and Data Ops.
+ - 23:## Tech stack
+ - 30:## Run
+ - 40:## Scripts
+ - 47:## API overview
+ - 92:## Data location
+ - 122:## Environment variables (optional)
+
+## Guidance/README_AI_AGENTS.md
+ - 1:# Guidance AI Agent README
+ - 5:## Project mission
+ - 14:## First files to read
+ - 26:## Runtime model
+ - 36:## Key data layers
+ - 61:## API groups that matter most
+ - 85:## Scheduler behavior
+ - 98:## Historical prefill context
+ - 111:## Commands
+ - 119:## Operational priorities for agents
+ - 137:## Known performance hotspots
+ - 143:## Minimal safe workflow for substantial data changes
+ - 145:1. Backup `data/guidance.db`.
+ - 146:2. Run migration/import in idempotent form.
+ - 147:3. Verify row parity/gap checks.
+ - 148:4. Run `refreshDerivedMetrics()`.
+ - 149:5. Run `rebuildDataChunks()`.
+ - 150:6. Refresh labels if address/name coverage changed.
+ - 151:7. Start server and verify `/api/admin/scheduler` + key analytics endpoints.
+
+## Guidance/data/research/BANDOG_API_RESEARCH.md
+ - 1:# Bandog (DoggoDog Labs) API research
+ - 5:## Findings
+ - 14:## Practical integration implication
+
+## Guidance/data/research/GUIDANCE_DATA_GAPS_AND_MAPPINGS.md
+ - 1:# Guidance: Added Data Mappings and Queries
+ - 3:## Added Objkt mappings (`raw_objkt_sales`)
+ - 10:## Added TzKT mappings (`raw_tzkt_transactions`)
+ - 19:## Import upgrades from existing DBs
+ - 25:## New API queries
+
+## Image-Battle-Arena/.continue/prompts/new-prompt.md
+
+## Image-Battle-Arena/client/requirements.md
+ - 1:## Packages
+ - 7:## Notes
+
+## Lil Guys/README.md
+ - 1:# Lil Guys Generator
+ - 5:## Features
+ - 7:### Current Functionality
+ - 8:- **Random Generation**: Generate 1 or 4 characters at once with randomized traits
+ - 9:- **Manual Selection**: Preview combinations by manually selecting traits from each category
+ - 10:- **Image Layering**: Properly layers traits in the correct order to create composite characters
+ - 11:- **Save Functionality**: Export generated characters as PNG images or JSON data
+ - 12:- **Responsive Design**: Clean, minimal interface that works on desktop and mobile
+ - 13:- **Offline Operation**: Runs entirely locally with no external dependencies
+ - 15:### Trait Categories
+ - 17:1. **Background** (Required)
+ - 18:2. **Skin** (Required) 
+ - 19:3. **Skin Variants** (Optional, Multiple allowed)
+ - 20:4. **Eyes** (Required)
+ - 21:5. **Noses** (Optional)
+ - 22:6. **Mouths** (Required)
+ - 23:7. **Legs Under Shoes** (Optional)
+ - 24:8. **Hair Layer 1** (Optional)
+ - 25:9. **Accessories** (Optional, Multiple allowed)
+ - 26:10. **Footwear** (Optional)
+ - 27:11. **Eye Accessories** (Optional)
+ - 28:12. **Tops** (Optional)
+ - 29:13. **Neck** (Optional)
+ - 30:14. **Legs Over Shoes** (Optional)
+ - 31:15. **Hair Layer 2** (Optional)
+ - 32:16. **Holding** (Optional)
+ - 33:17. **Speech Bubbles** (Optional)
+ - 34:18. **Coveralls** (Optional)
+ - 36:## Usage
+ - 38:1. **Open `index.html`** in any modern web browser
+ - 39:2. **Generate Characters**:
+ - 42:3. **Manual Preview**:
+ - 45:4. **Save Characters**:
+ - 49:## Technical Structure
+ - 51:### Current Implementation
+ - 52:- **HTML5 Canvas**: For image composition and export
+ - 53:- **Vanilla JavaScript**: No external dependencies
+ - 54:- **CSS Grid/Flexbox**: Responsive layout
+ - 55:- **File Structure**: Trait images organized in numbered folders
+ - 57:### Future Extensibility
+ - 61:#### Weighting System
+ - 67:#### Rules Engine (Planned)
+ - 85:#### Individual Trait Weights (Planned)
+ - 95:## Adding New Traits
+ - 97:1. **Add image files** to the appropriate numbered folder
+ - 98:2. **Update the trait list** in the `loadTraitsFromFolder()` function
+ - 99:3. **Images should be 256x256 pixels** for best results
+ - 100:4. **Use PNG format** with transparency for proper layering
+ - 102:## File Organization
+ - 129:## Browser Compatibility
+ - 131:- **Chrome/Edge**: Full support
+ - 132:- **Firefox**: Full support  
+ - 133:- **Safari**: Full support
+ - 134:- **Mobile browsers**: Responsive design supported
+ - 136:## Future Enhancements
+ - 138:- [ ] Advanced rule system for trait conflicts and dependencies
+ - 139:- [ ] Rarity/weighting system for individual traits
+ - 140:- [ ] Animation support for dynamic traits
+ - 141:- [ ] Batch export functionality
+ - 142:- [ ] Custom trait upload interface
+ - 143:- [ ] Character variation system
+ - 144:- [ ] Template/preset saving
+ - 146:## License
+
+## Lil Guys/trait_combinations_analysis.md
+ - 1:# Lil Guys Trait Combinations Analysis
+ - 3:## Trait Count by Category
+ - 5:### Required Categories (Always Present):
+ - 6:- **Background**: 2 options
+ - 7:- **Skin**: 17 options  
+ - 8:- **Eyes**: 21 options
+ - 9:- **Mouths**: 20 options
+ - 11:### Optional Categories with Special Rules:
+ - 12:- **Noses**: 3 options (50% chance of none, 75%/25% split between first two when present)
+ - 14:### Optional Categories (Present based on weight):
+ - 15:- **Skin Variants**: 5 options (weight: 0.3, allowMultiple: true)
+ - 16:- **Legs Under Shoes**: 0 options (empty folder)
+ - 17:- **Hair Layer 1**: 26 options (weight: 0.8)
+ - 18:- **Accessories**: 16 options (weight: 0.4, allowMultiple: true)
+ - 19:- **Footwear**: 14 options (weight: 0.6)
+ - 20:- **Eye Accessories**: 18 options (weight: 0.3)
+ - 21:- **Neck**: 16 options (weight: 0.4)
+ - 22:- **Legs Over Shoes**: 11 options (weight: 0.5)
+ - 23:- **Tops**: 23 options (weight: 0.7)
+ - 24:- **Hair Layer 2**: 37 options (weight: 0.6)
+ - 25:- **Holding**: 4 options (weight: 0.3)
+ - 26:- **Speech Bubbles**: 4 options (weight: 0.2)
+ - 27:- **Coveralls**: 1 option (weight: 0.1)
+ - 29:## Minimum Characters Needed
+ - 31:### For Required Traits Only:
+ - 34:### For ALL Possible Trait Combinations:
+ - 37:1. **Optional traits** can be present/absent
+ - 38:2. **Nose special rules** (3 states: none, first nose, second nose)
+ - 39:3. **Multiple traits allowed** in some categories
+ - 40:4. **Probabilistic generation** based on weights
+ - 42:### Simplified Maximum Calculation:
+ - 67:## Realistic Answer
+ - 69:### For showing ALL individual traits at least once:
+ - 75:### For seeing most trait combinations:
+ - 78:### Recommendation:
+ - 79:- **~100-500 characters** would give you a very good sampling of trait variety
+ - 80:- **~1,000-5,000 characters** would show most individual traits multiple times in different combinations
+ - 81:- **Complete coverage** is mathematically impractical due to the combinatorial explosion
+
+## Objkt-Advisor/SCORING_METHODOLOGY.md
+ - 1:# NFT Creator Investment Scoring Model - 5-Point System
+ - 3:## Overview
+ - 6:## Time Decay
+ - 7:- **Decay Factor**: 0.95 per month
+ - 8:- **Formula**: `value * (0.95 ^ months_ago)`
+ - 11:## Price Validation
+ - 13:- **Minimum**: 0.000001 XTZ
+ - 14:- **Maximum**: 1,000,000 XTZ
+ - 19:## 1. LIQUIDITY & MARKET ACTIVITY (20 points max)
+ - 21:### Purpose
+ - 24:### Parameters
+ - 25:- **Total Secondary Sales Count**: Number of valid secondary market sales
+ - 26:- **Secondary Volume (XTZ)**: Sum of all valid secondary sale prices
+ - 27:- **Months Active**: Time between first and last token mint (minimum 1 month)
+ - 28:- **Sales Per Month**: Total sales / months active
+ - 30:### Scoring Formula
+ - 39:### Output Metrics
+ - 45:## 2. PRICE APPRECIATION & ROI (25 points max)
+ - 47:### Purpose
+ - 50:### Parameters
+ - 51:- **Price Gain Per Sale**: `salePrice / primaryPrice` for each secondary sale
+ - 52:- **Average Gain**: Mean of all price gains
+ - 53:- **Median Gain**: Median of all price gains
+ - 54:- **Tokens Appreciated**: Percentage of tokens that have at least one sale above primary price
+ - 56:### Scoring Formula
+ - 65:### Output Metrics
+ - 72:## 3. CONSISTENCY & LONGEVITY (20 points max)
+ - 74:### Purpose
+ - 77:### Parameters
+ - 78:- **Years Active**: Time between first and last mint (minimum 0.1 years)
+ - 79:- **Tokens Per Year**: Total tokens / years active
+ - 80:- **Recent Mints Count**: Number of tokens minted in last 6 months
+ - 82:### Scoring Formula
+ - 91:### Output Metrics
+ - 98:## 4. MARKET MOMENTUM (20 points max)
+ - 100:### Purpose
+ - 103:### Parameters
+ - 104:- **Recent Sales Count**: Sales in last 6 months
+ - 105:- **Previous Sales Count**: Sales in 6-12 months ago
+ - 106:- **Recent Sales Velocity**: `recentSalesCount / previousSalesCount` (or 2.0 if no previous sales but has recent)
+ - 107:- **Recent Average Price**: Mean price of recent sales
+ - 108:- **Previous Average Price**: Mean price of previous sales
+ - 109:- **Recent Gain Trend**: `recentAvgPrice / previousAvgPrice`
+ - 110:- **Floor Price Metrics**: Calculated from minimum prices per period
+ - 116:### Scoring Formula
+ - 126:### Output Metrics
+ - 134:## 5. EDITION STRATEGY & SCARCITY (15 points max)
+ - 136:### Purpose
+ - 139:### Parameters
+ - 140:- **Average Edition Size**: Mean of all token supplies
+ - 141:- **Scarcity Ratio**: Percentage of tokens with supply ≤ 10
+ - 142:- **Price Strategy**: Consistency of primary prices (standard deviation relative to mean)
+ - 143:- **Edition Balance**: Penalty for extremes (ideal: 5-100 editions)
+ - 145:### Scoring Formula
+ - 168:### Output Metrics
+ - 174:## TOTAL SCORE CALCULATION
+ - 181:## Additional Calculated Metrics
+ - 191:## Data Requirements
+ - 193:### Input Data
+ - 194:- **Tokens**: Array of token objects with:
+ - 196:- **Sales**: Array of sale objects with:
+ - 199:### Data Filtering
+ - 206:## Potential Improvement Areas for Analysis
+ - 208:1. **Weighting Distribution**: Current weights may not reflect market reality
+ - 209:2. **Capping Thresholds**: Maximum values (100 sales, 1000 XTZ, etc.) may be too low/high
+ - 210:3. **Time Decay Application**: Currently defined but not explicitly applied in all calculations
+ - 211:4. **Floor Price Calculation**: Uses minimum price - may not account for outliers
+ - 212:5. **Velocity Calculation**: Handles edge cases but may need refinement
+ - 213:6. **Scarcity Definition**: Fixed threshold of ≤10 may not be optimal
+ - 214:7. **Edition Balance**: Ideal range (5-100) may need market-specific tuning
+ - 215:8. **Price Strategy**: Standard deviation approach may not capture all pricing patterns
+ - 216:9. **Missing Data Handling**: How to score creators with incomplete data
+ - 217:10. **Normalization**: Some metrics may need normalization across different creator scales
+
+## Objkt-Advisor/client/requirements.md
+ - 1:## Packages
+ - 6:## Notes
+
+## Objkt-Advisor/docs/objkt-api-schema.md
+ - 1:# Objkt GraphQL API Schema Navigation
+ - 9:## Core Entities
+ - 11:### 1. Token (NFT)
+ - 79:### 2. Holder (Wallet/Profile)
+ - 118:### 3. Listing Sale (Historical Sales)
+ - 155:### 4. Listing (Active Listings)
+ - 182:## Exploratory Queries
+ - 184:### Query 1: Schema Introspection
+ - 203:### Query 2: Recent Sales with Full Context
+ - 233:### Query 3: Top Collectors by Purchase Volume
+ - 252:### Query 4: Creator Profile Deep Dive
+ - 281:### Query 5: Token Holders (Who Owns What)
+ - 305:## Discovered Tables/Entities
+ - 318:## Common Patterns
+ - 320:### Filtering
+ - 327:### Ordering
+ - 333:### Pagination
+ - 339:### Aggregation
+ - 352:## Price Conversion
+ - 360:## Rate Limiting
+ - 368:## TODO: Explore Further
+ - 370:- [ ] `fulfilled_ask` - Alternative sales table?
+ - 371:- [ ] `offer` - Buy offers on tokens?
+ - 372:- [ ] `auction` - Auction mechanics?
+ - 373:- [ ] `event` - On-chain events?
+ - 374:- [ ] `collection` / `fa` - Contract/collection data?
+ - 375:- [ ] Aggregation queries for analytics
+
+## Particle Painting/particle-studio/NETLIFY_DEPLOYMENT.md
+ - 1:# Netlify Deployment Guide
+ - 5:## What Was Changed
+ - 9:### Changes Made:
+ - 11:1. **Added `netlify.toml`** - Netlify build and deployment configuration:
+ - 17:2. **Added `public/_headers`** - Static headers for WASM and asset files:
+ - 22:3. **Updated `vite.config.ts`** - Optimized build configuration:
+ - 28:## Deploying to Netlify
+ - 30:### Option 1: Connect via Netlify Dashboard (Recommended)
+ - 32:1. Go to [Netlify](https://app.netlify.com/)
+ - 33:2. Click "Add new site" → "Import an existing project"
+ - 34:3. Connect your GitHub repository
+ - 35:4. **IMPORTANT**: Netlify will auto-detect the settings from `netlify.toml`:
+ - 39:5. Click "Deploy site"
+ - 46:### Option 2: Manual Deploy
+ - 49:# Install Netlify CLI
+ - 52:# Navigate to the project directory
+ - 55:# Login to Netlify
+ - 58:# Deploy
+ - 62:## Technical Details
+ - 64:### WASM Usage
+ - 67:- **@ffmpeg/ffmpeg** (v0.12.15) - For video encoding/processing
+ - 68:- **FFmpeg WASM Core** (v0.12.6) - Loaded from unpkg.com CDN
+ - 75:### Browser Requirements
+ - 82:### Performance Notes
+ - 88:## Troubleshooting
+ - 90:### 404 "Page not found" Error
+ - 94:1. **Check Base Directory**: In Netlify's Site settings → Build & deploy → Build settings:
+ - 99:2. **Verify `netlify.toml`**: The `netlify.toml` file should be at the **repository root** (not inside particle-studio), with:
+ - 106:3. **Check `_redirects` file**: Verify that `particle-studio/public/_redirects` exists with:
+ - 112:4. **Redeploy**: After making changes, trigger a new deploy:
+ - 115:### WASM Loading Issues
+ - 118:1. Check browser console for CORS errors
+ - 119:2. Ensure the unpkg.com CDN is accessible
+ - 120:3. Verify browser supports SharedArrayBuffer
+ - 122:### Build Failures
+ - 125:1. Check Node version (should be 18+)
+ - 126:2. Verify all dependencies are listed in package.json
+ - 127:3. Check build logs for specific errors
+ - 129:### MIME Type Errors
+ - 132:1. Verify `_headers` file is in the `public` directory
+ - 133:2. Check that `netlify.toml` headers are configured
+ - 134:3. Clear browser cache and try again
+ - 136:## Local Development
+ - 139:# Install dependencies
+ - 142:# Run dev server
+ - 145:# Build for production
+ - 148:# Preview production build
+ - 152:## Additional Resources
+ - 154:- [Netlify Documentation](https://docs.netlify.com/)
+ - 155:- [FFmpeg.wasm Documentation](https://github.com/ffmpegwasm/ffmpeg.wasm)
+ - 156:- [Vite Documentation](https://vitejs.dev/)
+
+## Particle Painting/particle-studio/README.md
+ - 1:# Particle Studio 🎨✨
+ - 5:## Quick Start
+ - 7:### Prerequisites
+ - 11:### Installation
+ - 21:### Getting Started in 5 Steps
+ - 23:1. **Add a Layer** - Click "+ Add" in the left panel
+ - 24:2. **Choose Type** - Select particle type (Sand, Dust, Sparks, Ink, etc.)
+ - 25:3. **Adjust Physics** - Modify gravity, wind, jitter in the Forces section
+ - 26:4. **Style Particles** - Change size, color, brightness in the right panel
+ - 27:5. **Export** - Use the export bar to capture screenshots, GIFs, or videos
+ - 29:### Keyboard Shortcuts
+ - 36:## Features
+ - 38:### Movement Patterns
+ - 39:- **Still** - Particles respond only to forces
+ - 40:- **Linear** - Move in a set direction
+ - 41:- **Wave** - Sinusoidal motion with cardinal direction controls
+ - 42:- **Spiral** - Spiral toward/away from center
+ - 43:- **Orbit** - Circular orbit around a point
+ - 44:- **Vortex** - Spinning drain effect
+ - 45:- **Brownian** - Random walk motion
+ - 46:- **Evade** - Particles flee from each other
+ - 47:- **Clusters** - Particles bind together in groups
+ - 49:### Boundary Modes
+ - 52:### Export Options
+ - 58:## Documentation
+ - 62:## Development
+ - 71:## Tech Stack
+ - 79:## License
+
+## Particle Painting/particle-studio/USER_MANUAL.md
+ - 1:# Particle Studio User Manual 📖
+ - 5:## Table of Contents
+ - 7:1. [Getting Started](#getting-started)
+ - 8:2. [Interface Overview](#interface-overview)
+ - 9:3. [Creating Layers](#creating-layers)
+ - 10:4. [Particle Types](#particle-types)
+ - 11:5. [Physics & Forces](#physics--forces)
+ - 12:6. [Movement Patterns](#movement-patterns)
+ - 13:7. [Spawn Regions](#spawn-regions)
+ - 14:8. [Appearance Settings](#appearance-settings)
+ - 15:9. [Color Options](#color-options)
+ - 16:10. [Masks](#masks)
+ - 17:11. [Material System](#material-system)
+ - 18:12. [Audio Reactivity](#audio-reactivity)
+ - 19:13. [Boundary Modes](#boundary-modes)
+ - 20:14. [Exporting](#exporting)
+ - 21:15. [Tips & Tricks](#tips--tricks)
+ - 25:## Getting Started
+ - 27:### First Launch
+ - 31:### Adding Your First Layer
+ - 33:1. Click **"+ Add"** in the left panel
+ - 34:2. Select a **Layer Kind**: Foreground, Background, Mask, or Directed Flow
+ - 35:3. Choose a **Particle Type**: Sand, Dust, Sparks, Ink, Crumbs, or Liquid
+ - 36:4. Click **"Create Layer"**
+ - 40:### Basic Controls
+ - 50:## Interface Overview
+ - 52:### Left Panel - Physics & Motion
+ - 55:- **Layer Settings**: Name, enable/disable, particle type
+ - 56:- **Particle Count**: 50 to 20,000 particles per layer
+ - 57:- **Spawn**: Density and initial velocity
+ - 58:- **Lifecycle**: Accumulation and decay rates
+ - 59:- **Forces**: Gravity, drag, jitter, curl
+ - 60:- **Wind**: Direction and strength
+ - 61:- **Attract**: Single attraction point settings
+ - 62:- **Spawn Region**: Where particles appear
+ - 63:- **Movement Pattern**: Intrinsic motion behavior
+ - 64:- **Boundary**: How particles interact with canvas edges
+ - 66:### Right Panel - Render & Appearance
+ - 69:- **Global**: Time scale, exposure, background fade
+ - 70:- **Visual**: Monochrome, invert
+ - 71:- **Audio**: Upload and control audio reactivity
+ - 72:- **Particle**: Shape, size, brightness, jitter options
+ - 73:- **Color**: Single, gradient, scheme, or range modes
+ - 74:- **Material System**: Advanced depth and surface effects
+ - 76:### Export Bar (Bottom)
+ - 85:## Creating Layers
+ - 87:### Layer Kinds
+ - 96:### Managing Layers
+ - 98:- **Reorder**: Use ↑/↓ buttons to change layer order
+ - 99:- **Enable/Disable**: Toggle visibility without deleting
+ - 100:- **Import/Export**: Save and load layer settings as JSON
+ - 104:## Particle Types
+ - 119:## Physics & Forces
+ - 121:### Gravity
+ - 122:- **Range**: -0.5 to 1.0
+ - 123:- **Negative values**: Particles rise (like sparks, bubbles)
+ - 124:- **Positive values**: Particles fall (like sand, rain)
+ - 126:### Mass Jitter
+ - 127:- **Range**: 0 to 1
+ - 131:### Velocity Scale
+ - 132:- **Range**: 0 to 2
+ - 135:### Drag
+ - 136:- **Range**: 0 to 0.5
+ - 139:### Jitter
+ - 140:- **Range**: 0 to 1
+ - 144:### Curl
+ - 145:- **Range**: 0 to 1
+ - 150:## Movement Patterns
+ - 152:### Still
+ - 155:### Linear
+ - 157:- **Direction**: 0-360° (0=right, 90=up, 180=left, 270=down)
+ - 159:### Wave
+ - 161:- **Cardinal Direction**: Click ←↑→↓ buttons for quick direction setting
+ - 162:- **Angle Slider**: Fine-tune wave travel direction (0-360°)
+ - 163:- **Amplitude**: Height of the wave (0-0.5)
+ - 164:- **Frequency**: How many wave cycles (0.5-5)
+ - 166:### Spiral
+ - 168:- **Center X/Y**: Position of spiral center
+ - 169:- **Tightness**: Negative spirals outward, positive spirals inward
+ - 171:### Orbit
+ - 173:- **Center X/Y**: Orbit center position
+ - 174:- **Radius**: Distance from center
+ - 176:### Radial Out / Radial In
+ - 179:### Vortex
+ - 181:- **Rotation**: Rotational strength
+ - 182:- **Inward Pull**: How strongly particles are pulled to center
+ - 184:### Brownian
+ - 187:### Follow Curl
+ - 190:### Evade
+ - 192:- **Evade Strength**: How strongly particles repel
+ - 193:- **Evade Radius**: Detection distance for nearby particles
+ - 195:### Clusters
+ - 197:- **Cluster Strength**: Bond strength between particles
+ - 198:- **Break Threshold**: Force required to break cluster bonds
+ - 199:- **Cluster by Size**: Only same-sized particles cluster
+ - 200:- **Cluster by Color**: Only same-colored particles cluster
+ - 201:- **Cluster by Brightness**: Only similar brightness particles cluster
+ - 205:## Spawn Regions
+ - 220:- **Edge Offset**: Distance from edge for off-canvas spawn
+ - 221:- **Spread**: Distribution along the spawn edge
+ - 222:- **Burst Speed**: Initial velocity for center burst
+ - 226:## Appearance Settings
+ - 228:### Shape
+ - 233:### Point Size
+ - 234:- **Range**: 0.5 to 64 pixels
+ - 235:- **Size Min/Max Offset**: -6 to +6 variation
+ - 237:### Jitter Options
+ - 239:- **Size Jitter**: Random variation in particle size
+ - 240:- **Brightness Jitter**: Random variation in brightness
+ - 241:- **Scale Jitter**: Random scaling variation
+ - 242:- **Rotation Jitter**: Random rotation (0-360°)
+ - 243:- **Color Jitter**: Random hue variation
+ - 245:### Other
+ - 246:- **Trail Stretch**: Velocity-based elongation (0-1)
+ - 247:- **Dither**: Adds noise/texture (0-1)
+ - 251:## Color Options
+ - 253:### Color Modes
+ - 264:## Masks
+ - 268:### Creating Masks
+ - 269:1. Add a new layer with kind "Mask"
+ - 270:2. Upload a black & white image
+ - 271:3. **Black areas** = inside boundary
+ - 272:4. **White areas** = outside boundary
+ - 274:### Mask Options
+ - 275:- **Invert Mask**: Flip inside/outside
+ - 276:- **Threshold**: Sensitivity for edge detection
+ - 277:- **Show Mask**: Display mask overlay in red (for debugging)
+ - 279:### Mask Modes
+ - 280:- **Ignore**: Particles pass through
+ - 281:- **Visibility**: Mask controls visibility only
+ - 282:- **Collision**: Particles bounce off boundaries
+ - 283:- **Accumulate**: Particles stick to boundaries
+ - 285:### Mask Transform
+ - 288:### Mask Eraser
+ - 290:1. Click "Erase" to activate eraser mode
+ - 291:2. Draw on the preview to remove mask areas
+ - 292:3. Click "Done" when finished
+ - 293:4. Click "Clear" to reset eraser
+ - 297:## Material System
+ - 301:### Depth Field (2.5D)
+ - 311:1. Create a mask layer with an uploaded image
+ - 312:2. Open the "Material System" section in the right panel
+ - 313:3. Enable "Depth Field (2.5D)"
+ - 314:4. Adjust depth parameters:
+ - 326:### Ground Plane
+ - 331:1. Open the "Ground Plane" section in the right panel
+ - 332:2. Enable "Enable ground plane"
+ - 333:3. Adjust parameters:
+ - 351:## Audio Reactivity
+ - 353:### Setup
+ - 354:1. Click "Upload MP3" in the Audio section
+ - 355:2. Click "Play" to start audio
+ - 356:3. Configure audio mappings per layer
+ - 358:### Audio Sources
+ - 359:- **Amplitude**: Overall volume level
+ - 360:- **Bass**: Low frequency energy
+ - 361:- **Mid**: Middle frequency energy
+ - 362:- **Treble**: High frequency energy
+ - 363:- **Beat**: Beat detection
+ - 364:- **Brightness**: Spectral brightness
+ - 365:- **Centroid**: Spectral centroid
+ - 367:### Mapping Parameters
+ - 378:### Audio Gain
+ - 379:- **Range**: 0 to 3
+ - 385:## Boundary Modes
+ - 402:## Exporting
+ - 404:### Screenshot (PNG)
+ - 408:### GIF Export
+ - 413:### WebM Recording
+ - 418:### MP4 with Audio
+ - 423:### Rolling Buffer
+ - 430:## Tips & Tricks
+ - 432:### Creating Rain Effects
+ - 433:1. Set Spawn Region to "Off-Canvas Top"
+ - 434:2. Use Sand or Liquid particle type
+ - 435:3. Set Gravity to positive (0.3-0.5)
+ - 436:4. Add slight Wind for diagonal rain
+ - 438:### Fire/Sparks Effects
+ - 439:1. Use Sparks type (naturally rises)
+ - 440:2. Set Spawn Region to "Bottom Edge"
+ - 441:3. Add high Jitter (0.5+)
+ - 442:4. Use warm color scheme
+ - 444:### Flowing Water
+ - 445:1. Use Liquid or Ink type
+ - 446:2. Set Movement Pattern to "Follow Curl"
+ - 447:3. Increase Curl value (0.5-0.8)
+ - 448:4. Add masks for riverbanks
+ - 450:### Flocking/Swarming
+ - 451:1. Use Movement Pattern "Evade" 
+ - 452:2. Low Evade Strength (0.1-0.2)
+ - 453:3. Add a weak attraction point
+ - 454:4. Particles will cluster loosely
+ - 456:### Creating Seamless Loops
+ - 457:1. Enable "Loop Mode" in recording settings
+ - 458:2. Set loop duration to match export duration
+ - 459:3. Simulation will wrap smoothly
+ - 461:### Performance Tips
+ - 469:## Troubleshooting
+ - 471:### Particles Not Visible
+ - 477:### Simulation Too Slow
+ - 482:### Export Fails
+ - 487:### Audio Not Working
+ - 494:## Keyboard Reference
+
+## Particle Painting/particle-studio/WALLET_MINT_GUIDE.md
+ - 1:# Wallet Connect and Teia Mint Integration
+ - 5:## Features
+ - 7:### Wallet Connection
+ - 15:### Mint to Teia
+ - 23:## How to Use
+ - 25:### 1. Enable the Frame Buffer
+ - 28:1. Click the "⚡ Quick" button in the export bar
+ - 29:2. Check "Enable Rolling Buffer"
+ - 30:3. Select desired buffer duration and quality
+ - 31:4. Wait for frames to accumulate
+ - 33:### 2. Connect Your Wallet
+ - 35:1. Click the "🔗 Connect Wallet" button in the export bar
+ - 36:2. Select your Tezos wallet from the Beacon modal
+ - 37:3. Approve the connection request in your wallet
+ - 38:4. Sign the authentication message to prove ownership
+ - 39:5. Your address and balance will be displayed
+ - 41:### 3. Mint Your Art
+ - 43:1. Click the "🎨 TEIA" button (only active when wallet is connected)
+ - 44:2. In the mint modal:
+ - 48:3. Click "Mint NFT"
+ - 49:4. The app will:
+ - 54:### 4. Disconnect (Optional)
+ - 58:## IPFS Configuration (For Developers)
+ - 62:1. Choose an IPFS pinning service:
+ - 67:2. Obtain API keys from your chosen service
+ - 69:3. Update `src/services/teiaService.ts`:
+ - 83:## Technical Details
+ - 85:### Dependencies
+ - 91:### Architecture
+ - 97:## Troubleshooting
+ - 99:### Wallet Connection Issues
+ - 105:### Export Issues
+ - 110:### IPFS Upload Errors
+ - 115:## Support
+ - 118:1. Check the [GitHub Issues](https://github.com/Paulwhoisaghostnet/ParticlePainter-v1.0/issues)
+ - 119:2. Review the code in `src/services/` for implementation details
+ - 120:3. Open a new issue if you encounter bugs
+
+## Particle Painting/particle-studio/audio-engine-changes-log.md
+ - 1:# Audio engine analysis changes (attempted fixes)
+ - 7:## 1. FFT and frequency resolution
+ - 9:- **FFT size**: 1024 → **2048**
+ - 10:- **Reason**: Better frequency resolution (smaller bin width), especially for bass. At 48 kHz, 2048 FFT gives ~23 Hz per bin so the 20–250 Hz bass band is represented with more bins.
+ - 14:## 2. dB floor (normalization)
+ - 16:- **Before**: `(db + 60) / 60` → -60 dB treated as floor (0), above that mapped to 0–1.
+ - 17:- **After**: `(db + 80) / 80` → **-80 dB floor**
+ - 18:- **Reason**: Mids and treble are often quieter than bass in mixes. A -60 dB floor was crushing quieter bands; -80 dB gives more usable range for mid/treble before clipping at 1.
+ - 22:## 3. Band extraction: linear average → energy-weighted
+ - 24:- **Before**: Per band, sum **normalized linear value** (from dB), then **average** (sum / count). So each bin contributed equally.
+ - 25:- **After**: Per band, sum **energy** (linear²), then **√(sum / count)** to get an amplitude-like value.
+ - 26:- **Reason**: Human hearing and perceived “level” are closer to energy than to linear average. Bass has fewer bins; with a simple average, weak bins pulled the band down. Energy weighting (sum of squares, then sqrt) gives a more representative level per band and lets sensitivity scaling work better.
+ - 30:## 4. Per-band sensitivity
+ - 32:- **Before**: bass 3.0, mid 2.5, treble 2.0
+ - 33:- **After**: bass **2.5**, mid **4.0**, treble **5.0**
+ - 34:- **Reason**: Mid and treble were under-represented in the final 0–1 CV; increasing their sensitivity (and slightly lowering bass) makes all three bands reach a fuller, more usable range for mapping.
+ - 38:## 5. Per-band smoothing
+ - 40:- **Before**: Single smoothing factor 0.3 for bass, mid, treble.
+ - 41:- **After**: bass **0.35**, mid **0.15**, treble **0.15**
+ - 42:- **Reason**: Bass can stay slightly smoother for stability; mid and treble use less smoothing so they respond faster to transients (e.g. snare, hi-hat).
+ - 46:## 6. Beat detection
+ - 48:- **Input**: Before: **bass only**. After: **bass + 0.7× mid** (combined onset).
+ - 49:- **Reason**: Beats are not only kicks (bass); snares and hi-hats are mid-heavy. Using combined bass+mid for onset makes beat CV fire on more percussive events.
+ - 50:- **History size**: 30 → **45** (longer running context for average).
+ - 51:- **Threshold**: 1.4× average → **1.6×** average (slightly stricter to reduce false hits).
+ - 52:- **Min gap between beats**: 200 ms → **180 ms**.
+ - 53:- **Min energy**: 0.05 → **0.06** (slightly higher floor so very quiet bumps don’t count as beats).
+ - 57:## 7. Shared band computation
+ - 59:- **computeBandsFromFFT()** was updated to use the same rules as above (energy-weighted bands, -80 dB floor, sensitivities 2.5 / 4.0 / 5.0) so that both **live getAnalysis()** and any **offline/scan** path use identical band math. Live path still applies its own smoothing and beat in getAnalysis(); the scan uses the same raw band formula then applies reversal and offline beat.
+ - 63:## Files touched (engine only)
+ - 65:- **particle-studio/src/engine/AudioEngine.ts**
+
+## README-agent.md
+ - 1:# Minimal Ollama agent (sandbox)
+ - 5:## Files
+ - 14:## Setup
+ - 16:1. Install Ollama and start it (`ollama serve`). Pull a model that supports tool use, e.g.:
+ - 22:2. In the sandbox:
+ - 29:## Tools
+ - 31:- **get_current_time** — Current date/time.
+ - 32:- **read_file** — Read a text file under the sandbox (`path` relative to sandbox).
+ - 33:- **list_dir** — List files/dirs under a path in the sandbox (default: sandbox root).
+ - 37:## Config
+
+## SANDBOX_PROJECTS_APPENDIX.md
+ - 1:# Sandbox Projects Appendix
+ - 7:## A) Active Git Projects (excluding Bowers)
+ - 17:## B) Git Projects Currently Clean
+ - 23:## C) Likely Active Non-Git Project Folders
+ - 36:## D) Suggested Execution Order (if you want this triaged)
+ - 38:1. Stabilize active dirty repos: `web3 simulator`, `Objkt-Advisor`, `r00t`, `Particle Painting`, `Image-Battle-Arena`.
+ - 39:2. Decide VCS boundaries for non-git active folders (`smartpy-test-platform`, `tezpulse`, `color wars`, `p5js`, `Discord Bots`, `projects`).
+ - 40:3. Standardize onboarding minimums across active projects: `README`, `.env.example`, test command, and branch/commit hygiene.
+
+## Tezos-Intel/replit.md
+ - 1:# Objkt Advisor
+ - 3:## Overview
+ - 6:## User Preferences
+ - 11:## System Architecture
+ - 13:### Frontend
+ - 14:- **Framework**: React with TypeScript and Vite.
+ - 15:- **Routing**: Wouter for client-side navigation across eight main pages (Dashboard, Holdings, Activity, Market Pulse, Marketplace Analytics, Historic Analytics, Wallet Analyzer, Sync Data).
+ - 16:- **UI Components**: shadcn/ui (new-york style) built on Radix UI and Tailwind CSS v4.
+ - 17:- **State Management**: TanStack React Query for server state management and data fetching via custom hooks.
+ - 18:- **Wallet State**: `WalletContext` for managing global wallet connection state.
+ - 19:- **API Client**: Typed API client (`lib/api.ts`) centralizing all frontend API calls.
+ - 20:- **Charts**: Recharts for data visualization.
+ - 21:- **Wallet Integration**: `@airgap/beacon-dapp` for Tezos wallet connection (read-only).
+ - 22:- **Styling**: Dark "Data Future" theme with Inter and JetBrains Mono fonts.
+ - 23:- **Data Flow**: All data is fetched via server-side `/api/*` endpoints through React Query hooks; no direct external API calls from the client.
+ - 25:### Backend
+ - 26:- **Framework**: Express.js with Node.js and TypeScript.
+ - 27:- **Architecture**: A single HTTP server serving both the API and the client.
+ - 28:- **API Design**: REST endpoints under `/api/` providing market data, wallet analytics, token details, and synchronization controls. Key endpoints include `/api/dashboard/*`, `/api/wallet/:address/*`, `/api/market/*`, and `/api/tokens/:contract/:tokenId`.
+ - 29:- **Background Workers**: Continuous priority-based orchestrator loop (`server/workers.ts`). P0: XTZ price → P1: Head scans (new sales/mints) → P2: Token metadata backfill (recent 7 days first) → P3: Collection sync + gap fill → P4: Sales/mints gap fills → P5: Token metadata (all-time) → P6: Historic backfill → P7: Address resolution + address tagging (known + auto-discovery via TzKT) → P8: Daily aggregation + indexing queue processing. Workers keep running until DB coverage is complete, then enter 60s maintenance pause. Stale thresholds control re-run frequency per worker. Rate limiting enforced between all external API calls.
+ - 30:- **Indexing Queue**: `indexing_queue` table enables network-expansion discovery — querying one wallet cascades to discover connected wallets via shared token holdings and sales history. Depth-limited to prevent infinite expansion (max depth 2).
+ - 31:- **Address Tagging**: `address_tags` table stores semantic labels (marketplace, cex, burn, dex, contract) for known addresses, seeded from a hardcoded list and auto-discovered via TzKT account metadata.
+ - 32:- **Build Process**: Custom build script using Vite for the client and esbuild for the server.
+ - 34:### Data Layer
+ - 35:- **Database**: PostgreSQL with Drizzle ORM.
+ - 36:- **Schema**:
+ - 47:- **Migrations**: Managed by `drizzle-kit`.
+ - 48:- **Storage Pattern**: `IStorage` interface with `DatabaseStorage` implementation using upsert operations.
+ - 50:### Key Design Decisions
+ - 51:- **Server-side data aggregation**: Centralizes all external API interactions to mitigate CORS issues and enable caching.
+ - 52:- **Background worker pattern**: Utilizes pre-fetching and persistent storage in PostgreSQL for improved response times and reduced load on external APIs. Workers use batch operations (e.g., batchUpsertTokenHoldings) for bulk data.
+ - 53:- **Non-blocking wallet sync**: POST /api/wallet/:address/sync returns immediately; sync runs in background. Frontend polls /api/wallet/:address/sync-status for progress.
+ - 54:- **Batch address resolution**: TzKT batch API (address.in) resolves up to 200 addresses per cycle in groups of 50, pulling from sales, mints, token_holdings, and tokens tables.
+ - 55:- **Indexer-style database**: Optimized for fast queries and time-series analytics.
+ - 56:- **Shared schema**: Ensures type safety across the full stack (server and client) using the `shared/` directory.
+ - 57:- **Wallet caching**: Server-side caching of wallet data to reduce TzKT API load and maintain data freshness.
+ - 59:## External Dependencies
+ - 61:### APIs
+ - 62:- **TzKT API**: Tezos blockchain indexer for wallet balances, token balances, and transaction history.
+ - 63:- **Objkt GraphQL API**: Objkt.com's data API for NFT collections, sales data, and marketplace statistics.
+ - 64:- **CoinGecko API**: Used for fetching XTZ/USD price data.
+ - 66:### Database
+ - 67:- **PostgreSQL**: The primary relational database for persistent data storage.
+ - 69:### Blockchain
+ - 70:- **Tezos via Beacon**: Client-side integration for connecting user wallets and accessing their on-chain data (read-only).
+ - 72:### Key npm Packages
+
+## Tezos-Scout/client/requirements.md
+ - 1:## Packages
+ - 7:## Notes
+
+## WTF/.agents/skills/supabase-postgres-best-practices/SKILL.md
+ - 13:# Supabase Postgres Best Practices
+ - 17:## When to Apply
+ - 27:## Rule Categories by Priority
+ - 40:## How to Use
+ - 58:## References
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/_contributing.md
+ - 1:# Writing Guidelines for Postgres References
+ - 6:## Key Principles
+ - 8:### 1. Concrete Transformation Patterns
+ - 15:### 2. Error-First Structure
+ - 26:### 3. Quantified Impact
+ - 33:### 4. Self-Contained Examples
+ - 50:### 5. Semantic Naming
+ - 59:## Code Example Standards
+ - 61:### SQL Formatting
+ - 73:### Comments
+ - 79:### Language Tags
+ - 88:## When to Include Application Code
+ - 125:## Impact Level Guidelines
+ - 138:## Reference Standards
+ - 156:## Review Checklist
+ - 160:- [ ] Title is clear and action-oriented
+ - 161:- [ ] Impact level matches the performance gain
+ - 162:- [ ] impactDescription includes quantification
+ - 163:- [ ] Explanation is concise (1-2 sentences)
+ - 164:- [ ] Has at least 1 **Incorrect** SQL example
+ - 165:- [ ] Has at least 1 **Correct** SQL example
+ - 166:- [ ] SQL uses semantic naming
+ - 167:- [ ] Comments explain _why_, not _what_
+ - 168:- [ ] Trade-offs mentioned if applicable
+ - 169:- [ ] Reference links included
+ - 170:- [ ] `mise run test` passes
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/_sections.md
+ - 1:# Section Definitions
+ - 9:## 1. Query Performance (query)
+ - 13:## 2. Connection Management (conn)
+ - 17:## 3. Security & RLS (security)
+ - 21:## 4. Schema Design (schema)
+ - 25:## 5. Concurrency & Locking (lock)
+ - 29:## 6. Data Access Patterns (data)
+ - 33:## 7. Monitoring & Diagnostics (monitor)
+ - 37:## 8. Advanced Features (advanced)
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/_template.md
+ - 8:## [Rule Title]
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md
+ - 8:## Use tsvector for Full-Text Search
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md
+ - 8:## Index JSONB Columns for Efficient Querying
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md
+ - 8:## Configure Idle Connection Timeouts
+ - 41:# pgbouncer.ini
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/conn-limits.md
+ - 8:## Set Appropriate Connection Limits
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/conn-pooling.md
+ - 8:## Use Connection Pooling for All Applications
+ - 38:- **Transaction mode**: connection returned after each transaction (best for most apps)
+ - 39:- **Session mode**: connection held for entire session (needed for prepared statements, temp tables)
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md
+ - 8:## Use Prepared Statements Correctly with Pooling
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/data-batch-inserts.md
+ - 8:## Batch INSERT Statements for Bulk Data
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/data-n-plus-one.md
+ - 8:## Eliminate N+1 Queries with Batch Loading
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/data-pagination.md
+ - 8:## Use Cursor-Based Pagination Instead of OFFSET
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/data-upsert.md
+ - 8:## Use UPSERT for Insert-or-Update Operations
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/lock-advisory.md
+ - 8:## Use Advisory Locks for Application-Level Locking
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md
+ - 8:## Prevent Deadlocks with Consistent Lock Ordering
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/lock-short-transactions.md
+ - 8:## Keep Transactions Short to Reduce Lock Contention
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/lock-skip-locked.md
+ - 8:## Use SKIP LOCKED for Non-Blocking Queue Processing
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md
+ - 8:## Use EXPLAIN ANALYZE to Diagnose Slow Queries
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md
+ - 8:## Enable pg_stat_statements for Query Analysis
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md
+ - 8:## Maintain Table Statistics with VACUUM and ANALYZE
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/query-composite-indexes.md
+ - 8:## Create Composite Indexes for Multi-Column Queries
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/query-covering-indexes.md
+ - 8:## Use Covering Indexes to Avoid Table Lookups
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/query-index-types.md
+ - 8:## Choose the Right Index Type for Your Data
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/query-missing-indexes.md
+ - 8:## Add Indexes on WHERE and JOIN Columns
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/query-partial-indexes.md
+ - 8:## Use Partial Indexes for Filtered Queries
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/schema-constraints.md
+ - 8:## Add Constraints Safely in Migrations
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/schema-data-types.md
+ - 8:## Choose Appropriate Data Types
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md
+ - 8:## Index Foreign Key Columns
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md
+ - 8:## Use Lowercase Identifiers for Compatibility
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/schema-partitioning.md
+ - 8:## Partition Large Tables for Better Performance
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/schema-primary-keys.md
+ - 8:## Select Optimal Primary Key Strategy
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/security-privileges.md
+ - 8:## Apply Principle of Least Privilege
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/security-rls-basics.md
+ - 8:## Enable Row Level Security for Multi-Tenant Data
+
+## WTF/.agents/skills/supabase-postgres-best-practices/references/security-rls-performance.md
+ - 8:## Optimize RLS Policies for Performance
+
+## WTF/.agents/skills/supabase/SKILL.md
+ - 9:# Supabase
+ - 11:## Core Principles
+ - 28:- **Auth and session security**
+ - 33:- **API key and client exposure**
+ - 36:- **RLS, views, and privileged database code**
+ - 42:- **Storage access control**
+ - 47:## Supabase CLI
+ - 64:## Supabase MCP Server
+ - 70:1. **Check if the server is reachable:**
+ - 74:2. **Check `.mcp.json` configuration:**
+ - 77:3. **Authenticate the MCP server:**
+ - 80:## Supabase Documentation
+ - 84:1. **MCP `search_docs` tool** (preferred — returns relevant snippets directly)
+ - 85:2. **Fetch docs pages as markdown** — any docs page can be fetched by appending `.md` to the URL path.
+ - 86:3. **Web search** for Supabase-specific topics when you don't know which page to look at.
+ - 88:## Making and Committing Schema Changes
+ - 96:1. **Run advisors** → `supabase db advisors` (CLI v2.81.3+) or MCP `get_advisors`. Fix any issues.
+ - 97:2. **Review the Security Checklist above** if your changes involve views, functions, triggers, or storage.
+ - 98:3. **Generate the migration** → `supabase db pull <descriptive-name> --local --yes`
+ - 99:4. **Verify** → `supabase migration list --local`
+ - 101:## Reference Guides
+ - 103:- **Skill Feedback** → [references/skill-feedback.md](references/skill-feedback.md)
+
+## WTF/.agents/skills/supabase/assets/feedback-issue-template.md
+ - 1:## What happened
+ - 9:## Source
+ - 15:## Fix suggestion
+
+## WTF/.agents/skills/supabase/references/skill-feedback.md
+ - 1:# Skill Feedback
+ - 5:## Steps
+ - 7:1. **Ask permission** — Ask the user if they'd like to submit feedback to the skill maintainers. If they decline, move on.
+ - 9:2. **Draft the issue** — Use the template at [assets/feedback-issue-template.md](../assets/feedback-issue-template.md) to structure the feedback. Fill in the fields based on the conversation. Always identify which specific reference file and section caused the problem.
+ - 11:3. **Submit** — Create a GitHub Issue on the `supabase/agent-skills` repository using the draft as the issue body. The title must follow this format: `user-feedback: <summary of the problem>`.
+ - 13:4. **Share the result** — Share the issue URL with the user after submission. If submission fails, give the user this link to create the issue manually:
+
+## WTF/README.md
+ - 1:# WTF Gameshow Platform
+ - 5:## Tech Stack
+ - 7:- **Frontend**: React 19 + Vite + TypeScript + React95 (Windows 95 UI)
+ - 8:- **Backend**: Express.js + Drizzle ORM + **PostgreSQL hosted on Supabase**
+ - 9:- **Auth**: Passport.js (local + Google OAuth)
+ - 10:- **Wallet**: octez.connect + Beacon SDK fallback + Taquito
+ - 11:- **Real-time**: WebSockets for live chat
+ - 12:- **Blockchain**: TzKT API + Teznames domain resolution
+ - 13:- **Deploy**: Netlify (serverless functions + static frontend)
+ - 14:- **Supabase CLI**: `supabase/` (local stack, migrations, GitHub integration path = **repository root** / `.`)
+ - 16:## WTF Token
+ - 21:## Setup
+ - 26:# Edit .env — see “Supabase & environment” below
+ - 32:### Supabase and environment variables
+ - 45:1. Open your **project** (not org-only or billing-only views).
+ - 46:2. Click **Connect** in the top bar (or open `https://supabase.com/dashboard/project/<YOUR_PROJECT_REF>?showConnect=true` and replace `<YOUR_PROJECT_REF>` with the subdomain from `https://<ref>.supabase.co`).
+ - 47:3. Pick **Direct**, **Session pooler**, or **Transaction pooler** and copy the string; use **Transaction** (port **6543**) for Netlify serverless when it fits your driver.
+ - 48:4. Replace `[YOUR-PASSWORD]` with your **database password**. If you never saved it: left sidebar **Database** → **Settings** (URL shape: `…/database/settings`) → **Reset database password**.
+ - 56:# Optional: token from https://supabase.com/dashboard/account/tokens — fills region for the Transaction pooler URL.
+ - 57:# Or run `supabase login` first; the script may read the CLI token from ~/.supabase/access-token.
+ - 61:# For local terminal only (prints real password; never use in CI/build logs):
+ - 62:# npm run db:print-url -- --raw
+ - 71:### Supabase as PostgreSQL host (schema management)
+ - 84:- **Production (Netlify Functions):** **Transaction pooler**, port **6543** (PgBouncer).
+ - 85:- **One-off `db:push` / Drizzle Studio:** **Session mode** or **direct** `db.<project>.supabase.co:5432` if the pooler causes issues—see [Supabase connection docs](https://supabase.com/docs/guides/database/connecting-to-postgres).
+ - 101:# paste project ref when prompted (from your Supabase URL / dashboard)
+ - 104:### Supabase CLI (`supabase init` is already run)
+ - 118:### Supabase JS (`@supabase/supabase-js`)
+ - 131:## User Roles
+ - 140:## Features
+ - 142:- **Dashboard**: WTF balance, active season, quick actions
+ - 143:- **Seasons & Rounds**: Browse seasons, view round details and challenges
+ - 144:- **Challenges**: Submit responses, receive grades, earn WTF rewards
+ - 145:- **Message Board**: Hybrid async/sync chat with channels and threads
+ - 146:- **Marketplace**: List tokens for auction or buy-now, pay with WTF
+ - 147:- **Leaderboard**: WTF holder rankings with .tez domain resolution
+ - 148:- **Gallery**: Survival tokens and exclusive gameshow art
+ - 149:- **Side Quests**: Bonus challenges for extra WTF earnings
+ - 150:- **Admin Panel**: Manage users, seasons, rounds, challenges, channels
+ - 152:## Smart Contracts
+ - 158:### Marketplace contract flow
+ - 168:### Deploy + configure
+ - 170:0. Run local contract QA first:
+ - 172:1. Compile contract with SmartPy:
+ - 178:2. Originate on mainnet with:
+ - 182:3. Set frontend env:
+ - 186:4. Restart frontend after env changes.
+ - 188:## Deployment
+
+## WTF/security_best_practices_report.md
+ - 1:# WTFMarketplace Contract Security Audit
+ - 3:## Executive Summary
+ - 11:## Critical Findings
+ - 13:### C-001: Contract source is syntactically invalid as written (compile/deploy blocker)
+ - 25:## High Findings
+ - 27:### H-001: WTF amount unit mismatch risk (decimals vs raw nat) can misprice sales
+ - 40:## Medium Findings
+ - 42:### M-001: Royalty config allows `royalty_bps > 0` with no recipient, reducing seller payout unintentionally
+ - 51:### M-002: Non-payable entrypoints do not reject attached XTZ
+ - 59:## Low Findings
+ - 61:### L-001: Missing contract-level test coverage for critical invariants
+ - 73:## Notes / Assumptions
+
+## album packager/compiled/analbumpacker-interactive-token/README.md
+ - 1:# AnalBumPacker User Manual
+ - 6:## What This Tool Outputs
+ - 11:## Basic Workflow
+ - 13:1. Fill out Release Profile (album title, artist, year, output name).
+ - 14:2. Upload album-level art (cover, rear, CD art, vinyl label, optional full vinyl art).
+ - 15:3. Add tracks and assign each to A side or B side.
+ - 16:4. Upload per-track audio, image, optional visualizer video loop, and notes `.txt`.
+ - 17:5. Click `Download Mint ZIP` to export a browser-safe package.
+ - 19:## Local Optional Features
+ - 24:## Starter Kit
+ - 29:## Minting Constraints
+
+## album packager/progress.md
+
+## bootloader-project/README.md
+ - 1:# 🚀 Bootloader Generative Art Template
+ - 5:## 📁 Project Structure
+ - 18:## 🎨 Quick Start
+ - 20:### 1. Local Development
+ - 22:# Navigate to project directory
+ - 25:# Start local server (recommended)
+ - 27:# Or use any other local server
+ - 29:# Open preview
+ - 33:### 2. Development Workflow
+ - 34:1. Edit `generator.js` with your generative algorithm
+ - 35:2. Refresh `preview.html` to see changes
+ - 36:3. Test with different seeds and iterations
+ - 37:4. Use preview mode to design cover images
+ - 38:5. Deploy to Bootloader when ready
+ - 40:### 3. Deploy to Bootloader
+ - 41:1. Copy contents of `generator.js`
+ - 42:2. Paste into Bootloader's code editor
+ - 43:3. Test with live preview on Bootloader
+ - 44:4. Set pricing and edition parameters
+ - 45:5. Publish your generative art!
+ - 47:## 🔧 Key Features
+ - 49:### ✅ Complete BTLDR Environment Simulation
+ - 55:### ✅ Comprehensive Boilerplate
+ - 56:- **Utility Functions**: Random helpers, SVG creation, color palettes
+ - 57:- **Pattern Examples**: Circles, grids, organic flows
+ - 58:- **Best Practices**: Preview handling, edition evolution, optimization
+ - 59:- **Error Handling**: Graceful fallbacks and debugging
+ - 61:### ✅ Development Tools
+ - 62:- **Interactive Preview**: Real-time testing with seed/iteration controls
+ - 63:- **Visual Debugging**: Error display and console logging
+ - 64:- **Export Functionality**: Download generated SVGs
+ - 65:- **Keyboard Shortcuts**: Space to regenerate, Cmd+R for random seed
+ - 67:## 📖 Understanding Bootloader
+ - 69:### The BTLDR Object
+ - 83:### Critical Requirements
+ - 90:## 🎯 Customization Guide
+ - 92:### 1. Replace Example Patterns
+ - 106:### 2. Customize Configuration
+ - 119:### 3. Add Edition Evolution
+ - 130:### 4. Design Preview Covers
+ - 141:## 💡 Pro Tips
+ - 143:### Performance
+ - 148:### Aesthetics
+ - 153:### Economics
+ - 158:### Testing
+ - 163:## 🔗 Resources
+ - 165:- [Bootloader Platform](https://bootloader.art/)
+ - 166:- [Bootloader Help Documentation](https://bootloader.art/help)
+ - 167:- [Contract Storage Explorer](https://better-call.dev/mainnet/KT1CB4MYiAViCuXWBU961x7LjQXGeA8SnQwt/storage)
+ - 168:- [SVG Reference](https://developer.mozilla.org/en-US/docs/Web/SVG)
+ - 170:## 📄 License
+
+## color wars/AUDIT_REPORT.md
+ - 1:# Full Codebase Audit Report
+ - 3:## Executive Summary
+ - 14:## Issues Found and Fixed
+ - 16:### ✅ CRITICAL - Fixed
+ - 18:#### 1. Image Resize Function (lib/image/resize.ts)
+ - 25:#### 2. RGB to HSV Hue Calculation (lib/image/color.ts)
+ - 32:#### 3. Database Path Configuration (lib/db/index.ts)
+ - 39:#### 4. Seeded RNG Division (lib/battle/simulate.ts)
+ - 46:## Issues Identified (Not Critical)
+ - 48:### ⚠️ MEDIUM PRIORITY
+ - 50:#### 1. File Path Handling
+ - 58:#### 2. Error Handling in Image Processing
+ - 66:#### 3. Missing Input Validation
+ - 77:### ℹ️ LOW PRIORITY
+ - 79:#### 1. Battle Simulation Edge Cases
+ - 89:#### 2. Database Transaction Safety
+ - 97:#### 3. Session Expiration Cleanup
+ - 105:## Code Quality Assessment
+ - 107:### ✅ Strengths
+ - 109:1. **Type Safety**: Excellent TypeScript usage with proper types throughout
+ - 110:2. **Modularity**: Clean separation of concerns (auth, image processing, battle engine)
+ - 111:3. **Error Handling**: API routes have consistent error handling patterns
+ - 112:4. **Versioning**: Proper versioning system for conversions and balance
+ - 113:5. **Determinism**: Hash-based determinism properly implemented
+ - 114:6. **Documentation**: Comprehensive README
+ - 116:### 📝 Areas for Improvement
+ - 118:1. **Testing Coverage**: Only basic unit tests exist. Could add:
+ - 123:2. **Performance**: 
+ - 128:3. **Security**:
+ - 134:4. **User Experience**:
+ - 139:## Testing Status
+ - 141:### ✅ Unit Tests
+ - 147:### ❌ Missing Tests
+ - 153:## Dependencies Audit
+ - 155:### ✅ All Dependencies Are Local
+ - 160:### ⚠️ Potential Issues
+ - 164:## Security Audit
+ - 166:### ✅ Good Practices
+ - 172:### ⚠️ Recommendations
+ - 178:## Performance Considerations
+ - 180:### Current Performance
+ - 185:### Optimization Opportunities
+ - 186:1. **Image Processing**: 
+ - 191:2. **Database**:
+ - 195:3. **API Routes**:
+ - 199:## Conclusion
+ - 203:### Priority Actions
+ - 204:1. ✅ **DONE**: Fix image resize function (async)
+ - 205:2. ✅ **DONE**: Fix hue calculation
+ - 206:3. ✅ **DONE**: Fix database path
+ - 207:4. ⚠️ **RECOMMENDED**: Add file size validation
+ - 208:5. ⚠️ **RECOMMENDED**: Add database transactions for multi-step operations
+ - 209:6. ℹ️ **FUTURE**: Add integration tests
+ - 210:7. ℹ️ **FUTURE**: Add rate limiting
+ - 212:### Overall Grade: **A-**
+
+## color wars/DEBUG_AUDIT.md
+ - 1:# Full Debug Audit Report
+ - 3:## Executive Summary
+ - 6:- **Issue A**: Processed image not saved (saves original instead of resized)
+ - 7:- **Issue B**: Resized image buffer not exposed from conversion pipeline
+ - 8:- **Issue C**: Path format inconsistencies
+ - 14:## Issue A: Processed Image Not Saved Correctly
+ - 16:### Location
+ - 17:- **File**: `app/api/armies/route.ts`
+ - 18:- **Line**: 163
+ - 19:- **Current Code**:
+ - 24:### Evidence
+ - 26:# File sizes confirm issue:
+ - 32:### Root Cause
+ - 33:1. `convertImageToArmy()` resizes the image internally (lines 40-49)
+ - 34:2. But the resized `Image` object is never converted back to a `Buffer`
+ - 35:3. Route handler saves `imageBuffer` (original) instead of resized version
+ - 37:### Impact
+ - 44:## Issue B: Resized Image Buffer Not Exposed
+ - 46:### Location
+ - 47:- **File**: `lib/image/convertToArmy.ts`
+ - 48:- **Lines**: 40-49 (resize happens), 79-86 (return statement)
+ - 50:### Current Flow
+ - 68:### Missing Function
+ - 82:## Issue C: Path Format & API Response
+ - 84:### Current Path Format
+ - 85:- **File**: `app/api/armies/route.ts`
+ - 86:- **Lines**: 203, 213, 223, 233
+ - 87:- **Pattern**: `path.replace(process.cwd() + "/public", "")`
+ - 89:### Example Paths in DB
+ - 95:### API Response Check
+ - 96:- **File**: `app/api/armies/[armyId]/route.ts`
+ - 97:- **Lines**: 54-64
+ - 98:- **Status**: ✅ Returns paths correctly
+ - 104:### Potential Issue
+ - 111:## Issue D: Rank Preview Generation
+ - 113:### Status: ✅ WORKING
+ - 114:- **File**: `lib/image/preview.ts`
+ - 115:- **Function**: `generatePreview()` - generates rank-collapse preview
+ - 116:- **Called**: Line 71 in `convertToArmy.ts`
+ - 117:- **Saved**: Line 164 in `app/api/armies/route.ts`
+ - 118:- **Size**: 352B (correct for 256x256 preview)
+ - 120:### Preview Algorithm
+ - 128:## Issue E: Unit Map Generation
+ - 130:### Status: ✅ WORKING
+ - 131:- **File**: `lib/image/unitmap.ts`
+ - 132:- **Function**: `encodeUnitMap()` - creates packed base64 format
+ - 133:- **Called**: Line 74 in `convertToArmy.ts`
+ - 134:- **Saved**: Line 165 in `app/api/armies/route.ts`
+ - 135:- **Format**: JSON with base64-encoded Uint8Arrays
+ - 137:### Unit Map Structure
+ - 156:## Issue F: Canvas Components (Client-Side)
+ - 158:### Status: ✅ IMPLEMENTED
+ - 159:- **File**: `components/ArmyFormationCanvas.tsx`
+ - 164:- **File**: `components/ArmyRankCanvas.tsx`
+ - 169:### Potential Issue
+ - 176:## Issue G: Battle Animation Image Loading
+ - 178:### Status: ⚠️ POTENTIAL ISSUE
+ - 179:- **File**: `app/battle/animated/page.tsx`
+ - 180:- **Lines**: 150-184 (image loading)
+ - 182:### Current Implementation
+ - 190:### Potential Issues
+ - 191:1. Path format: API returns `/uploads/...` but browser needs full URL or relative path
+ - 192:2. CORS: `crossOrigin = "anonymous"` set but may not be needed for local files
+ - 193:3. Image loading async: No error handling if image fails to load
+ - 197:## Summary of Required Fixes
+ - 199:### Priority 1: Fix Processed Image Saving
+ - 228:### Priority 2: Verify Path Resolution
+ - 234:### Priority 3: Add Error Handling
+ - 242:## Files That Need Changes
+ - 244:1. ✅ **CREATE**: `lib/image/imageToBuffer.ts` (new file)
+ - 245:2. ✅ **UPDATE**: `lib/image/types.ts` (add `processedImage: Buffer`)
+ - 246:3. ✅ **UPDATE**: `lib/image/convertToArmy.ts` (return processed image buffer)
+ - 247:4. ✅ **UPDATE**: `app/api/armies/route.ts` (save processed buffer, fix dimensions)
+ - 248:5. ⚠️ **VERIFY**: `next.config.js` (ensure static file serving works)
+ - 249:6. ⚠️ **IMPROVE**: `components/ArmyFormationCanvas.tsx` (error handling)
+ - 250:7. ⚠️ **IMPROVE**: `app/battle/animated/page.tsx` (image loading)
+ - 254:## Testing Checklist
+ - 257:- [ ] Convert new image → check `processed.png` file size (should be < 5MB)
+ - 258:- [ ] Check `processed.png` is actually PNG format (not JPEG)
+ - 259:- [ ] Verify DB `army_assets` has correct width/height for PROCESSED
+ - 260:- [ ] Test army detail page loads preview image
+ - 261:- [ ] Test formation canvas shows processed image background
+ - 262:- [ ] Test battle animation loads both army images
+ - 263:- [ ] Verify paths in API response are accessible URLs
+ - 267:## Current File Status
+ - 282:## Next Steps
+ - 284:1. Implement `imageToBuffer` utility
+ - 285:2. Update conversion to return processed image
+ - 286:3. Fix route handler to save processed buffer
+ - 287:4. Test with new conversion
+ - 288:5. Verify all paths resolve correctly
+ - 289:6. Add error handling for missing assets
+
+## color wars/README.md
+ - 1:# Color Wars
+ - 5:## Overview
+ - 9:## Features
+ - 11:- **Image to Army Conversion**: Upload images and convert them into armies with units, stats, and classes
+ - 12:- **Deterministic Processing**: Same image + same settings = same army (guaranteed via SHA256 hashing)
+ - 13:- **Battle System**: Rank-based combat simulation between armies
+ - 14:- **User Accounts**: Sign up, login, and manage your armies
+ - 15:- **Stock Armies**: Pre-generated armies for testing and battles
+ - 16:- **Versioning**: All conversion and balance settings are versioned for traceability
+ - 18:## Tech Stack
+ - 20:- **Framework**: Next.js 14 (App Router) + TypeScript
+ - 21:- **Styling**: Tailwind CSS
+ - 22:- **Database**: SQLite (dev) / Postgres-ready (prod) with Drizzle ORM
+ - 23:- **Authentication**: Custom session-based auth with bcrypt
+ - 24:- **Image Processing**: Canvas API (node-canvas)
+ - 25:- **Validation**: Zod
+ - 26:- **Testing**: Vitest
+ - 28:## Project Structure
+ - 53:## Setup Instructions
+ - 55:### Prerequisites
+ - 60:### Installation
+ - 62:1. **Clone the repository** (or navigate to the project directory)
+ - 64:2. **Install dependencies**:
+ - 69:3. **Set up environment variables**:
+ - 78:4. **Create database directory**:
+ - 83:5. **Generate and run database migrations**:
+ - 89:6. **Start the development server**:
+ - 96:## Usage
+ - 98:### Creating an Account
+ - 100:1. Navigate to `/signup`
+ - 101:2. Enter your email, password (min 8 characters), and optional display name
+ - 102:3. You'll be automatically logged in and redirected to the dashboard
+ - 104:### Converting an Image to an Army
+ - 106:1. Navigate to `/convert`
+ - 107:2. Upload an image (PNG, JPG, JPEG, or WebP)
+ - 108:3. Enter a name and optional description
+ - 109:4. Click "Convert to Army"
+ - 110:5. The image will be processed:
+ - 117:### Viewing Your Armies
+ - 119:1. Navigate to `/dashboard`
+ - 120:2. See all your armies in a grid
+ - 121:3. Click any army to view detailed stats and preview
+ - 123:### Battling Armies
+ - 125:1. Navigate to `/battle`
+ - 126:2. Select an attacker army and defender army
+ - 127:3. Click "Start Battle"
+ - 128:4. Watch the battle log as ranks fight
+ - 129:5. See the winner and remaining ranks
+ - 131:### Seeding Stock Armies
+ - 139:1. Place stock images in `public/stock/` (001.png, 002.png, etc.)
+ - 140:2. Run:
+ - 147:## How Determinism is Guaranteed
+ - 151:1. **Image Normalization**: Images are resized to fixed maximum dimensions (2048px, then 1024px)
+ - 152:2. **Fixed Processing**: 2x2 block averaging uses a fixed weighting rule (255-weight = 2, else 1)
+ - 153:3. **Versioned Settings**: All conversion settings (versions, dimensions, rules) are stored and included in hash
+ - 154:4. **Hash Computation**: SHA256 hash includes:
+ - 159:5. **Pure Functions**: All conversion functions are pure (no side effects, no randomness)
+ - 160:6. **Database Storage**: Hash is stored in `army_conversion.image_sha256` for verification
+ - 164:## Tuning Balance & Versions
+ - 166:### Conversion Versions
+ - 174:### Battle Balance
+ - 181:### Image Processing Settings
+ - 188:## Development Workflow
+ - 190:### Running Tests
+ - 197:### Database Management
+ - 205:### Building for Production
+ - 212:## Architecture Details
+ - 214:### Image Processing Pipeline
+ - 216:1. **Load**: Image buffer → ImageBitmap (via canvas)
+ - 217:2. **Resize**: Two-stage resize (2048px max, then 1024px max)
+ - 218:3. **Convert**: ImageBitmap → ImageData (pixel array)
+ - 219:4. **Hash**: Compute SHA256 of pixels + settings
+ - 220:5. **Unitize**: Process 2x2 blocks → Units with stats
+ - 221:6. **Classify**: Assign class based on color (HOLY/UNHOLY/GREY/color)
+ - 222:7. **Stats**: Compute base stats from HSV, apply class modifiers
+ - 223:8. **Preview**: Generate rank-collapse preview image
+ - 225:### Database Schema
+ - 227:- **users**: User accounts
+ - 228:- **sessions**: Session tokens
+ - 229:- **sources**: Image sources (UPLOAD, STOCK, TEZOS_NFT, EXTERNAL_URL)
+ - 230:- **armies**: Army records
+ - 231:- **army_assets**: Image files (ORIGINAL, PROCESSED, PREVIEW, UNIT_BLOB)
+ - 232:- **army_conversion**: Conversion metadata and versioning
+ - 233:- **army_stats**: Cached summary statistics
+ - 234:- **battles**: Battle records with logs
+ - 235:- **army_units_index**: Optional analytics index
+ - 237:### Battle System
+ - 239:- **Rank Formation**: Units grouped into ranks (32 units per rank)
+ - 240:- **Rank Stats**: HP = sum, ATK/DEF/SPD = average
+ - 241:- **Turn Loop**: Initiative-based turns, damage calculation, rank destruction
+ - 242:- **Deterministic RNG**: Seeded random number generation for initiative
+ - 244:## Future Enhancements
+ - 247:- **Tezos NFT Integration**: Connect Tezos wallets, fetch NFT images
+ - 248:- **Marketplace**: Share and trade armies
+ - 249:- **Advanced Analytics**: Unit-level indexing and search
+ - 250:- **Compressed Storage**: Store unit blobs instead of regenerating
+ - 252:## Troubleshooting
+ - 254:### Database Errors
+ - 257:1. Ensure `data/` directory exists
+ - 258:2. Run `npm run db:push` to create tables
+ - 259:3. Check `.env` has correct `DATABASE_URL`
+ - 261:### Image Processing Errors
+ - 264:1. Check image format (PNG, JPG, JPEG, WebP supported)
+ - 265:2. Ensure image is not corrupted
+ - 266:3. Check file size (very large images may timeout)
+ - 268:### Canvas Errors
+ - 271:1. Ensure `canvas` package is installed: `npm install canvas`
+ - 272:2. On Linux, you may need: `sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev`
+ - 274:## License
+
+## color wars/progress.md
+
+## dweet-bootloader/README.md
+ - 1:# Dweet-like Bootloader Generator
+ - 5:## Features
+ - 7:- **Ultra-minimal size**: Only 1.9KB total
+ - 8:- **Real-time animation**: Uses `requestAnimationFrame` for smooth 60fps animation
+ - 9:- **Deterministic randomness**: Reproducible with BTLDR.seed
+ - 10:- **Multiple patterns**: 4 different animation patterns per seed
+ - 11:- **Dweet-style math**: Uses classic `S`, `C`, `T` shorthand (sin, cos, tan)
+ - 12:- **Dynamic colors**: HSL color cycling based on time and seed
+ - 14:## Core Dweet Elements Replicated
+ - 16:### Math Shortcuts
+ - 21:### Deterministic Random
+ - 28:### Animation Loop
+ - 39:### Compact Patterns
+ - 41:- **Pattern 0**: Orbital motion with sine/cosine modulation
+ - 42:- **Pattern 1**: Spiral growth pattern
+ - 43:- **Pattern 2**: Complex oscillating orbits
+ - 44:- **Pattern 3**: Chaotic particle field
+ - 46:## Usage
+ - 48:1. Copy `generator.js` code to bootloader.art
+ - 49:2. Each mint creates a unique animated pattern
+ - 50:3. Preview shows static rainbow circle
+ - 51:4. Live versions animate infinitely
+ - 53:## Size Optimization
+
+## fafo tax/README.md
+ - 1:# FAFO Tax - Crypto Tax Liability Tracker
+ - 5:## Features
+ - 7:- **Wallet Activity Tracking**: Monitor all transactions for any blockchain wallet address
+ - 8:- **Real-time USD Conversion**: Fetch historical USD prices at the time of each transaction
+ - 9:- **Tax Event Classification**: Automatically categorize transactions as taxable events
+ - 10:- **Tax Liability Calculation**: Calculate total tax owed based on transaction history
+ - 11:- **Comprehensive Reporting**: Generate detailed tax reports and summaries
+ - 13:## Architecture
+ - 15:### Backend (`/backend`)
+ - 16:- **API**: RESTful endpoints for wallet tracking and tax calculations
+ - 17:- **Models**: Database schemas for transactions, tax events, and price data
+ - 18:- **Services**: Business logic for blockchain data fetching and tax calculations
+ - 19:- **Utils**: Helper functions and utilities
+ - 20:- **Config**: Application configuration and environment settings
+ - 22:### Frontend (`/frontend`)
+ - 23:- **React-based UI**: Modern web interface for wallet input and report viewing
+ - 24:- **Components**: Reusable UI components
+ - 25:- **Pages**: Main application pages (dashboard, reports, settings)
+ - 26:- **Services**: API integration and data fetching
+ - 27:- **Types**: TypeScript type definitions
+ - 29:### Database (`/database`)
+ - 30:- **Migrations**: Database schema changes and versioning
+ - 31:- **Seeds**: Sample data for development and testing
+ - 33:## Installation
+ - 35:1. Install dependencies:
+ - 44:2. Set up environment variables:
+ - 50:3. Initialize database:
+ - 55:4. Start the application:
+ - 64:## Usage
+ - 66:1. Enter a wallet address in the web interface
+ - 67:2. The application will fetch all transaction history
+ - 68:3. Review categorized tax events and their USD values
+ - 69:4. Generate comprehensive tax liability reports
+ - 71:## Supported Blockchains
+ - 80:## Tax Event Types
+ - 82:- **Trading**: Buy/sell transactions with capital gains/losses
+ - 83:- **DeFi Activities**: Yield farming, liquidity provision, staking rewards
+ - 84:- **NFT Transactions**: Minting, buying, selling NFTs
+ - 85:- **Airdrops**: Free token distributions
+ - 86:- **Mining/Staking**: Block rewards and staking rewards
+ - 88:## Legal Disclaimer
+
+## fafo tax/SETUP_COMPLETE.md
+ - 1:# 🎉 FAFO Tax Setup Complete!
+ - 3:## ✅ What's Working
+ - 7:### Backend ✅
+ - 8:- **FastAPI** server running on Python 3.13
+ - 9:- **SQLite** database for local development
+ - 10:- **Basic API endpoints** available
+ - 11:- **Health checks** working
+ - 13:### Frontend ✅
+ - 14:- **React** application with TypeScript
+ - 15:- **Modern UI** with styled-components
+ - 16:- **Responsive design** with sidebar navigation
+ - 17:- **Professional theme** and components
+ - 19:## 🚀 Quick Start
+ - 21:### 1. Start the Application
+ - 26:### 2. Access the App
+ - 27:- **Frontend**: http://localhost:3000
+ - 28:- **Backend API**: http://localhost:8000
+ - 29:- **API Documentation**: http://localhost:8000/docs
+ - 31:## 📁 Project Structure
+ - 54:## 📝 Current Status
+ - 56:### ✅ What's Ready
+ - 63:### 🚧 Coming Soon
+ - 70:## 🔧 Development
+ - 72:### Adding Blockchain Features
+ - 86:### Database
+ - 91:### API Testing
+ - 98:## 🎯 Next Steps
+ - 100:1. **Add API Keys**: Edit `.env` to add your blockchain API keys
+ - 101:2. **Test Frontend**: Navigate through the UI pages
+ - 102:3. **Blockchain Integration**: Add full blockchain dependencies when ready
+ - 103:4. **Wallet Tracking**: Implement wallet address tracking
+ - 104:5. **Tax Calculations**: Build out the tax calculation engine
+ - 106:## 🆘 Troubleshooting
+ - 108:### If the backend won't start:
+ - 115:### If the frontend won't start:
+ - 122:### If you see import errors:
+
+## greetings.md
+ - 1:# Welcome!
+ - 7:## Quick Start
+
+## ledger-village/README.md
+ - 1:# Ledger Village
+ - 5:## Local Run
+ - 7:1. `npm install`
+ - 8:2. `npm run dev`
+ - 9:3. Open the Vite app in the browser and use the sample village or paste a Tezos address.
+ - 11:## Scripts
+ - 18:## Design Notes
+
+## ledger-village/progress.md
+ - 3:## Current Direction
+ - 10:## Notes For The Next Pass
+ - 17:## Completed
+
+## local-video-review-lab/README.md
+ - 1:# Local Video Review Lab
+ - 13:## What it does
+ - 17:1. inspect file metadata
+ - 18:2. detect scene changes
+ - 19:3. build segment candidates
+ - 20:4. extract representative frames for each segment
+ - 21:5. create a contact sheet and preview clip per segment
+ - 22:6. transcribe spoken audio locally
+ - 23:7. ask a local vision model to review each segment visually
+ - 24:8. ask a local text model to score each segment against an editing objective
+ - 25:9. export top-ranked clips
+ - 27:## Project layout
+ - 40:## Setup
+ - 56:## Analyze a video
+ - 73:## Export clips from an existing project
+ - 89:## Model selection
+ - 109:## Current shape
+
+## model-match-lab/README.md
+ - 1:# Model Match Lab
+ - 7:1. Choose a directory that contains local model files.
+ - 8:2. Detect which models are benchmark-ready on the current Mac.
+ - 9:3. Build a hardware-first benchmark plan for each selected model.
+ - 10:4. Run deterministic benchmark tasks against every model and every supported runtime setting combination.
+ - 11:5. Rank model + runtime-parameter combinations by task accuracy, startup time, latency, throughput, GPU load, and memory fit.
+ - 13:## Current scope
+ - 30:## What the app measures
+ - 73:## Running locally
+ - 107:## Project layout
+ - 116:## Benchmark behavior
+ - 130:## Next steps you may want to add
+
+## objkt-owned-editions-sorter/README.md
+ - 1:# objkt Owned Editions Sorter (Chrome Extension)
+ - 5:## What it does
+ - 15:## Install (unpacked)
+ - 17:1. Open Chrome and go to `chrome://extensions`.
+ - 18:2. Turn on **Developer mode**.
+ - 19:3. Click **Load unpacked**.
+ - 20:4. Select this folder:
+ - 23:## Use
+ - 25:1. Open an objkt owned page, for example:
+ - 27:2. Use the **Owned Sort** dropdown.
+ - 28:3. Click **Refresh** after new cards load if needed.
+ - 30:## Notes
+
+## p5js/README.md
+ - 1:# Signal Foundry
+ - 5:## Included Systems
+ - 12:## Creator Workflow
+ - 19:## Exports
+ - 28:## Run It
+ - 37:## Smoke Test
+
+## p5js/progress.md
+ - 62:1. Replace hard-coded scene backdrops with a real background-image system.
+ - 63:2. Add at least five stock background options plus uploaded background support.
+ - 64:3. Add background controls for opacity, blend, scale, and composition mode.
+ - 65:4. Add a mask system with uploaded mask image support.
+ - 66:5. Support mask modes for none / inside / outside behavior plus threshold control.
+ - 67:6. Make masking apply to the actual rendered system output, not just the stage chrome.
+ - 68:7. Add at least four new standalone systems beyond flow / automata / l-system / orbit.
+ - 69:8. Ensure at least one new standalone system is true 3D physics projected into a 2D render.
+ - 70:9. Add preset camera angles for 3D-capable systems.
+ - 71:10. Add custom XYZ camera controls while always facing center in 3D mode.
+ - 72:11. Add scale/composition controls so outputs can feel immersive instead of fixed-grid.
+ - 73:12. Add at least four hybrid systems that combine multiple simulation families.
+ - 74:13. Reorganize the UI so environment, camera, transport, finish, systems, and export controls feel intentional.
+ - 75:14. Retest in-browser and confirm the new control surface and export pipeline still work.
+
+## porcupin-slideshow/README.md
+ - 1:# Porcupin Slideshow
+ - 18:## Run locally
+ - 31:## Useful URLs
+ - 37:## Pi defaults
+
+## progress.md
+ - 3:## Working Concept
+ - 16:## Technical Notes
+ - 25:## Pending
+ - 40:## Pending
+ - 48:## Completed Validation
+
+## projects/Sandbox/Artcessible Studios/PROJECT_SUMMARY.md
+ - 1:# Artcessible Creative Studios - Project Summary
+ - 9:## 🎉 What's Been Created
+ - 15:## 📚 Complete Document Library
+ - 17:### 1. **Business Plan** ✅
+ - 44:### 2. **Franchise Operations Manual** ✅
+ - 50:- **Pre-Opening Phase** (12-18 month timeline, budget, financing)
+ - 51:- **Site Selection** (city/neighborhood/space criteria, lease negotiation)
+ - 52:- **Build-Out & Design** (floor plans, specifications, equipment layouts)
+ - 53:- **Equipment Procurement** (detailed specs, costs, preferred vendors)
+ - 54:- **Staffing & Training** (hiring timeline, job descriptions, 3-week training program)
+ - 55:- **Systems & Technology** (booking, POS, website, CRM, blockchain)
+ - 56:- **Launch Marketing** (8-week pre-launch campaign, grand opening playbook)
+ - 57:- **Daily Operations** (opening/closing procedures, weekly/monthly tasks)
+ - 58:- **Safety & Compliance** (training, PPE, chemical handling, emergencies, insurance)
+ - 59:- **Financial Management** (chart of accounts, monthly reporting, KPIs)
+ - 60:- **Member Experience** (onboarding, engagement, conflict resolution)
+ - 61:- **Programming & Events** (workshop development, events calendar, exhibition planning)
+ - 62:- **Gallery Management** (art handling, sales, commissions)
+ - 63:- **Franchise Support** (parent company contact structure, communication channels)
+ - 64:- **Brand Standards** (logo usage, voice, photography style)
+ - 68:### 3. **Pitch Deck** ✅
+ - 74:1. Title (company, tagline, investment ask)
+ - 75:2. The Problem (art has become a spectator sport)
+ - 76:3. The Solution (hybrid gallery + makerspace + classroom + café)
+ - 77:4. The Experience (walk in curious, leave with art created)
+ - 78:5. Market Opportunity (£600M UK, £8.2T experience economy)
+ - 79:6. Business Model (5 revenue streams, membership-focused)
+ - 80:7. Unit Economics (£156k revenue, £13-20k profit, 8-12% margin)
+ - 81:8. Competitive Landscape (vs. makerspaces, art centers, paint-and-sip)
+ - 82:9. The Artcessible Difference (accessibility, quality, community, innovation)
+ - 83:10. Traction & Validation (pre-signups, market research)
+ - 84:11. Go-to-Market Strategy (Phase 1-4 expansion)
+ - 85:12. Financial Projections (Year 1-10, conservative scenario)
+ - 86:13. Use of Funds (£150k allocation example)
+ - 87:14. The Team (founders, advisors, hiring plan)
+ - 88:15. Why Now? (post-COVID, blockchain, maker movement, cultural shift)
+ - 89:16. Risks & Mitigation (7 risks addressed)
+ - 90:17. Investment Opportunity (3 structure options, expected returns)
+ - 91:18. Vision (Year 1 → Year 20 impact)
+ - 92:19. The Artcessible Network (collaborative global artwork vision)
+ - 93:20. Call to Action (next steps for investors)
+ - 99:### 4. **Development Roadmap** ✅
+ - 135:### 5. **Project README** ✅
+ - 158:## 💡 Key Highlights
+ - 160:### The Concept
+ - 169:### The Market
+ - 170:- **UK Alone**: 20M creative hobbyists, £600M annual market
+ - 171:- **Global**: Experience economy (£8.2T), maker movement (135M+ participants)
+ - 172:- **Trends**: Post-COVID demand for in-person community, creative tourism, experiential retail
+ - 176:### The Business Model
+ - 184:- **Total**: £156,000/year
+ - 193:### The Franchise Model
+ - 209:### 10-Year Projections (Conservative)
+ - 222:- **Total ROI**: 12× over 10 years
+ - 226:### The Innovation: Blockchain Integration
+ - 247:## 🎯 What Makes This Special
+ - 249:### 1. **Comprehensive**
+ - 257:### 2. **Realistic**
+ - 260:### 3. **Scalable**
+ - 263:### 4. **Innovative**
+ - 266:### 5. **Impactful**
+ - 271:## 📋 Next Steps
+ - 273:### For Founders (You!)
+ - 276:1. **Review all documents** thoroughly
+ - 277:2. **Select flagship location** (Bristol, Portland, or Prague?)
+ - 278:3. **Finalize founding team** (co-founder? CFO? advisors?)
+ - 279:4. **Incorporate entity** (UK Ltd. or US LLC)
+ - 280:5. **Begin fundraising prep** (refine pitch, identify investors)
+ - 283:6. **Raise seed round** (£100-250k target)
+ - 284:7. **Recruit advisory board** (franchise expert, art educator, tech specialist, real estate)
+ - 285:8. **Conduct market research** (validate demand in chosen city)
+ - 286:9. **Sign lease** (secure ideal space)
+ - 287:10. **Hire CFO/COO** (if funded)
+ - 290:11. **Build flagship studio** (construction, equipment, staffing)
+ - 291:12. **Launch** (soft opening, grand opening, first 100 members)
+ - 292:13. **Prove model** (achieve profitability by Month 18)
+ - 293:14. **Prepare franchise package** (FDD, operations manual finalization)
+ - 294:15. **Sign first franchisee** (Year 2)
+ - 298:### For Investors
+ - 301:1. **Review business plan** (`docs/business-plan.md`) — deep dive
+ - 302:2. **Review pitch deck** (`docs/pitch-deck.md`) — quick overview
+ - 303:3. **Review financials** (spreadsheet model to be shared)
+ - 304:4. **Schedule call** with founder (discuss vision, team, market)
+ - 305:5. **Visit potential location** (if local) or view photos/videos
+ - 306:6. **Meet advisors** (validate expertise and commitment)
+ - 307:7. **Negotiate terms** (equity, revenue share, or convertible note)
+ - 308:8. **Invest!** (£25k minimum, £100-250k target total raise)
+ - 322:### For Potential Franchisees
+ - 325:1. **Review franchise operations manual** (`docs/franchise-kit/franchise-operations-manual.md`)
+ - 326:2. **Assess your market** (is your city a good fit?)
+ - 327:3. **Evaluate financing** (£135-175k total investment needed)
+ - 328:4. **Attend franchise discovery call** (contact parent company)
+ - 329:5. **Visit flagship** (when operational, Year 1)
+ - 330:6. **Apply** (submit franchise application)
+ - 331:7. **Complete training** (2 weeks at flagship)
+ - 332:8. **Open your studio!** (12-18 months from signing)
+ - 345:## 🏆 Success Metrics
+ - 347:### Phase 0 Success (Month 6):
+ - 352:### Phase 1 Success (Month 18):
+ - 358:### Phase 2 Success (Year 3):
+ - 364:### Phase 3 Success (Year 10):
+ - 372:## 🎨 Brand Identity
+ - 394:## 📞 Contact
+ - 404:## 🙏 Acknowledgments
+ - 422:## 📝 Final Notes
+ - 435:1. **Funding** (£100-250k seed round)
+ - 436:2. **Location** (Bristol, Portland, or Prague)
+ - 437:3. **Team** (advisors, CFO, staff)
+ - 438:4. **Execution** (follow the roadmap!)
+
+## projects/Sandbox/Artcessible Studios/README.md
+ - 1:# Artcessible Creative Studios
+ - 11:## 🎨 What is Artcessible?
+ - 15:- **Professional equipment** (screen printing, risograph, video editing, audio recording)
+ - 16:- **Expert instruction** (workshops, classes, artist residencies)
+ - 17:- **Gallery space** (exhibit and sell member artwork)
+ - 18:- **Community hub** (café, events, collaborative projects)
+ - 19:- **Blockchain integration** (NFT memberships, hybrid physical+digital art)
+ - 25:## 📂 Project Structure
+ - 45:## ✅ Documents Created
+ - 47:### 1. **Business Plan** (`docs/business-plan.md`)
+ - 79:### 2. **Franchise Operations Manual** (`docs/franchise-kit/franchise-operations-manual.md`)
+ - 111:### 3. **Pitch Deck** (`docs/pitch-deck.md`)
+ - 138:## 🏢 The Artcessible Studio
+ - 140:### Facility Design (3,000 sq ft typical)
+ - 168:### Equipment Investment
+ - 180:## 💰 Revenue Model
+ - 182:### Membership Tiers
+ - 196:### Revenue Breakdown (Annual per Studio)
+ - 212:## 🚀 Startup Costs
+ - 214:### Investment Required (Per Studio)
+ - 236:## 📈 Growth Roadmap
+ - 238:### Phase 1: Flagship Studio (Year 1)
+ - 256:### Phase 2: Pilot Franchises (Years 2-3)
+ - 270:### Phase 3: Network Growth (Years 4-5)
+ - 283:### Phase 4: Maturity (Years 6-10)
+ - 300:## 🎯 Key Metrics & Targets
+ - 302:### Year 1 (Flagship Only)
+ - 304:- **Members**: 100+ (by Month 12)
+ - 305:- **Revenue**: £108,000
+ - 306:- **Expenses**: £144,000
+ - 307:- **Net**: -£36,000 (covered by working capital)
+ - 308:- **Workshops**: 50+ classes/year
+ - 309:- **Exhibitions**: 6 shows
+ - 310:- **Community**: 1,000+ event attendees
+ - 312:### Year 3 (5 Studios)
+ - 314:- **Studios**: 1 flagship + 4 franchises
+ - 315:- **Members**: 550 total
+ - 316:- **Revenue** (parent company): £54,600 royalties + £13,080 flagship = £67,680
+ - 317:- **Net Profit**: Approaching break-even
+ - 319:### Year 5 (10 Studios)
+ - 321:- **Studios**: 1 flagship + 9 franchises
+ - 322:- **Members**: 1,150 total
+ - 323:- **Revenue** (parent company): £109,200 royalties + £15,000 flagship = £124,200
+ - 324:- **Net Profit**: Positive (break-even achieved)
+ - 326:### Year 10 (20 Studios)
+ - 328:- **Studios**: 1 flagship + 19 franchises
+ - 329:- **Members**: 2,400 total
+ - 330:- **Revenue** (parent company): £218,400 royalties + £18,000 flagship = £236,400
+ - 331:- **Net Profit**: £400,000+ (including other revenue streams)
+ - 332:- **Company Valuation**: £4-8M (10-20× earnings)
+ - 336:## 🔧 Technology Stack
+ - 338:### Operations
+ - 339:- **Booking & Membership**: Pike13 or Glofox
+ - 340:- **POS**: Square or Shopify POS
+ - 341:- **Website**: WordPress or Next.js
+ - 342:- **Email/CRM**: Mailchimp or HubSpot
+ - 343:- **Accounting**: QuickBooks or Xero
+ - 345:### Blockchain Integration
+ - 346:- **Platform**: Tezos (low fees, eco-friendly, strong art community)
+ - 347:- **Membership NFTs**: FA2 tokens (ERC-721 equivalent)
+ - 348:- **Art NFTs**: Hybrid physical + digital certificates
+ - 349:- **Features**:
+ - 357:## 💼 Investment Opportunity
+ - 359:### Seeking: £100,000 - £250,000
+ - 369:### Investment Structures
+ - 385:### Expected Returns (20% equity, moderate scenario)
+ - 392:- **Total ROI**: 12× over 10 years
+ - 396:## 👥 Team (To Be Built)
+ - 398:### Current
+ - 399:- **Founder/CEO**: [Your Name]
+ - 400:- **Advisors**: [To be recruited]
+ - 406:### Hiring Roadmap
+ - 407:- **Pre-Launch**: CFO/COO
+ - 408:- **Month 0**: Flagship staff (Studio Director, Workshop Manager, Technician, Café Assistant)
+ - 409:- **Year 2**: Franchise Coordinator
+ - 410:- **Year 3**: Marketing Director, additional support staff
+ - 414:## 🎨 Brand Identity
+ - 416:### Visual
+ - 417:- **Logo**: Modern, bold wordmark with geometric icon
+ - 418:- **Colors**:
+ - 422:- **Typography**: Helvetica Neue (headers), Open Sans (body)
+ - 423:- **Photography**: People creating, diverse representation, bright natural lighting
+ - 425:### Voice
+ - 431:### Tagline
+ - 436:## 🌍 Impact & Vision
+ - 438:### Social Impact
+ - 439:- **Democratize art creation** (remove financial and skill barriers)
+ - 440:- **Build community** ("third places" for creative connection)
+ - 441:- **Support artists** (gallery commissions, residencies, mentorship)
+ - 442:- **Educational access** (affordable workshops, school partnerships)
+ - 444:### Long-Term Vision
+ - 456:## 📋 Next Steps
+ - 458:### For Founders
+ - 459:1. **Finalize location** (Bristol, Portland, or Prague)
+ - 460:2. **Secure seed funding** (£100k-£250k)
+ - 461:3. **Form legal entity** (Ltd. company)
+ - 462:4. **Begin site search** (2,500-3,500 sq ft)
+ - 463:5. **Recruit advisors** (franchise, art, tech, real estate)
+ - 464:6. **Hire CFO/COO**
+ - 465:7. **Launch flagship** (12-18 months from funding)
+ - 467:### For Investors
+ - 468:1. **Review business plan** (`docs/business-plan.md`)
+ - 469:2. **Review pitch deck** (`docs/pitch-deck.md`)
+ - 470:3. **Schedule call** with founder
+ - 471:4. **Visit potential locations** (market tour)
+ - 472:5. **Meet advisors** and review team
+ - 473:6. **Discuss investment terms**
+ - 474:7. **Join the Artcessible journey!**
+ - 476:### For Potential Franchisees
+ - 477:1. **Review franchise operations manual** (`docs/franchise-kit/`)
+ - 478:2. **Assess your market** (is your city a fit?)
+ - 479:3. **Evaluate financing** (£135k-£175k total investment)
+ - 480:4. **Contact parent company** (franchise@artcessible.studio)
+ - 481:5. **Visit flagship** (when operational)
+ - 482:6. **Attend franchise training**
+ - 483:7. **Open your studio!**
+ - 487:## 📞 Contact
+ - 496:## 📜 License & Usage
+ - 500:- **Business Plan**: Confidential, for stakeholder review only
+ - 501:- **Franchise Materials**: For authorized franchisees only
+ - 502:- **Pitch Deck**: For investor review only
+ - 508:## 🙏 Acknowledgments
+
+## projects/Sandbox/Artcessible Studios/docs/business-plan.md
+ - 1:# Artcessible Creative Studios - Business Plan
+ - 10:## Table of Contents
+ - 12:1. [Executive Summary](#executive-summary)
+ - 13:2. [Company Structure](#company-structure)
+ - 14:3. [Mission, Vision & Values](#mission-vision--values)
+ - 15:4. [Market Analysis](#market-analysis)
+ - 16:5. [The Problem & Solution](#the-problem--solution)
+ - 17:6. [Studio Concept & Design](#studio-concept--design)
+ - 18:7. [Core Offerings](#core-offerings)
+ - 19:8. [Revenue Model](#revenue-model)
+ - 20:9. [Facility Design & Equipment](#facility-design--equipment)
+ - 21:10. [Staffing Structure](#staffing-structure)
+ - 22:11. [Startup Costs](#startup-costs)
+ - 23:12. [Financial Projections](#financial-projections)
+ - 24:13. [Franchise Model](#franchise-model)
+ - 25:14. [Technology & Blockchain Integration](#technology--blockchain-integration)
+ - 26:15. [Marketing Strategy](#marketing-strategy)
+ - 27:16. [Expansion Roadmap](#expansion-roadmap)
+ - 28:17. [Risk Analysis](#risk-analysis)
+ - 29:18. [Investment Opportunity](#investment-opportunity)
+ - 33:## Executive Summary
+ - 35:### Overview
+ - 38:### The Problem
+ - 41:### The Solution
+ - 43:- **Professional equipment** (screen printing, risograph, analog video, audio recording)
+ - 44:- **Expert instruction** (workshops, classes, artist residencies)
+ - 45:- **Gallery space** for members to exhibit and sell work
+ - 46:- **Community** of fellow creators and collaborators
+ - 47:- **Accessibility** through tiered memberships starting at £30/month
+ - 49:### Business Model
+ - 51:1. **Membership tiers** (£30-£250/month)
+ - 52:2. **Workshops & classes** (£20-£100 per session)
+ - 53:3. **Art sales** (60/40 commission split)
+ - 54:4. **Retail & café** (merchandise, coffee, materials)
+ - 55:5. **Event rentals** (private parties, corporate team-building)
+ - 56:6. **Educational partnerships** (schools, universities, corporate)
+ - 60:### Franchise Structure
+ - 61:- **Parent Company**: Artcessible Holdings Ltd.
+ - 62:- **Franchise Fee**: £20,000 initial
+ - 63:- **Royalty**: 7% of gross revenue
+ - 64:- **Support**: Training, branding, equipment sourcing, operational templates
+ - 66:### Investment Opportunity
+ - 79:### Market Opportunity
+ - 80:- **Addressable Market**: 50 million+ adults in UK, EU, and US interested in creative hobbies
+ - 81:- **Competitive Gap**: No established franchise offering this hybrid experience
+ - 82:- **Cultural Trend**: Shift toward experiential retail and community-focused spaces
+ - 83:- **Post-COVID**: Increased demand for in-person social and creative activities
+ - 85:### Expected Outcomes (5 Years)
+ - 86:- **20 franchise locations** across UK, EU, and US
+ - 87:- **10,000+ active members** globally
+ - 88:- **£3.1M annual revenue** for parent company (royalties + flagship)
+ - 89:- **Recognized brand** in accessible art and creative community building
+ - 93:## Company Structure
+ - 95:### Legal Entities
+ - 109:### Ownership & Governance
+ - 129:## Mission, Vision & Values
+ - 131:### Mission Statement
+ - 134:### Vision Statement
+ - 137:### Core Values
+ - 171:## Market Analysis
+ - 173:### Target Market Segments
+ - 206:### Market Size
+ - 223:### Competitive Landscape
+ - 227:1. **Traditional Makerspaces** (TechShop, local hackerspaces)
+ - 231:2. **Art Centers & Studios** (community art centers)
+ - 235:3. **Print Studios** (specialist screenprint/letterpress)
+ - 239:4. **Art Cafés** (paint-and-sip, pottery studios)
+ - 249:1. ✅ **Only franchise model** combining gallery + makerspace + education
+ - 250:2. ✅ **Professional equipment** accessible to all
+ - 251:3. ✅ **Hybrid experience**: physical + digital, create + exhibit
+ - 252:4. ✅ **Blockchain integration**: memberships, collaborations, NFTs
+ - 253:5. ✅ **Scalable brand**: franchise-ready from day one
+ - 254:6. ✅ **Community-rooted**: each studio reflects its city
+ - 256:### Market Trends Supporting Artcessible
+ - 285:## The Problem & Solution
+ - 287:### The Problem: Art Has Become Inaccessible
+ - 311:### The Solution: Artcessible Studios
+ - 346:## Studio Concept & Design
+ - 348:### The Artcessible Experience
+ - 352:1. **Enter**: Bright, welcoming gallery space with rotating member art
+ - 353:2. **Explore**: Café seating, free WiFi, art books, current exhibition
+ - 354:3. **Discover**: Peek into print lab, see members screen printing
+ - 355:4. **Learn**: Sign up for intro workshop (£25 - includes membership trial)
+ - 356:5. **Create**: Make your first print, guided by instructor
+ - 357:6. **Connect**: Meet other members, learn about membership tiers
+ - 358:7. **Decide**: Join as member, return for drop-in, or book private session
+ - 362:1. **Book** a workstation or equipment online (calendar system)
+ - 363:2. **Arrive** with badge/NFT membership (scan at door)
+ - 364:3. **Grab** coffee from café, chat with fellow members
+ - 365:4. **Create** for 2-4 hours using booked equipment
+ - 366:5. **Store** work-in-progress in personal locker/cubby
+ - 367:6. **Share** on social media (#artcessible)
+ - 368:7. **Exhibit** finished work in member gallery section
+ - 369:8. **Sell** via studio (60/40 split) or take home
+ - 371:### Zones & Functions
+ - 413:## Core Offerings
+ - 415:### 1. Membership Tiers
+ - 425:- **Drop-In Rate**: £15/hour (for non-members)
+ - 426:- **Day Pass**: £40 (8-hour access)
+ - 427:- **Family Membership**: £100/month (2 adults + kids under 16)
+ - 429:### 2. Workshops & Classes
+ - 457:### 3. Gallery & Retail
+ - 477:### 4. Events & Community
+ - 493:### 5. Artist Residencies
+ - 512:## Revenue Model
+ - 514:### Revenue Streams
+ - 545:### Cost Structure (Annual)
+ - 552:- **Subtotal**: £116,400
+ - 558:- **Subtotal**: £15,600
+ - 566:### Break-Even Analysis
+ - 576:## Facility Design & Equipment
+ - 578:### Space Requirements
+ - 588:### Layout Example (3,000 sq ft)
+ - 609:### Equipment List & Costs
+ - 644:### Build-Out & Renovation
+ - 659:## Staffing Structure
+ - 661:### Core Team (Per Studio)
+ - 698:### Additional Roles (As Needed)
+ - 699:- **Cleaning Staff** (Contract, £3,000/year)
+ - 700:- **Accountant/Bookkeeper** (Contract, £3,000/year)
+ - 701:- **Guest Instructors** (Per workshop, £50-£150)
+ - 705:## Startup Costs
+ - 707:### Initial Investment (Single Studio)
+ - 729:## Financial Projections
+ - 731:### Year 1 (Flagship Studio)
+ - 749:- **Net Loss**: -£36,000 (covered by working capital)
+ - 751:### Year 2 (Flagship Mature)
+ - 761:- **Net Profit**: +£13,080
+ - 763:### Year 3-5 (Franchise Network)
+ - 781:## Franchise Model
+ - 783:### Franchise Package
+ - 787:1. **Brand & IP License**
+ - 792:2. **Operational Templates**
+ - 798:3. **Training & Support**
+ - 804:4. **Marketing Tools**
+ - 810:5. **Technology Platform**
+ - 816:6. **Curriculum & Content**
+ - 822:### Franchise Terms
+ - 844:### Franchisee Profile
+ - 857:### Franchise Support Structure
+ - 877:## Technology & Blockchain Integration
+ - 879:### Digital Infrastructure
+ - 907:### Blockchain Integration
+ - 917:- **Verifiable Membership**: Scan NFT at door (no physical card)
+ - 918:- **Portability**: Members travel and use any studio
+ - 919:- **Resale Market**: Members sell memberships they're not using
+ - 920:- **Collectibility**: Limited-edition NFTs for founding members
+ - 921:- **Rewards**: NFT evolves with member achievements (badges, XP)
+ - 939:## Marketing Strategy
+ - 941:### Brand Positioning
+ - 958:### Launch Strategy (Per Studio)
+ - 961:1. **Teaser Campaign**
+ - 967:2. **Founding Member Program**
+ - 973:3. **Soft Opening**
+ - 978:4. **Grand Opening**
+ - 984:### Ongoing Marketing
+ - 1021:### Customer Acquisition Cost & Lifetime Value
+ - 1035:## Expansion Roadmap
+ - 1037:### Phase 1: Flagship Studio (Year 1)
+ - 1055:### Phase 2: Pilot Franchises (Years 2-3)
+ - 1068:### Phase 3: Network Growth (Years 4-5)
+ - 1081:### Phase 4: Maturity (Years 6-10)
+ - 1097:## Risk Analysis
+ - 1099:### Key Risks & Mitigation
+ - 1102:- **Risk**: Not enough people in market willing to pay for membership
+ - 1103:- **Mitigation**:
+ - 1110:- **Risk**: Broken equipment frustrates members, reduces value
+ - 1111:- **Mitigation**:
+ - 1118:- **Risk**: Memberships don't grow fast enough, burn through capital
+ - 1119:- **Mitigation**:
+ - 1126:- **Risk**: Member injured using equipment, lawsuit
+ - 1127:- **Mitigation**:
+ - 1135:- **Risk**: Bad franchisee damages brand reputation
+ - 1136:- **Mitigation**:
+ - 1144:- **Risk**: Others launch similar studios
+ - 1145:- **Mitigation**:
+ - 1152:- **Risk**: Members confused by NFTs, adoption low
+ - 1153:- **Mitigation**:
+ - 1161:## Investment Opportunity
+ - 1163:### Funding Request
+ - 1167:### Use of Funds
+ - 1178:### Investment Structure Options
+ - 1198:### Returns Scenarios
+ - 1222:### Non-Financial Benefits to Investors
+ - 1233:## Appendices
+ - 1235:### Appendix A: Sample Membership Agreement
+ - 1238:### Appendix B: Franchise Disclosure Document (FDD)
+ - 1241:### Appendix C: Equipment Maintenance Schedule
+ - 1244:### Appendix D: Workshop Curriculum Examples
+ - 1247:### Appendix E: Artist Residency Application
+ - 1250:### Appendix F: Financial Model (Detailed Spreadsheet)
+ - 1255:## Document Control
+
+## projects/Sandbox/Artcessible Studios/docs/franchise-kit/franchise-operations-manual.md
+ - 1:# Artcessible Creative Studios
+ - 2:## Franchise Operations Manual
+ - 10:## Welcome to the Artcessible Network
+ - 20:## Table of Contents
+ - 22:1. [Pre-Opening Phase](#pre-opening-phase)
+ - 23:2. [Site Selection & Lease Negotiation](#site-selection--lease-negotiation)
+ - 24:3. [Build-Out & Design](#build-out--design)
+ - 25:4. [Equipment Procurement](#equipment-procurement)
+ - 26:5. [Staffing & Training](#staffing--training)
+ - 27:6. [Systems & Technology](#systems--technology)
+ - 28:7. [Launch Marketing](#launch-marketing)
+ - 29:8. [Daily Operations](#daily-operations)
+ - 30:9. [Safety & Compliance](#safety--compliance)
+ - 31:10. [Financial Management](#financial-management)
+ - 32:11. [Member Experience](#member-experience)
+ - 33:12. [Programming & Events](#programming--events)
+ - 34:13. [Gallery Management](#gallery-management)
+ - 35:14. [Franchise Support](#franchise-support)
+ - 36:15. [Brand Standards](#brand-standards)
+ - 40:## Pre-Opening Phase
+ - 42:### Timeline: 12-18 Months from Signing to Opening
+ - 45:- [ ] Complete franchise training at flagship (2 weeks)
+ - 46:- [ ] Secure financing (if needed)
+ - 47:- [ ] Form legal entity (LLC, Ltd., etc.)
+ - 48:- [ ] Open business bank account
+ - 49:- [ ] Begin site search
+ - 50:- [ ] Hire architect or designer (optional)
+ - 53:- [ ] Identify 3-5 potential locations
+ - 54:- [ ] Submit sites to parent company for approval
+ - 55:- [ ] Negotiate lease terms
+ - 56:- [ ] Sign lease
+ - 57:- [ ] Finalize floor plan and design
+ - 58:- [ ] Obtain permits and approvals
+ - 61:- [ ] Hire contractors
+ - 62:- [ ] Complete construction and renovations
+ - 63:- [ ] Order equipment (8-12 week lead time)
+ - 64:- [ ] Install electrical, plumbing, HVAC
+ - 65:- [ ] Paint, flooring, fixtures
+ - 66:- [ ] Equipment delivery and installation
+ - 69:- [ ] Hire staff
+ - 70:- [ ] Complete staff training
+ - 71:- [ ] Set up technology systems
+ - 72:- [ ] Stock supplies
+ - 73:- [ ] Soft opening (invite-only)
+ - 74:- [ ] Grand opening marketing campaign
+ - 76:### Budget & Financing
+ - 93:## Site Selection & Lease Negotiation
+ - 95:### Location Criteria
+ - 126:### Lease Negotiation Tips
+ - 129:- **Term**: 5 years with 5-year renewal option
+ - 130:- **Rent**: £25-£35/sq ft annually (varies by city)
+ - 131:- **Escalation**: CPI or 2-3% annual increase
+ - 132:- **Tenant Improvement Allowance**: Negotiate £10-20/sq ft for build-out
+ - 133:- **Early Termination**: Option to exit after 3 years (with penalty)
+ - 134:- **Use Clause**: "Art studio, gallery, and education space"
+ - 137:1. What utilities are included?
+ - 138:2. Who maintains HVAC, plumbing, electrical?
+ - 139:3. Can we install exterior signage?
+ - 140:4. Are there restrictions on hours or noise?
+ - 141:5. What's the parking situation?
+ - 142:6. What's the history of the space (previous tenants)?
+ - 143:7. Are there any upcoming building renovations or sales?
+ - 151:### Approval Process
+ - 154:1. Complete Site Evaluation Form (provided)
+ - 155:2. Photos (exterior, interior, neighborhood)
+ - 156:3. Lease proposal or draft
+ - 157:4. Demographic data (Census or city data)
+ - 158:5. Competitive analysis (other art spaces nearby)
+ - 170:## Build-Out & Design
+ - 172:### Standard Floor Plan (3,000 sq ft example)
+ - 220:### Build-Out Checklist
+ - 223:- [ ] Demolition (if needed)
+ - 224:- [ ] Framing for audio booth
+ - 225:- [ ] Build movable gallery walls
+ - 226:- [ ] Install shelving and storage
+ - 229:- [ ] Paint (white walls, accent colors per brand guide)
+ - 230:- [ ] Flooring (polished concrete or sealed wood)
+ - 231:- [ ] Ceiling (painted or exposed, depending on aesthetic)
+ - 234:- [ ] Upgraded panel (if needed for equipment load)
+ - 235:- [ ] Outlets every 6 ft on walls
+ - 236:- [ ] Dedicated circuits for heavy equipment
+ - 237:- [ ] Track lighting in gallery
+ - 238:- [ ] Task lighting at workstations
+ - 241:- [ ] Utility sink in print lab (hot/cold water)
+ - 242:- [ ] Café sink (3-compartment if serving food)
+ - 243:- [ ] Bathroom(s) ADA-compliant
+ - 246:- [ ] Ventilation for print lab (fume extraction)
+ - 247:- [ ] Climate control (68-75°F year-round)
+ - 248:- [ ] Soundproofing for audio booth
+ - 251:- [ ] Fire extinguishers (3-4 throughout)
+ - 252:- [ ] Smoke detectors
+ - 253:- [ ] Emergency exit signage
+ - 254:- [ ] First aid station
+ - 255:- [ ] Eyewash station (print lab)
+ - 258:- [ ] Exterior sign (Artcessible logo + location)
+ - 259:- [ ] Window graphics
+ - 260:- [ ] Interior wayfinding
+ - 261:- [ ] Safety signs (required by law)
+ - 263:### Design Standards
+ - 284:## Equipment Procurement
+ - 286:### Required Equipment List
+ - 337:### Preferred Vendors
+ - 340:- **Ryonet** (screen printing): 15% franchise discount
+ - 341:- **Dell Business** (computers): Partner pricing
+ - 342:- **Square** (POS): Reduced processing fees
+ - 343:- **Artcessible Supplier Portal**: Bulk purchasing for supplies (inks, paper, etc.)
+ - 346:1. Use provided Equipment Spec Sheet
+ - 347:2. Get 3 quotes per major item
+ - 348:3. Submit Purchase Order to parent for approval (items >£1,000)
+ - 349:4. Order 8-12 weeks before planned opening
+ - 350:5. Coordinate delivery with build-out schedule
+ - 354:## Staffing & Training
+ - 356:### Hiring Timeline
+ - 364:### Position Descriptions
+ - 416:### Training Program
+ - 445:### Staff Culture
+ - 448:1. **Welcoming**: Make every person feel they belong
+ - 449:2. **Helpful**: Proactively assist, don't wait to be asked
+ - 450:3. **Patient**: Beginners are learning; celebrate effort
+ - 451:4. **Safe**: Safety is never negotiable
+ - 452:5. **Fun**: We're here to create and enjoy art!
+ - 462:## Systems & Technology
+ - 464:### Required Systems
+ - 531:### Blockchain Integration
+ - 547:## Launch Marketing
+ - 549:### Pre-Launch Campaign (8 weeks before)
+ - 593:### Grand Opening (Week 0)
+ - 624:### First 3 Months
+ - 640:## Daily Operations
+ - 642:### Hours of Operation
+ - 655:### Daily Checklist
+ - 658:- [ ] Unlock and disarm security
+ - 659:- [ ] Turn on lights, music, HVAC
+ - 660:- [ ] Start café equipment (espresso machine warm-up)
+ - 661:- [ ] Check booking calendar for day
+ - 662:- [ ] Tidy gallery and labs
+ - 663:- [ ] Check equipment functionality
+ - 664:- [ ] Greet first members
+ - 667:- [ ] Monitor member check-ins
+ - 668:- [ ] Assist with equipment questions
+ - 669:- [ ] Restock supplies as needed
+ - 670:- [ ] Process café and retail sales
+ - 671:- [ ] Respond to inquiries (phone, email, walk-in)
+ - 672:- [ ] Post to social media (at least 1×/day)
+ - 675:- [ ] Ensure all members have left
+ - 676:- [ ] Turn off equipment
+ - 677:- [ ] Put away supplies and tools
+ - 678:- [ ] Wipe down surfaces
+ - 679:- [ ] Take out trash/recycling
+ - 680:- [ ] Turn off lights, music, HVAC
+ - 681:- [ ] Arm security system
+ - 682:- [ ] Lock doors
+ - 684:### Weekly Tasks
+ - 686:- [ ] **Monday**: Staff meeting, plan week ahead
+ - 687:- [ ] **Tuesday**: Inventory check, order supplies if needed
+ - 688:- [ ] **Wednesday**: Member outreach (birthdays, renewals, lapsed)
+ - 689:- [ ] **Thursday**: Prep for weekend workshops
+ - 690:- [ ] **Friday**: Social media scheduling for next week
+ - 691:- [ ] **Saturday**: Deep clean equipment
+ - 692:- [ ] **Sunday**: Review week, plan next
+ - 694:### Monthly Tasks
+ - 696:- [ ] **Week 1**: Financial reports (to parent company)
+ - 697:- [ ] **Week 2**: Gallery changeover (new exhibition)
+ - 698:- [ ] **Week 3**: Equipment maintenance day
+ - 699:- [ ] **Week 4**: Member survey, feedback collection
+ - 703:## Safety & Compliance
+ - 705:### Safety Training (Required for All Members)
+ - 708:1. Watch safety video (15 min)
+ - 709:2. Read safety manual
+ - 710:3. Sign waiver
+ - 711:4. Pass safety quiz (10 questions, 80% required)
+ - 712:5. Supervised first use with staff
+ - 722:### Personal Protective Equipment (PPE)
+ - 734:### Chemical Safety
+ - 751:### Emergency Procedures
+ - 754:1. Activate fire alarm
+ - 755:2. Evacuate building (designated meeting spot outside)
+ - 756:3. Call emergency services (999 in UK, 911 in US)
+ - 757:4. DO NOT re-enter building
+ - 758:5. Staff accounts for all members
+ - 761:1. Assess severity (minor vs. major)
+ - 762:2. Minor: First aid on-site, document in incident log
+ - 763:3. Major: Call emergency services, do not move person
+ - 764:4. Staff trained in first aid provides assistance
+ - 765:5. Notify franchise parent company within 24 hours
+ - 768:1. Evacuate immediate area
+ - 769:2. Wear PPE (gloves, goggles)
+ - 770:3. Contain spill with absorbent material
+ - 771:4. Ventilate area
+ - 772:5. Dispose of waste properly
+ - 773:6. If large spill, call hazmat team
+ - 775:### Insurance & Liability
+ - 788:### Compliance & Inspections
+ - 791:- [ ] Fire safety inspection
+ - 792:- [ ] Health inspection (if serving food/drink)
+ - 793:- [ ] Electrical inspection
+ - 794:- [ ] HVAC maintenance
+ - 795:- [ ] Equipment calibration (as needed)
+ - 806:## Financial Management
+ - 808:### Chart of Accounts
+ - 838:### Monthly Reporting (Due 10th of Following Month)
+ - 841:1. **Profit & Loss Statement**
+ - 846:2. **Balance Sheet**
+ - 849:3. **Metrics Dashboard**
+ - 859:### Royalty Payment
+ - 874:### Key Performance Indicators (KPIs)
+ - 877:- **Member Count**: Total active (goal: 100+)
+ - 878:- **Member Growth Rate**: New - churned (goal: +5-10/month)
+ - 879:- **Churn Rate**: Cancellations ÷ total (goal: <5%)
+ - 880:- **Revenue per Member**: Total revenue ÷ members (goal: £100+)
+ - 881:- **Workshop Fill Rate**: Attended ÷ capacity (goal: >70%)
+ - 882:- **Retail Conversion**: Buyers ÷ visitors (goal: >15%)
+ - 885:- **Net Profit Margin**: (goal: 8-12%)
+ - 886:- **Break-Even Point**: Revenue needed to cover costs
+ - 887:- **Equipment Utilization**: Booking hours ÷ available hours (goal: >40%)
+ - 891:## Member Experience
+ - 893:### Onboarding New Members
+ - 929:### Member Engagement
+ - 932:- **Weekly**: Newsletter with events, spotlights, tips
+ - 933:- **Monthly**: Personal email on membership anniversary
+ - 934:- **Quarterly**: Survey for feedback
+ - 935:- **Annual**: Renewal with thank you and special offer
+ - 938:- **Member Directory**: Opt-in profiles to connect with others
+ - 939:- **Skill Shares**: Members teach each other (informal, free)
+ - 940:- **Collaborations**: Match members for joint projects
+ - 941:- **Critique Groups**: Weekly peer feedback sessions
+ - 942:- **Social Events**: Happy hours, potlucks, field trips
+ - 944:### Handling Issues
+ - 948:1. **"Equipment is always booked"**
+ - 951:2. **"Too crowded / too quiet"**
+ - 954:3. **"Staff unavailable for help"**
+ - 957:4. **"Other members are loud / messy"**
+ - 961:1. Listen actively, empathize
+ - 962:2. Understand the issue (ask clarifying questions)
+ - 963:3. Propose solutions, involve member in deciding
+ - 964:4. Follow through, check back later
+ - 965:5. Document in member profile (for patterns)
+ - 974:1. Document incidents
+ - 975:2. Issue written warning
+ - 976:3. Consult with parent company (for serious issues)
+ - 977:4. Terminate membership, refund if applicable
+ - 978:5. Revoke access immediately
+ - 982:## Programming & Events
+ - 984:### Workshop Development
+ - 987:1. **Topic**: What will participants learn/create?
+ - 988:2. **Level**: Beginner, Intermediate, Advanced, or All Levels
+ - 989:3. **Duration**: 2-3 hours (intro), 4-8 weeks (course)
+ - 990:4. **Capacity**: 8-15 participants (depending on equipment)
+ - 991:5. **Materials**: List everything needed, cost per person
+ - 992:6. **Outcomes**: What will they leave with?
+ - 1027:### Events Calendar
+ - 1047:### Exhibition Planning
+ - 1061:1. **Member Shows**: Open call, juried selection
+ - 1062:2. **Solo Shows**: Feature one artist (Residents prioritized)
+ - 1063:3. **Thematic Groups**: Curated around topic (e.g., "Printmaking Now")
+ - 1064:4. **Community Partner**: Co-curated with local org
+ - 1070:## Gallery Management
+ - 1072:### Art Handling
+ - 1075:1. Inspect for damage upon arrival
+ - 1076:2. Photograph (6 sides if sculptural, front/back if flat)
+ - 1077:3. Complete condition report
+ - 1078:4. Store safely until installation
+ - 1079:5. Email artist confirmation
+ - 1099:### Sales & Commissions
+ - 1106:1. Visitor expresses interest
+ - 1107:2. Staff checks if piece is available (not all are for sale)
+ - 1108:3. Process payment (POS)
+ - 1109:4. Hold piece until exhibition ends OR ship immediately (if allowed by artist)
+ - 1110:5. Provide receipt and certificate of authenticity
+ - 1121:## Franchise Support
+ - 1123:### Parent Company Support Team
+ - 1148:### Communication Channels
+ - 1172:### Performance Reviews
+ - 1188:## Brand Standards
+ - 1190:### Logo Usage
+ - 1210:### Brand Voice
+ - 1225:### Photography Style
+ - 1240:## Appendices
+ - 1242:### Appendix A: Equipment Spec Sheets
+ - 1245:### Appendix B: Sample Lease Agreement
+ - 1248:### Appendix C: Safety Training Video Script
+ - 1251:### Appendix D: Workshop Lesson Plans
+ - 1254:### Appendix E: Member Handbook
+ - 1257:### Appendix F: Marketing Asset Library
+ - 1260:### Appendix G: Vendor Contact List
+ - 1263:### Appendix H: Financial Model Template
+ - 1268:## Conclusion
+ - 1279:- **Version**: 1.0  
+ - 1280:- **Last Updated**: November 2025  
+ - 1281:- **Next Review**: Annually  
+ - 1282:- **Contact**: franchise@artcessible.studio
+
+## projects/Sandbox/Artcessible Studios/docs/pitch-deck.md
+ - 1:# Artcessible Creative Studios
+ - 2:## Investor Pitch Deck
+ - 10:## Slide 1: Title
+ - 25:## Slide 2: The Problem
+ - 41:## Slide 3: The Solution
+ - 58:## Slide 4: The Experience
+ - 62:1. **Explore** the gallery (free, open to all)
+ - 63:2. **Discover** the print lab, media studio, workshop space
+ - 64:3. **Try** a 2-hour intro workshop (£25)
+ - 65:4. **Create** their first screenprint, glitch video, or audio piece
+ - 66:5. **Join** as a member (£30-£250/month)
+ - 67:6. **Return** weekly to use equipment, take classes, exhibit work
+ - 76:## Slide 5: Market Opportunity
+ - 98:## Slide 6: Business Model
+ - 102:1. **Memberships** (60% of revenue)
+ - 108:2. **Workshops & Classes** (15%)
+ - 111:3. **Art Sales** (8%)
+ - 114:4. **Café & Retail** (9%)
+ - 117:5. **Event Rentals** (8%)
+ - 125:## Slide 7: Unit Economics
+ - 128:- **Setup Cost**: £135k-£175k (incl. franchise fee)
+ - 129:- **Monthly Revenue**: £13k (at 100 members)
+ - 130:- **Monthly Expenses**: £12k
+ - 131:- **Monthly Net**: £1k+ (8-12% margin)
+ - 132:- **Break-Even**: Month 6-9
+ - 133:- **Payback Period**: 5-7 years
+ - 136:- **Customer Acquisition Cost**: £50-£75
+ - 137:- **Lifetime Value**: £1,710 (18-month avg duration)
+ - 138:- **LTV:CAC Ratio**: 22:1 ✅
+ - 142:## Slide 8: Competitive Landscape
+ - 152:1. ✅ **Only franchise model** combining gallery + makerspace + education
+ - 153:2. ✅ **Professional equipment** at accessible prices
+ - 154:3. ✅ **Hybrid physical + digital** (NFTs, blockchain memberships)
+ - 155:4. ✅ **Scalable brand** (franchise-ready from day one)
+ - 156:5. ✅ **Community-rooted** (each studio reflects its city)
+ - 160:## Slide 9: The Artcessible Difference
+ - 186:## Slide 10: Traction & Validation
+ - 199:- **Lesson**: Strong unit economics + franchise model = sustainability
+ - 203:## Slide 11: Go-To-Market Strategy
+ - 227:## Slide 12: Financial Projections
+ - 245:## Slide 13: Use of Funds
+ - 267:## Slide 14: The Team
+ - 279:- [Name], Franchise Expert (successfully scaled [X] to [Y] locations)
+ - 280:- [Name], Art Educator (20+ years teaching at [University])
+ - 281:- [Name], Blockchain/Tech (experience with Tezos, NFTs)
+ - 282:- [Name], Real Estate (lease negotiation, site selection)
+ - 291:## Slide 15: Why Now?
+ - 315:## Slide 16: Risks & Mitigation
+ - 318:- **Mitigation**: Market research, flexible pricing, diverse revenue
+ - 321:- **Mitigation**: Maintenance contracts, backup equipment
+ - 324:- **Mitigation**: Conservative projections, 6-12 month runway
+ - 327:- **Mitigation**: Rigorous vetting, training, audits, termination clause
+ - 330:- **Mitigation**: First-mover advantage, strong brand, continuous innovation
+ - 334:## Slide 17: Investment Opportunity
+ - 361:## Slide 18: Vision
+ - 378:## Slide 19: The Artcessible Network
+ - 385:- **Result**: Collaborative global artwork, minted as NFT, exhibited simultaneously in all studios
+ - 393:## Slide 20: Call to Action
+ - 413:1. Review full business plan
+ - 414:2. Visit potential flagship location
+ - 415:3. Meet the team
+ - 416:4. Let's create something amazing together
+ - 422:## Appendix Slides
+ - 424:### Appendix A: Detailed Financials
+ - 427:### Appendix B: Market Research Data
+ - 430:### Appendix C: Floor Plans & Renderings
+ - 433:### Appendix D: Partnership Letters of Intent
+ - 436:### Appendix E: Team Bios (Full)
+ - 439:### Appendix F: Franchise Economics
+ - 444:## Presentation Notes
+ - 447:- **Slide 1-2**: Hook with the problem (relatable, emotional)
+ - 448:- **Slide 3-4**: Paint the vision (experiential, tangible)
+ - 449:- **Slide 5-6**: Validate the market (data-driven, credible)
+ - 450:- **Slide 7-9**: Prove the model works (unit economics, competitive advantages)
+ - 451:- **Slide 10-13**: Show traction and path forward (realistic, achievable)
+ - 452:- **Slide 14-16**: Build confidence in team and risk management
+ - 453:- **Slide 17-20**: Close with clear ask and inspiring vision
+ - 456:1. Why you? (Answer: Personal connection to mission + relevant skills)
+ - 457:2. Why now? (Answer: Post-COVID moment + blockchain integration + maker movement maturity)
+ - 458:3. How is this different from TechShop? (Answer: Art-focused, franchise model, stronger unit economics)
+ - 459:4. What if members don't adopt blockchain/NFT? (Answer: Optional layer, not core to model)
+ - 460:5. How do you prevent copycats? (Answer: Brand, first-mover, network effects, continuous innovation)
+ - 473:- **Version**: 1.0
+ - 474:- **Status**: Draft for Review
+ - 475:- **Next Update**: After investor feedback
+ - 476:- **Contact**: hello@artcessible.studio
+
+## projects/Sandbox/Artcessible Studios/docs/roadmap.md
+ - 1:# Artcessible Creative Studios - Development Roadmap
+ - 9:## Overview
+ - 13:1. **Phase 0**: Foundation & Planning (Months 1-6)
+ - 14:2. **Phase 1**: Flagship Launch (Months 7-18)
+ - 15:3. **Phase 2**: Pilot Franchises (Years 2-3)
+ - 16:4. **Phase 3**: Network Growth (Years 4-10)
+ - 20:## Phase 0: Foundation & Planning
+ - 24:### Month 1: Entity Formation & Team
+ - 27:- [ ] Retain business attorney (franchise specialist preferred)
+ - 28:- [ ] Form Artcessible Holdings Ltd. (UK) or LLC (US)
+ - 29:- [ ] Register business name and domains
+ - 30:- [ ] Obtain EIN/company number
+ - 31:- [ ] Open business bank account
+ - 32:- [ ] Set up accounting system (QuickBooks, Xero)
+ - 35:- [ ] Finalize founding team roles
+ - 36:- [ ] Recruit advisors (franchise, art, tech, real estate)
+ - 37:- [ ] Create Advisory Board structure
+ - 38:- [ ] Define equity split and vesting schedules
+ - 48:### Month 2-3: Fundraising Campaign
+ - 51:- [ ] Finalize business plan
+ - 52:- [ ] Create pitch deck (slides + speaker notes)
+ - 53:- [ ] Develop financial model (Excel, detailed projections)
+ - 54:- [ ] Prepare investor data room (documents, market research)
+ - 57:- [ ] Identify 20-30 target investors
+ - 62:- [ ] Conduct 15-20 pitch meetings
+ - 63:- [ ] Negotiate terms and close £100k-£250k seed round
+ - 74:### Month 4-5: Location Selection & Market Research
+ - 77:- [ ] Survey 200+ target customers in 3 candidate cities
+ - 78:- [ ] Analyze demographics and competition
+ - 79:- [ ] Conduct focus groups (10-15 people per city)
+ - 80:- [ ] Select flagship location (Bristol, Portland, or Prague)
+ - 83:- [ ] Tour 15-20 potential spaces
+ - 84:- [ ] Evaluate against criteria (size, location, cost, zoning)
+ - 85:- [ ] Narrow to top 3 sites
+ - 86:- [ ] Submit sites to advisors for feedback
+ - 95:### Month 6: Lease Negotiation & Design
+ - 98:- [ ] Negotiate terms with top choice landlord
+ - 99:- [ ] Review lease with attorney
+ - 100:- [ ] Secure tenant improvement allowance
+ - 101:- [ ] Sign lease (target: 5 years with 5-year option)
+ - 104:- [ ] Hire architect or designer (or DIY with templates)
+ - 105:- [ ] Finalize floor plan (gallery, labs, workshop, office)
+ - 106:- [ ] Create equipment layout and workflow
+ - 107:- [ ] Obtain necessary permits and approvals
+ - 117:## Phase 1: Flagship Launch
+ - 121:### Month 7-9: Build-Out
+ - 124:- [ ] Hire contractors (general, electrical, plumbing)
+ - 125:- [ ] Complete demolition and framing
+ - 126:- [ ] Install electrical, plumbing, HVAC
+ - 127:- [ ] Paint, flooring, fixtures
+ - 128:- [ ] Build audio booth (soundproofing)
+ - 129:- [ ] Install track lighting in gallery
+ - 132:- [ ] Order all equipment (8-12 week lead time)
+ - 139:- [ ] Coordinate delivery with build-out timeline
+ - 140:- [ ] Install and test all equipment
+ - 143:- [ ] Post job listings (Studio Director, Workshop Manager, Technician)
+ - 144:- [ ] Interview candidates
+ - 145:- [ ] Make offers
+ - 146:- [ ] Begin onboarding (Month 9)
+ - 159:### Month 10: Systems Setup & Pre-Launch Marketing
+ - 162:- [ ] Set up booking system (Pike13 or Glofox)
+ - 163:- [ ] Configure POS (Square)
+ - 164:- [ ] Launch website (WordPress template)
+ - 165:- [ ] Set up email marketing (Mailchimp)
+ - 166:- [ ] Create social media accounts
+ - 167:- [ ] Implement security and WiFi
+ - 170:- [ ] Complete staff hiring (4-5 people)
+ - 171:- [ ] 2-week intensive training
+ - 176:- [ ] Dry runs and practice workshops
+ - 179:- [ ] Announce opening (press release, social media)
+ - 180:- [ ] Launch Founding Member campaign (50 memberships at 50% off)
+ - 181:- [ ] Build email list (target: 500+ subscribers)
+ - 182:- [ ] Partner outreach (universities, corporations)
+ - 183:- [ ] Influencer invites (local artists, bloggers)
+ - 192:### Month 11: Soft Opening
+ - 195:- [ ] Invite-only preview (100-150 people)
+ - 198:- [ ] Offer free mini-workshops
+ - 199:- [ ] Test all systems (booking, POS, operations)
+ - 200:- [ ] Gather feedback and iterate
+ - 203:- [ ] Welcome first 30 founding members
+ - 204:- [ ] Run first paid workshops (4-6 classes)
+ - 205:- [ ] Daily operations at reduced hours
+ - 206:- [ ] Staff adjusting to real-world conditions
+ - 209:- [ ] Fix any issues identified in soft launch
+ - 210:- [ ] Stock additional supplies based on demand
+ - 211:- [ ] Finalize grand opening event details
+ - 212:- [ ] Ramp up marketing (week of event)
+ - 221:### Month 12: Grand Opening & Launch
+ - 224:- [ ] Free public event (Friday or Saturday, 6-10 PM)
+ - 231:- [ ] Press coverage (invite TV, newspapers, magazines)
+ - 232:- [ ] Membership sign-ups (target: 30-50 on opening night)
+ - 241:- [ ] Full hours (Tues-Sun, closed Monday)
+ - 242:- [ ] Run 8-10 workshops
+ - 243:- [ ] First gallery exhibition installed
+ - 244:- [ ] First Friday open house (end of Month 12)
+ - 253:### Months 13-18: Growth & Optimization
+ - 265:- [ ] Expand workshop catalog (20+ different classes)
+ - 266:- [ ] Launch multi-week courses (4-8 week intensives)
+ - 267:- [ ] Initiate Artist Residency program (2-4 residents)
+ - 268:- [ ] Host 6 gallery exhibitions
+ - 269:- [ ] Develop signature events (quarterly)
+ - 272:- **Month 13**: £7,500/month revenue
+ - 273:- **Month 15**: £10,000/month revenue (approaching break-even)
+ - 274:- **Month 18**: £12,500/month revenue (profitable!)
+ - 277:- [ ] Document all operations (systems, processes, best practices)
+ - 278:- [ ] Create franchise operations manual
+ - 279:- [ ] Film training videos (equipment, safety, customer service)
+ - 280:- [ ] Develop franchise financial models
+ - 281:- [ ] Engage franchise attorney (FDD preparation)
+ - 282:- [ ] Design franchise marketing materials
+ - 290:## Phase 2: Pilot Franchises
+ - 294:### Year 2 Milestones
+ - 297:- [ ] Complete Franchise Disclosure Document (FDD)
+ - 298:- [ ] Register in franchise-required jurisdictions
+ - 299:- [ ] Launch franchise website and marketing
+ - 300:- [ ] Attend franchise trade shows (if applicable)
+ - 301:- [ ] Identify 10-15 qualified franchise candidates
+ - 304:- [ ] Sign first franchise agreement
+ - 305:- [ ] Franchisee completes training (2 weeks at flagship)
+ - 306:- [ ] Assist with site selection and lease negotiation
+ - 307:- [ ] Oversee build-out (remote support + site visits)
+ - 308:- [ ] First franchise opens (target: Month 24)
+ - 311:- [ ] Sign 2-3 additional franchise agreements
+ - 312:- [ ] Provide training and support
+ - 313:- [ ] 2nd franchise opens
+ - 316:- [ ] 3rd franchise opens
+ - 317:- [ ] Launch monthly franchise network calls
+ - 318:- [ ] Host first quarterly regional meetup
+ - 319:- [ ] Refine operations based on franchisee feedback
+ - 331:### Year 3 Milestones
+ - 334:- [ ] Sign 2-3 more franchise agreements
+ - 335:- [ ] 4th and 5th franchises open
+ - 336:- [ ] Expand flagship (add equipment or extend hours if demand)
+ - 337:- [ ] Launch online course pilot (additional revenue)
+ - 340:- [ ] Host first annual franchise conference (2-3 days)
+ - 341:- [ ] Awards and recognition (top performers)
+ - 342:- [ ] Strategic planning for Year 4-5 expansion
+ - 357:## Phase 3: Network Growth
+ - 361:### Year 4-5: Expansion
+ - 380:### Year 6-10: Maturity & Scale
+ - 402:## Critical Path & Dependencies
+ - 404:### Must-Haves for Flagship Launch
+ - 405:1. ✅ Seed funding secured (£100k+ minimum)
+ - 406:2. ✅ Lease signed (suitable space, favorable terms)
+ - 407:3. ✅ Equipment ordered (8-12 week lead time)
+ - 408:4. ✅ Core team hired (Director, Manager, Technician)
+ - 409:5. ✅ Systems set up (booking, POS, website)
+ - 411:### Must-Haves for Franchise Launch
+ - 412:1. ✅ Flagship profitable (proven model)
+ - 413:2. ✅ Operations manual complete (franchisee playbook)
+ - 414:3. ✅ FDD filed (legal compliance)
+ - 415:4. ✅ Training program established (2-week curriculum)
+ - 416:5. ✅ Support infrastructure (franchise coordinator, systems)
+ - 420:## Risk Mitigation Timeline
+ - 422:### Market Risk
+ - 423:- **Month 4-5**: Extensive market research before location selection
+ - 424:- **Month 11**: Soft opening to test demand before full commitment
+ - 425:- **Ongoing**: Member surveys and feedback loops
+ - 427:### Financial Risk
+ - 428:- **Month 2-3**: Secure 12-18 months of runway (not just 6 months)
+ - 429:- **Month 15**: Reassess if not approaching break-even (pivot or raise more)
+ - 430:- **Year 2**: Don't launch franchises until flagship is profitable
+ - 432:### Operational Risk
+ - 433:- **Month 10**: Thorough staff training (reduce early mistakes)
+ - 434:- **Month 12**: Soft opening before grand opening (test systems)
+ - 435:- **Ongoing**: Equipment maintenance contracts (prevent downtime)
+ - 437:### Legal Risk
+ - 438:- **Month 1**: Proper entity formation and liability protection
+ - 439:- **Month 6**: Lease reviewed by attorney (avoid unfavorable terms)
+ - 440:- **Year 2**: FDD professionally prepared (franchise attorney)
+ - 441:- **Ongoing**: Insurance (general liability, property, workers' comp)
+ - 445:## Key Performance Indicators (KPIs)
+ - 447:### Track Monthly (Flagship)
+ - 448:- **Members**: Total active (by tier)
+ - 449:- **New Members**: Sign-ups this month
+ - 450:- **Churn Rate**: Cancellations ÷ total (goal: <5%)
+ - 451:- **Revenue**: Total and by category
+ - 452:- **Expenses**: Total and by category
+ - 453:- **Net Profit/Loss**: Revenue - expenses
+ - 454:- **Workshop Fill Rate**: Attended ÷ capacity (goal: >70%)
+ - 455:- **Equipment Utilization**: Booking hours ÷ available (goal: >40%)
+ - 457:### Track Quarterly (Franchise Network)
+ - 458:- **Studios Open**: Total locations
+ - 459:- **Total Members**: Across all studios
+ - 460:- **Avg Members/Studio**: Total ÷ studios
+ - 461:- **Parent Revenue**: Royalties + flagship
+ - 462:- **Parent Expenses**: Support, marketing, admin
+ - 463:- **Parent Net Profit**: Revenue - expenses
+ - 464:- **Franchisee Satisfaction**: Survey score (goal: >8/10)
+ - 468:## Milestone Checklist
+ - 470:### By Month 6 (End of Phase 0)
+ - 471:- [x] Company formed, bank account open
+ - 472:- [x] Seed funding secured (£100k-£250k)
+ - 473:- [x] Advisory board assembled
+ - 474:- [x] Location selected, lease signed
+ - 475:- [x] Business plan, pitch deck, financial model finalized
+ - 477:### By Month 12 (Flagship Launch)
+ - 478:- [x] Build-out complete
+ - 479:- [x] All equipment installed and tested
+ - 480:- [x] 4-5 staff hired and trained
+ - 481:- [x] Systems operational (booking, POS, website)
+ - 482:- [x] Grand opening successful (200+ attendees)
+ - 483:- [x] 40-50 members signed up
+ - 485:### By Month 18 (Flagship Stable)
+ - 486:- [x] 100+ members
+ - 487:- [x] Profitable (£12,500+ monthly revenue)
+ - 488:- [x] Operations manual complete
+ - 489:- [x] Franchise package ready
+ - 490:- [x] FDD filed (if applicable)
+ - 492:### By Year 3 (Pilot Franchises)
+ - 493:- [x] 1 flagship + 5 franchises operational
+ - 494:- [x] 600+ total members
+ - 495:- [x] Parent company profitable (£65k+)
+ - 496:- [x] Franchise model proven and scalable
+ - 498:### By Year 5 (Network Growth)
+ - 499:- [x] 10-15 studios
+ - 500:- [x] 1,150+ members
+ - 501:- [x] £156k+ parent company profit
+ - 502:- [x] US expansion initiated
+ - 504:### By Year 10 (Maturity)
+ - 505:- [x] 20+ studios globally
+ - 506:- [x] 2,400+ members
+ - 507:- [x] £400k+ parent company profit
+ - 508:- [x] Exit opportunity identified (acquisition, IPO, etc.)
+ - 512:## Document Control
+
+## projects/Sandbox/Breadfond 501c/README.md
+ - 1:# Breadfond Foundation Project Repository
+ - 12:## 🎯 What is Breadfond?
+ - 23:## 📁 Project Structure
+ - 43:## 📄 Documents Created
+ - 45:### 1. **Business Plan** (`docs/business-plan.md`)
+ - 66:### 2. **Gallery Operations Manual** (`docs/gallery-operations-manual.md`)
+ - 85:### 3. **Development Roadmap** (`docs/roadmap.md`)
+ - 118:### 4. **Articles of Incorporation** (`docs/legal-kit/articles-of-incorporation.md`)
+ - 136:## 🎨 Gallery Network Vision
+ - 138:### Purpose
+ - 140:1. **Exhibition Spaces** - Showcase loan recipients' artwork
+ - 141:2. **Education Centers** - Teach Americans about global art movements
+ - 142:3. **Donor Recruitment Hubs** - Convert visitors into lenders
+ - 143:4. **Cultural Bridges** - Connect US audiences with artists worldwide
+ - 144:5. **Revenue Generators** - Art sales, memberships, events
+ - 146:### Target Cities (5-Year Plan)
+ - 147:1. **New York City** (Brooklyn) - Year 1, Q4
+ - 148:2. **Los Angeles** (Arts District) - Year 2, Q2
+ - 149:3. **San Francisco** (Mission/SOMA) - Year 2, Q4
+ - 150:4. **Miami** (Wynwood) - Year 3, Q4
+ - 151:5. **Chicago** (Pilsen) - Year 4, Q2
+ - 152:6. **Seattle** (Capitol Hill) - Year 4, Q4
+ - 153:7. **Austin** (East Austin) - Year 5, Q2
+ - 154:8. **Washington DC** (Shaw) - Year 5, Q4
+ - 156:### Programming
+ - 157:- **Rotating Exhibitions**: 6-8 weeks, featuring loan recipients
+ - 158:- **Artist Talks**: Virtual Q&As with artists abroad
+ - 159:- **Workshops**: Traditional techniques, cultural education
+ - 160:- **Opening Events**: Monthly receptions for new shows
+ - 161:- **Lending Stations**: iPads throughout gallery for immediate loans
+ - 162:- **VR Experiences**: Visit artists' studios virtually
+ - 164:### Financial Model
+ - 166:- **500 new lenders per year** × **$200 average loan** = **$100k in loans generated**
+ - 168:- **65% ROI** over 5 years through donor acquisition
+ - 173:## 💰 Fundraising Status & Needs
+ - 175:### Seed Funding Target: $250,000
+ - 184:### Target Funding Sources
+ - 185:1. **Crypto Ecosystem Grants** ($100k)
+ - 190:2. **Arts & Culture Foundations** ($75k)
+ - 195:3. **Impact Investing** ($50k)
+ - 200:4. **Corporate Sponsors** ($25k)
+ - 206:## 🔧 Technical Architecture (Planned)
+ - 208:### Blockchain Stack
+ - 209:- **Primary Layer**: Etherlink (L2) - Fast, cheap transactions
+ - 210:- **Settlement Layer**: Tezos (L1) - Security and artist payouts
+ - 211:- **Bridge**: Etherlink ↔ Tezos for cross-chain transfers
+ - 212:- **Oracle**: Chainlink or RedStone for USD/XTZ price feeds
+ - 214:### Smart Contracts
+ - 215:1. **Loan Registry** - Track loans, repayments, status
+ - 216:2. **DAO Governance** - Voting, proposals, treasury
+ - 217:3. **USD Oracle** - Real-time price conversion
+ - 218:4. **Swap Router** - Multi-token onramp (USDC, ETH, DAI → XTZ)
+ - 219:5. **Bridge Contract** - Cross-chain messaging
+ - 221:### Application Stack
+ - 222:- **Frontend**: Next.js 14 (React), TailwindCSS, ethers.js
+ - 223:- **Backend**: Node.js, Express, PostgreSQL, Redis
+ - 224:- **Storage**: IPFS (Pinata) for artist profiles & media
+ - 225:- **Payments**: Stripe or Transak for fiat onramp
+ - 229:## 📊 Key Metrics & Targets
+ - 231:### Year 1
+ - 232:- **Artists Funded**: 500
+ - 233:- **Loans Disbursed**: $150k
+ - 234:- **Active Lenders**: 500
+ - 235:- **Galleries**: 1 (NYC)
+ - 236:- **Gallery Visitors**: 5,000
+ - 237:- **Repayment Rate**: 90%+
+ - 239:### Year 3
+ - 240:- **Artists Funded**: 5,000 (cumulative)
+ - 241:- **Loans Disbursed**: $1.5M (cumulative)
+ - 242:- **Active Lenders**: 10,000
+ - 243:- **Galleries**: 4 (NYC, LA, SF, Miami)
+ - 244:- **Gallery Visitors**: 40,000/year
+ - 245:- **Repayment Rate**: 95%+
+ - 247:### Year 5
+ - 248:- **Artists Funded**: 12,000 (cumulative)
+ - 249:- **Loans Disbursed**: $3.6M (cumulative)
+ - 250:- **Active Lenders**: 25,000
+ - 251:- **Galleries**: 7 cities
+ - 252:- **Gallery Visitors**: 70,000/year
+ - 253:- **Self-Sustaining**: Yes (endowment + fees)
+ - 257:## 🚀 Next Steps
+ - 259:### Immediate Actions (Month 1)
+ - 260:1. **Legal**
+ - 265:2. **Fundraising**
+ - 270:3. **Team**
+ - 275:4. **Planning**
+ - 282:## 📚 Additional Documents Needed
+ - 286:### Legal Kit (In Progress)
+ - 287:- [x] Articles of Incorporation ✅
+ - 288:- [ ] Bylaws (IRS-compliant)
+ - 289:- [ ] Conflict of Interest Policy
+ - 290:- [ ] Board Charter
+ - 291:- [ ] Grant Proposal Template
+ - 293:### Technical Documentation
+ - 294:- [ ] Smart Contract Specifications
+ - 295:- [ ] API Documentation
+ - 296:- [ ] Security & Audit Plan
+ - 297:- [ ] Database Schema
+ - 299:### Operations
+ - 300:- [ ] Staff Position Descriptions
+ - 301:- [ ] Artist Onboarding Process
+ - 302:- [ ] Donor Onboarding Process
+ - 303:- [ ] Financial Policies & Procedures
+ - 305:### Marketing
+ - 306:- [ ] Brand Guidelines
+ - 307:- [ ] Content Strategy
+ - 308:- [ ] Social Media Playbook
+ - 309:- [ ] PR Launch Plan
+ - 313:## 🤝 How to Contribute
+ - 315:### For Developers
+ - 320:### For Artists & Cultural Orgs
+ - 325:### For Donors & Philanthropists
+ - 330:### For Gallery Professionals
+ - 337:## 📞 Contact
+ - 346:## 📜 License & Usage
+ - 350:- **Business Plan**: Confidential, for stakeholder review
+ - 351:- **Legal Documents**: Draft templates, require attorney review before filing
+ - 352:- **Technical Docs**: Open for community feedback
+ - 353:- **Code** (when created): Open source (MIT License)
+ - 357:## 🙏 Acknowledgments
+
+## projects/Sandbox/Breadfond 501c/docs/business-plan.md
+ - 1:# Breadfond Foundation Business Plan
+ - 10:## Table of Contents
+ - 12:1. [Executive Summary](#executive-summary)
+ - 13:2. [Mission and Vision](#mission-and-vision)
+ - 14:3. [Problem Statement](#problem-statement)
+ - 15:4. [Solution Overview](#solution-overview)
+ - 16:5. [Market Analysis](#market-analysis)
+ - 17:6. [Business Model](#business-model)
+ - 18:7. [Technical Infrastructure](#technical-infrastructure)
+ - 19:8. [Gallery Network Strategy](#gallery-network-strategy) ⭐ NEW
+ - 20:9. [Governance Structure](#governance-structure)
+ - 21:10. [Financial Projections](#financial-projections)
+ - 22:11. [Risk Analysis](#risk-analysis)
+ - 23:12. [Implementation Timeline](#implementation-timeline)
+ - 24:13. [Fundraising Strategy](#fundraising-strategy)
+ - 25:14. [Impact Metrics](#impact-metrics)
+ - 29:## Executive Summary
+ - 31:### Overview
+ - 34:### The Problem
+ - 37:### The Solution
+ - 39:- **Patrons** (primarily U.S. and EU donors) provide small loans ($50-$500)
+ - 40:- **Loans** are denominated in USD but settled in XTZ cryptocurrency
+ - 41:- **Artists** receive funds directly via Tezos blockchain (no intermediary banks)
+ - 42:- **Repayment** occurs in installments over 12-24 months at 0% interest
+ - 43:- **Platform** operates transparently on Etherlink L2, bridged to Tezos L1
+ - 45:### Key Differentiators
+ - 46:1. **Zero-interest loans** - Mission-driven, not profit-driven
+ - 47:2. **Blockchain transparency** - All transactions publicly verifiable
+ - 48:3. **No banking requirements** - Only a smartphone and internet needed
+ - 49:4. **Multi-currency onramp** - Accept credit cards, USDC, ETH, etc.
+ - 50:5. **DAO governance** - Community-driven decision making
+ - 51:6. **Cultural focus** - Specifically designed for artists and creatives
+ - 52:7. **Physical gallery network** - Exhibition spaces in major US cities ⭐ NEW
+ - 54:### Funding Request
+ - 62:### Expected Impact (Year 1)
+ - 63:- **500 artists** funded across 15 countries
+ - 64:- **$150,000** in total loans disbursed
+ - 65:- **95% repayment rate** (based on microloan industry standards)
+ - 66:- **Zero operational losses** from defaults (nonprofit status)
+ - 67:- **1 pilot gallery** opened in NYC (Year 1, Q4)
+ - 68:- **2,500 gallery visitors** exposed to global art movements
+ - 72:## Mission and Vision
+ - 74:### Mission Statement
+ - 77:### Vision Statement
+ - 80:### Core Values
+ - 82:1. **Accessibility**
+ - 88:2. **Transparency**
+ - 94:3. **Sustainability**
+ - 100:4. **Empowerment**
+ - 106:5. **Cultural Preservation**
+ - 112:### Target Beneficiaries
+ - 128:## Problem Statement
+ - 130:### The Challenge
+ - 133:1. **Purchasing Materials**
+ - 138:2. **Investing in Education**
+ - 143:3. **Scaling Their Practice**
+ - 149:4. **Building Financial Security**
+ - 154:### Current Solutions and Their Limitations
+ - 184:### Market Gap
+ - 194:## Solution Overview
+ - 196:### How Breadfond Works
+ - 198:#### For Patrons (Lenders)
+ - 199:1. **Browse Artists**: View profiles, portfolios, and loan requests
+ - 200:2. **Select Loan Amount**: Choose how much to lend ($50-$500)
+ - 201:3. **Payment Method**: Credit card or crypto (USDC, ETH, DAI, etc.)
+ - 202:4. **Automatic Conversion**: Funds converted to XTZ at current rate
+ - 203:5. **Track Progress**: Dashboard shows repayment status and artist updates
+ - 204:6. **Receive Repayment**: Get XTZ back over 12-24 months (converted to USD value)
+ - 205:7. **Relend or Withdraw**: Choose to fund another artist or cash out
+ - 207:#### For Artists (Borrowers)
+ - 208:1. **Create Profile**: Upload portfolio, bio, and artistic statement
+ - 209:2. **Submit Request**: Explain project and funding needs ($50-$500)
+ - 210:3. **Community Review**: BreadDAO members vote on applications
+ - 211:4. **Receive Funds**: XTZ sent directly to Tezos wallet within 48 hours
+ - 212:5. **Use Funds**: Purchase materials, pay for training, invest in practice
+ - 213:6. **Make Repayments**: Monthly installments via mobile money or crypto
+ - 214:7. **Build Credit**: Successful repayment unlocks larger loans
+ - 215:8. **Share Progress**: Post updates, photos, and completed works
+ - 217:### Technology Stack
+ - 220:- **Etherlink (L2)**: Primary platform for fast, cheap transactions
+ - 221:- **Tezos (L1)**: Final settlement and security layer
+ - 222:- **Bridge**: Etherlink ↔ Tezos for artist payouts
+ - 247:### Loan Mechanics
+ - 250:- **Amount**: $50 - $500 USD equivalent
+ - 251:- **Duration**: 12-24 months (artist chooses)
+ - 252:- **Interest**: 0% (charitable gift)
+ - 253:- **Platform Fee**: 2.5% (covers operational costs)
+ - 254:- **Repayment**: Monthly installments
+ - 255:- **Currency**: Denominated in USD, settled in XTZ
+ - 258:1. Artist submits application with:
+ - 265:2. BreadDAO review:
+ - 271:3. Risk scoring:
+ - 285:## Market Analysis
+ - 287:### Target Market Size
+ - 291:- **~30 million** in developing nations
+ - 292:- **~10 million** lack access to traditional financing
+ - 295:- **Year 1**: 500 artists (0.005% market penetration)
+ - 296:- **Year 2**: 2,500 artists (0.025%)
+ - 297:- **Year 3**: 10,000 artists (0.1%)
+ - 299:### Donor Market
+ - 302:- **$499 billion** donated to charity in 2022
+ - 303:- **$23 billion** to arts and culture (4.6%)
+ - 304:- **$58 billion** to international causes (11.6%)
+ - 305:- **Growing interest** in impact investing and crypto philanthropy
+ - 308:1. **Impact Investors**: Seek measurable social returns
+ - 309:2. **Art Collectors**: Interested in supporting emerging talent
+ - 310:3. **Crypto Philanthropists**: Want transparency and efficiency
+ - 311:4. **Cultural Nonprofits**: Foundations supporting arts globally
+ - 312:5. **Individual Donors**: $50-$5,000 donation range
+ - 314:### Competitive Landscape
+ - 317:1. **Kiva** (microloan platform, not artist-focused)
+ - 322:2. **Patreon** (creator support, not loans)
+ - 334:1. ✅ **Only** blockchain-based microloan platform for artists
+ - 335:2. ✅ **0% interest** (mission-driven)
+ - 336:3. ✅ **Transparent** on-chain tracking
+ - 337:4. ✅ **Multi-currency** onramp (fiat + crypto)
+ - 338:5. ✅ **DAO governance** (community-driven)
+ - 339:6. ✅ **Cultural focus** (artistic merit prioritized)
+ - 341:### Market Trends Supporting Breadfond
+ - 365:## Business Model
+ - 367:### Revenue Model (Nonprofit Structure)
+ - 370:1. **Platform Fees**: 2.5% on funded loans (covers operational costs)
+ - 375:2. **Grants**: Foundations, government, crypto ecosystem
+ - 380:3. **Donations**: Individual and corporate donors
+ - 385:4. **Endowment Returns**: Investment of reserve fund (when sufficient)
+ - 395:### Cost Structure
+ - 404:- **Total**: $245,000
+ - 412:- **Total**: $100,000
+ - 419:- **Total**: $33,000
+ - 426:- **Total**: $35,000
+ - 433:- **Total**: $21,000
+ - 437:### Funding Gap Analysis
+ - 442:- **Gap: -$280,250** ← Must be covered by seed funding
+ - 447:- **Gap: +$63,750** ← Break-even territory
+ - 452:- **Surplus: +$435,000** ← Sustainable; reinvest in endowment
+ - 454:### Loan Pool Capitalization
+ - 469:## Technical Infrastructure
+ - 471:### Smart Contract Architecture
+ - 500:### Security & Auditing
+ - 503:1. Third-party smart contract audit (Trail of Bits, OpenZeppelin, etc.)
+ - 504:2. Bug bounty program ($10,000 pool)
+ - 505:3. Gradual rollout (beta testing with 10 artists)
+ - 506:4. Multi-signature wallet for DAO treasury
+ - 514:### Data Architecture
+ - 531:## Gallery Network Strategy
+ - 533:### Vision: Breadfond Galleries
+ - 539:1. **Exhibition Space** - Rotating shows featuring loan recipients' work
+ - 540:2. **Education Center** - Workshops, talks, and cultural programming
+ - 541:3. **Donor Recruitment Hub** - Convert gallery visitors into lenders
+ - 542:4. **Cultural Exchange** - Bridge between global art movements and US audiences
+ - 543:5. **Revenue Generator** - Art sales (commission to artists), memberships, events
+ - 545:### Target Cities (5-Year Plan)
+ - 548:- **New York City** - Brooklyn (Bushwick or Williamsburg)
+ - 554:- **Los Angeles** - Arts District or Culver City
+ - 555:- **San Francisco** - Mission District or SOMA
+ - 556:- **Miami** - Wynwood Arts District
+ - 559:- **Chicago** - Pilsen or West Loop
+ - 560:- **Seattle** - Capitol Hill or Georgetown
+ - 561:- **Austin** - East Austin
+ - 562:- **Washington DC** - Shaw or U Street Corridor
+ - 564:### Gallery Programming
+ - 566:#### Rotating Exhibitions (6-8 weeks each)
+ - 567:- **Solo Shows**: Feature individual artist's journey from loan to established practice
+ - 568:- **Thematic Group Shows**: "Textiles of West Africa," "Street Art of Latin America," etc.
+ - 569:- **Loan Recipient Showcases**: Quarterly exhibitions of recent loan recipients
+ - 570:- **Emerging Movements**: Highlight contemporary trends from specific regions
+ - 572:#### Educational Events (Weekly/Monthly)
+ - 573:- **Artist Talks** (virtual): Loan recipients discuss their work and cultural context
+ - 574:- **Documentary Screenings**: Films about art, poverty, and cultural preservation
+ - 575:- **Panel Discussions**: Experts on global art, microfinance, blockchain for good
+ - 576:- **Workshops**: Traditional techniques taught by visiting or virtual artists
+ - 577:- **Gallery Tours**: Docent-led tours connecting art to artist stories
+ - 579:#### Donor Engagement Events
+ - 580:- **First Friday Openings**: Free wine & cheese, introduce Breadfond lending platform
+ - 581:- **Lender Appreciation Nights**: Exclusive events for those who've funded ≥3 loans
+ - 582:- **"Loan an Artist" Stations**: iPads throughout gallery for immediate lending
+ - 583:- **Member Meetups**: Build community among recurring donors
+ - 584:- **Corporate Partnerships**: Host company events, corporate art buying programs
+ - 586:### Gallery Operations Model
+ - 588:#### Staffing (Per Gallery)
+ - 589:- **Gallery Director** (1 FTE): $55k-$70k
+ - 591:- **Gallery Coordinator** (1 FTE): $40k-$50k
+ - 593:- **Part-Time Docents** (2-3 people, 15 hrs/week each): $18-$22/hr
+ - 595:- **Contract Curators** (project-based): $2k-$5k per exhibition
+ - 598:#### Revenue Streams
+ - 599:1. **Art Sales Commissions** (30% to Breadfond, 70% to artist)
+ - 603:2. **Gallery Memberships**
+ - 609:3. **Private Event Rentals**
+ - 614:4. **Workshop & Class Fees**
+ - 618:5. **Merchandise**
+ - 624:#### Operating Costs (Per Gallery, Annual)
+ - 625:- **Rent & Utilities**: $60k-$100k (varies by city)
+ - 626:- **Staff Salaries**: $110k-$145k
+ - 627:- **Marketing & PR**: $15k-$25k
+ - 628:- **Exhibition Costs** (art shipping, installation, insurance): $20k-$30k
+ - 629:- **Events & Programming**: $10k-$15k
+ - 630:- **Supplies & Overhead**: $8k-$12k
+ - 638:### Donor Conversion Strategy
+ - 640:#### Visitor-to-Lender Funnel
+ - 641:1. **Gallery Visit** (Target: 10,000 visitors/year per gallery)
+ - 643:2. **Engagement** (50% engage with educational materials)
+ - 648:3. **Information Capture** (30% provide email)
+ - 653:4. **First Loan** (10% of engaged visitors = 500 loans/year per gallery)
+ - 658:5. **Recurring Lender** (40% lend again = 200 recurring/year)
+ - 667:### Physical Space Design
+ - 669:#### Gallery Layout (2,500-3,500 sq ft)
+ - 670:- **Main Exhibition Space** (1,500-2,000 sq ft)
+ - 675:- **Education Corner** (300-500 sq ft)
+ - 681:- **Small Event Space** (400-600 sq ft)
+ - 685:- **Office/Storage** (300-400 sq ft)
+ - 689:#### Technology Integration
+ - 690:- **Digital Docent App**: Visitors scan QR codes for audio tours in multiple languages
+ - 691:- **Virtual Reality Stations**: Experience artists' home environments and studios
+ - 692:- **Live Streaming**: Artist talks broadcast from loan recipient countries
+ - 693:- **Blockchain Transparency Displays**: Real-time loan dashboard, global map of funded artists
+ - 695:### Partnerships & Collaborations
+ - 697:#### Local Art Institutions
+ - 698:- **Museums**: Partner for traveling exhibitions
+ - 699:- **Universities**: Student volunteer programs, academic collaborations
+ - 700:- **Art Schools**: Exhibition opportunities, intern placements
+ - 701:- **Other Galleries**: Cross-promotion, shared artists
+ - 703:#### Cultural Organizations
+ - 704:- **Embassies & Consulates**: Cultural programming, artist visas
+ - 705:- **UNESCO**: Alignment with cultural preservation goals
+ - 706:- **International Cultural Centers**: Co-host events
+ - 708:#### Corporate Partnerships
+ - 709:- **Tech Companies**: Sponsor tech infrastructure in galleries
+ - 710:- **Financial Institutions**: Corporate social responsibility programs
+ - 711:- **Art Suppliers**: In-kind donations for artist materials programs
+ - 713:### Marketing & PR
+ - 715:#### Gallery Launch Campaign
+ - 716:- **Press Release**: To art media, philanthropy outlets, tech press
+ - 717:- **Opening Gala**: Invite donors, collectors, press, influencers
+ - 718:- **Social Media**: Instagram-focused visual content
+ - 719:- **Influencer Partnerships**: Art bloggers, cultural critics
+ - 721:#### Ongoing Promotion
+ - 722:- **Weekly Newsletter**: Exhibition updates, artist spotlights
+ - 723:- **Social Media**: Daily posts, stories, reels
+ - 724:- **PR Outreach**: Regular pitches to local and national media
+ - 725:- **Content Marketing**: Blog posts, artist interviews, video series
+ - 727:### Measurement & Evaluation
+ - 729:#### Gallery KPIs
+ - 730:- **Foot Traffic**: Visitors per month
+ - 731:- **Engagement Rate**: % of visitors who interact with lending stations
+ - 732:- **Conversion Rate**: % of visitors who become lenders
+ - 733:- **Membership Growth**: New members per quarter
+ - 734:- **Art Sales**: Total sales and commission revenue
+ - 735:- **Event Attendance**: Average attendees per event
+ - 736:- **Media Impressions**: Press coverage and social reach
+ - 737:- **Donor Retention**: % of gallery-acquired lenders who lend again
+ - 739:#### Impact Metrics
+ - 740:- **Artists Exhibited**: Number of loan recipients featured
+ - 741:- **Cultural Reach**: Countries and art forms represented
+ - 742:- **Educational Impact**: Workshop participants, tour attendees
+ - 743:- **Community Building**: Active gallery community members
+ - 745:### Financial Model (5-Year Gallery Projection)
+ - 747:#### Year 1 (NYC Flagship)
+ - 748:- **Costs**: $250k (includes buildout)
+ - 749:- **Revenue**: $60k
+ - 750:- **Net**: -$190k
+ - 751:- **New Lenders**: 500
+ - 752:- **Loans Generated**: $100k
+ - 754:#### Year 2 (NYC + LA)
+ - 755:- **Costs**: $500k (2 galleries)
+ - 756:- **Revenue**: $160k
+ - 757:- **Net**: -$340k
+ - 758:- **New Lenders**: 1,000
+ - 759:- **Loans Generated**: $250k
+ - 761:#### Year 3 (NYC, LA, SF)
+ - 762:- **Costs**: $750k (3 galleries)
+ - 763:- **Revenue**: $300k
+ - 764:- **Net**: -$450k
+ - 765:- **New Lenders**: 1,500
+ - 766:- **Loans Generated**: $400k
+ - 768:#### Years 4-5 (7 galleries)
+ - 769:- **Costs**: $1.8M/year
+ - 770:- **Revenue**: $700k/year
+ - 771:- **Net**: -$1.1M/year
+ - 772:- **New Lenders**: 3,500/year
+ - 773:- **Loans Generated**: $900k/year
+ - 776:- **$4M invested** in gallery network
+ - 777:- **7,500 new lenders** recruited
+ - 778:- **$2.65M in loans** generated through gallery channel
+ - 779:- **65% ROI** on gallery investment via donor acquisition
+ - 781:### Risk Mitigation
+ - 804:## Governance Structure
+ - 806:### Legal Entity Structure
+ - 821:### Board of Directors
+ - 839:### BreadDAO (On-Chain Governance)
+ - 842:- **Verified Lenders**: Anyone who has funded ≥1 loan
+ - 843:- **Verified Artists**: Anyone who has received a loan
+ - 844:- **Founding Members**: Initial supporters and team
+ - 852:1. **Loan Applications**: Approve/reject artist applications
+ - 853:2. **Grant Proposals**: Fund community initiatives ($500-$5,000)
+ - 854:3. **Policy Changes**: Adjust loan terms, eligibility, fees
+ - 855:4. **Treasury Allocation**: Approve large expenditures
+ - 856:5. **Partnership Approval**: Vote on major partnerships
+ - 864:### Nonprofit + DAO Alignment
+ - 867:- **Board**: Legal, fiduciary, strategic
+ - 868:- **DAO**: Operational, tactical, community-driven
+ - 882:## Financial Projections
+ - 884:### 3-Year Financial Model
+ - 886:#### Year 1 (MVP Launch)
+ - 891:- **Total**: $153,750
+ - 899:- **Total**: $434,000
+ - 905:#### Year 2 (Growth)
+ - 911:- **Total**: $373,750
+ - 919:- **Total**: $415,000
+ - 925:#### Year 3 (Scale)
+ - 931:- **Total**: $790,000
+ - 939:- **Total**: $545,000
+ - 945:### Break-Even Analysis
+ - 956:## Risk Analysis
+ - 958:### Key Risks and Mitigation
+ - 961:- **Risk**: XTZ price fluctuates; USD value of loans changes
+ - 962:- **Mitigation**: Oracle-based dynamic conversion; repayments adjusted for current rate; endowment reserves buffer volatility
+ - 965:- **Risk**: Artists unable to repay loans (cultural, economic factors)
+ - 966:- **Mitigation**: Conservative underwriting; grace periods; education; endowment reserve covers 5-10% default rate
+ - 969:- **Risk**: IRS or state regulators question nonprofit status of crypto lending
+ - 970:- **Mitigation**: Legal counsel review; structure as charitable gift with optional repayment; 501(c)(3) compliance rigorous
+ - 973:- **Risk**: Smart contract bugs, hacks, or bridge failures
+ - 974:- **Mitigation**: Third-party audit; bug bounty; gradual rollout; insurance; emergency pause
+ - 977:- **Risk**: Artists unfamiliar with crypto; patrons hesitant to lend
+ - 978:- **Mitigation**: Fiat onramp for donors; mobile money for artists; education and onboarding; partnerships with local NGOs
+ - 981:- **Risk**: Scams, fraud, or misuse damage brand
+ - 982:- **Mitigation**: Verified artist profiles; DAO review; community moderation; transparent reporting
+ - 985:- **Risk**: Larger platforms enter space (Kiva, PayPal, etc.)
+ - 986:- **Mitigation**: First-mover advantage; cultural focus; nonprofit mission; community loyalty
+ - 990:## Implementation Timeline
+ - 992:### Phase 0: Foundation (Months 1-3)
+ - 993:- **Legal**: Incorporate as 501(c)(3) in Washington
+ - 994:- **Fundraising**: Secure $250k seed funding
+ - 995:- **Team**: Hire Executive Director and Technical Lead
+ - 996:- **Planning**: Finalize technical architecture
+ - 998:### Phase 1: MVP Development (Months 4-9)
+ - 999:- **Contracts**: Develop and test smart contracts
+ - 1000:- **Frontend**: Build web application
+ - 1001:- **Onramp**: Integrate Stripe or Transak
+ - 1002:- **Audit**: Complete third-party security audit
+ - 1004:### Phase 2: Beta Launch (Months 10-12)
+ - 1005:- **Pilot**: Onboard 50 artists (1-2 countries)
+ - 1006:- **Donors**: Recruit 200 initial lenders
+ - 1007:- **Testing**: Validate loan → repayment cycle
+ - 1008:- **Feedback**: Iterate based on user input
+ - 1010:### Phase 3: Public Launch (Month 13+)
+ - 1011:- **Scale**: Open to all eligible artists
+ - 1012:- **Marketing**: PR campaign, social media, partnerships
+ - 1013:- **DAO**: Activate governance token and voting
+ - 1014:- **Growth**: Expand to 500+ artists Year 1
+ - 1018:## Fundraising Strategy
+ - 1020:### Target: $250,000 Seed Funding
+ - 1023:1. **Crypto Ecosystem Grants** ($100k)
+ - 1029:2. **Arts & Culture Foundations** ($75k)
+ - 1035:3. **Impact Investing** ($50k)
+ - 1040:4. **Corporate Sponsorships** ($25k)
+ - 1047:## Impact Metrics
+ - 1049:### Key Performance Indicators (KPIs)
+ - 1073:### Reporting & Transparency
+ - 1089:## Appendices
+ - 1091:### Appendix A: Sample Artist Profile
+ - 1094:### Appendix B: Sample Loan Application
+ - 1097:### Appendix C: Technical Architecture Diagrams
+ - 1100:### Appendix D: Legal Opinion Letter (Sample)
+ - 1103:### Appendix E: Grant Proposal Template
+ - 1108:## Document Control
+ - 1118:- **Email**: info@breadfond.org
+ - 1119:- **Website**: www.breadfond.org (pending)
+ - 1120:- **Twitter**: @breadfond
+ - 1121:- **Discord**: discord.gg/breadfond
+
+## projects/Sandbox/Breadfond 501c/docs/gallery-operations-manual.md
+ - 1:# Breadfond Gallery Operations Manual
+ - 9:## Table of Contents
+ - 11:1. [Gallery Vision & Mission](#gallery-vision--mission)
+ - 12:2. [Site Selection Criteria](#site-selection-criteria)
+ - 13:3. [Space Requirements](#space-requirements)
+ - 14:4. [Staffing & Roles](#staffing--roles)
+ - 15:5. [Exhibition Planning](#exhibition-planning)
+ - 16:6. [Event Programming](#event-programming)
+ - 17:7. [Donor Engagement](#donor-engagement)
+ - 18:8. [Technology Integration](#technology-integration)
+ - 19:9. [Art Handling & Insurance](#art-handling--insurance)
+ - 20:10. [Marketing & PR](#marketing--pr)
+ - 21:11. [Financial Management](#financial-management)
+ - 22:12. [Performance Metrics](#performance-metrics)
+ - 26:## Gallery Vision & Mission
+ - 28:### Mission Statement
+ - 31:### Core Functions
+ - 32:1. **Exhibition**: Showcase loan recipients' artwork
+ - 33:2. **Education**: Teach Americans about global art movements
+ - 34:3. **Fundraising**: Convert visitors into lenders
+ - 35:4. **Community**: Build engaged donor base
+ - 36:5. **Revenue**: Generate sustainable income through sales and events
+ - 40:## Site Selection Criteria
+ - 42:### City-Level Criteria
+ - 50:### Priority Cities (Ranked)
+ - 51:1. **New York City** (Brooklyn) - Global art capital
+ - 52:2. **Los Angeles** (Arts District) - Entertainment/art hub
+ - 53:3. **San Francisco** (Mission/SOMA) - Tech philanthropy
+ - 54:4. **Miami** (Wynwood) - Art Basel, Latin American connections
+ - 55:5. **Chicago** (Pilsen/West Loop) - Central US, diverse
+ - 56:6. **Seattle** - Tech wealth, progressive giving
+ - 57:7. **Austin** - Growing arts scene, tech presence
+ - 58:8. **Washington DC** - Policy influence, international community
+ - 60:### Neighborhood-Level Criteria
+ - 68:### Space-Level Requirements
+ - 78:### Lease Considerations
+ - 79:- **Term**: 3-5 years with renewal option
+ - 80:- **Rent**: $30-$60/sq ft annually (varies by city)
+ - 81:- **Build-out**: Negotiate tenant improvement allowance
+ - 82:- **Flexibility**: Early termination clause if needed
+ - 83:- **Use Clause**: Allows art gallery, events, workshops
+ - 87:## Space Requirements
+ - 89:### Floor Plan Template (3,000 sq ft example)
+ - 118:### Build-Out Requirements
+ - 120:#### Walls & Flooring
+ - 121:- **Walls**: White painted, movable partition walls for flexibility
+ - 122:- **Flooring**: Polished concrete or hardwood (easy to clean)
+ - 123:- **Ceiling**: Painted white or exposed (if industrial space)
+ - 125:#### Lighting
+ - 126:- **Track Lighting**: LED spotlights on tracks (adjustable)
+ - 127:- **Ambient Lighting**: Dimmable overheads
+ - 128:- **Natural Light**: Blackout curtains if needed
+ - 130:#### Technology
+ - 131:- **Wi-Fi**: High-speed (100+ Mbps) throughout
+ - 132:- **Security**: Cameras, alarm system
+ - 133:- **Climate Control**: Maintain 68-72°F, 40-50% humidity
+ - 134:- **Power**: Sufficient outlets for tech installations
+ - 135:- **A/V System**: Projector, sound system, microphones
+ - 137:#### Furniture & Fixtures
+ - 138:- **Display**: Pedestals, shelving, hanging systems
+ - 139:- **Seating**: Benches for contemplation, chairs for events
+ - 140:- **Desks**: Staff work area
+ - 141:- **Storage**: Lockable cabinets for art and supplies
+ - 143:### Budget for Build-Out
+ - 144:- **Walls & Flooring**: $15-$25k
+ - 145:- **Lighting**: $10-$15k
+ - 146:- **Technology**: $8-$12k
+ - 147:- **Furniture**: $7-$10k
+ - 148:- **Signage (exterior)**: $3-$5k
+ - 149:- **Security System**: $2-$3k
+ - 150:- **Total**: $45k-$70k per gallery
+ - 154:## Staffing & Roles
+ - 156:### Gallery Director (Full-Time)
+ - 175:### Gallery Coordinator (Full-Time)
+ - 195:### Part-Time Docents (2-3 people)
+ - 212:### Contract Curators (Project-Based)
+ - 229:## Exhibition Planning
+ - 231:### Exhibition Calendar (Annual)
+ - 235:#### Example Calendar:
+ - 236:1. **Jan-Feb**: "Textiles of West Africa"
+ - 237:2. **Mar-Apr**: Solo Show - Nigerian Painter
+ - 238:3. **May-Jun**: "Street Art of Latin America"
+ - 239:4. **Jul-Aug**: Group Show - Young Photographers
+ - 240:5. **Sep-Oct**: "Indigenous Crafts of South Asia"
+ - 241:6. **Nov-Dec**: Solo Show - Ghanaian Sculptor
+ - 242:7. **Jan-Feb**: "Women Artists of the Global South"
+ - 243:8. **Mar-Apr**: "Loan Recipients Showcase" (annual highlight)
+ - 245:### Exhibition Development Process
+ - 247:#### 6 Months Before Opening
+ - 248:- **Curator Selection**: Hire or assign curator
+ - 249:- **Concept Development**: Theme, artist list
+ - 250:- **Artist Outreach**: Contact loan recipients, request works
+ - 251:- **Budget Approval**: Submit exhibition budget
+ - 253:#### 4 Months Before
+ - 254:- **Artist Confirmations**: Finalize participant list
+ - 255:- **Artwork Selection**: Receive images, make final selections
+ - 256:- **Shipping Logistics**: Arrange transport (international)
+ - 257:- **Marketing Plan**: Develop PR and social strategy
+ - 259:#### 2 Months Before
+ - 260:- **Wall Text Writing**: Artist bios, curatorial statement
+ - 261:- **Design & Layout**: Floor plan, lighting plan
+ - 262:- **Promotion Launch**: Press release, social media, invitations
+ - 263:- **Event Planning**: Opening reception details
+ - 265:#### 1 Month Before
+ - 266:- **Art Arrival**: Receive and inspect works
+ - 267:- **Installation**: Hang/place artworks, lighting adjustments
+ - 268:- **Final Walkthrough**: Curator, director, team review
+ - 269:- **Press Preview**: Invite media for advance viewing
+ - 271:#### Opening Week
+ - 272:- **Opening Reception**: Invite-only or public event
+ - 273:- **Docent Training**: Brief team on exhibition
+ - 274:- **Social Media Blitz**: Daily posts, stories
+ - 275:- **Press Outreach**: Follow up with media
+ - 277:#### During Exhibition
+ - 278:- **Gallery Talks**: Weekly or bi-weekly
+ - 279:- **Workshops**: Related to exhibition theme
+ - 280:- **Artist Video Calls**: Live Q&A with loan recipients
+ - 281:- **Visitor Surveys**: Collect feedback
+ - 283:#### Post-Exhibition
+ - 284:- **Deinstallation**: Pack and return works
+ - 285:- **Analytics Report**: Attendance, sales, conversions
+ - 286:- **Thank You Notes**: Artists, lenders, partners
+ - 287:- **Archive**: Photos, press, documentation
+ - 289:### Exhibition Types
+ - 291:#### Solo Shows
+ - 295:- **Example**: "From Loan to Legacy: The Art of [Artist Name]"
+ - 297:#### Thematic Group Shows
+ - 301:- **Example**: "Threads of Tradition: Contemporary Textiles from 5 Continents"
+ - 303:#### Loan Recipient Showcases
+ - 307:- **Example**: "New Voices: Spring 2026 Loan Recipients"
+ - 309:#### Emerging Movements
+ - 313:- **Example**: "Digital Art in the Developing World"
+ - 317:## Event Programming
+ - 319:### Monthly Event Calendar Template
+ - 337:### Event Types & Formats
+ - 339:#### Opening Receptions
+ - 340:- **Frequency**: Every 6-8 weeks (new exhibition)
+ - 341:- **Format**: Wine & cheese, music, artist talks (virtual)
+ - 342:- **Attendance**: 100-200 people
+ - 343:- **Cost**: $2k-$3k (catering, marketing, staffing)
+ - 344:- **Goal**: Generate excitement, media coverage, new lenders
+ - 346:#### Gallery Tours
+ - 347:- **Frequency**: 2x per week (Saturday & Sunday afternoons)
+ - 348:- **Format**: 45-minute docent-led tour
+ - 349:- **Attendance**: 5-15 people per tour
+ - 350:- **Cost**: Free (included in operations)
+ - 351:- **Goal**: Educate visitors, convert to lenders
+ - 353:#### Artist Talks (Virtual)
+ - 354:- **Frequency**: 2x per month
+ - 355:- **Format**: 30-minute presentation + 15-minute Q&A
+ - 356:- **Attendance**: 20-40 in-person, 50-100 virtual
+ - 357:- **Cost**: $200-$500 (artist honorarium, tech)
+ - 358:- **Goal**: Connect donors with artists, humanize loans
+ - 360:#### Workshops
+ - 361:- **Frequency**: 2x per month
+ - 362:- **Format**: 2-3 hour hands-on class
+ - 363:- **Attendance**: 10-20 people
+ - 364:- **Cost**: $30-$75 per person (revenue generator)
+ - 365:- **Goal**: Engage community, generate revenue, educate
+ - 367:#### Documentary Screenings
+ - 368:- **Frequency**: Monthly
+ - 369:- **Format**: 60-90 minute film + discussion
+ - 370:- **Attendance**: 30-50 people
+ - 371:- **Cost**: $300-$500 (licensing, snacks)
+ - 372:- **Goal**: Cultural education, community building
+ - 374:#### Panel Discussions
+ - 375:- **Frequency**: Quarterly
+ - 376:- **Format**: 3-4 experts + moderator, 90 minutes
+ - 377:- **Attendance**: 40-80 people
+ - 378:- **Cost**: $500-$1k (honorariums, marketing)
+ - 379:- **Goal**: Thought leadership, donor cultivation
+ - 381:#### Private Events (Rentals)
+ - 382:- **Frequency**: 1-2x per month
+ - 383:- **Format**: Corporate receptions, weddings, parties
+ - 384:- **Attendance**: 50-100 people
+ - 385:- **Revenue**: $2k-$5k per event
+ - 386:- **Goal**: Generate revenue, expose new audiences
+ - 390:## Donor Engagement
+ - 392:### Lending Stations
+ - 401:1. Visitor approaches station
+ - 402:2. Browse artist profiles (filtered: featured loan recipients)
+ - 403:3. Select artist and loan amount
+ - 404:4. Enter credit card or connect wallet
+ - 405:5. Complete loan in 2-3 minutes
+ - 406:6. Receive confirmation email with artist story
+ - 415:### Membership Program
+ - 445:### Lender Recognition
+ - 467:## Technology Integration
+ - 469:### Digital Infrastructure
+ - 472:- **Artwork Database**: Artlogic or similar
+ - 473:- **CRM**: Salesforce Nonprofit or DonorPerfect
+ - 474:- **POS System**: Square or Clover (for memberships, events)
+ - 475:- **Email Marketing**: Mailchimp or Constant Contact
+ - 478:- **Online Lending**: Link from gallery site to main platform
+ - 479:- **Virtual Tours**: 360° gallery views
+ - 480:- **Live Streaming**: Artist talks broadcast online
+ - 481:- **Blog**: Artist features, exhibition reviews
+ - 484:- **Touch Screens**: Artist bios, videos, interactive maps
+ - 485:- **VR Stations**: Experience artists' home environments
+ - 486:- **Blockchain Dashboard**: Real-time loan tracking
+ - 489:- **Instagram**: Daily posts, stories, reels
+ - 490:- **Facebook**: Event promotion, community building
+ - 491:- **Twitter**: News, partnerships, thought leadership
+ - 492:- **YouTube**: Artist interviews, virtual tours
+ - 496:## Art Handling & Insurance
+ - 498:### Receiving Artwork
+ - 501:1. Photograph artwork upon arrival (6-sided documentation)
+ - 502:2. Note any existing damage
+ - 503:3. Measure and weigh
+ - 504:4. Record in database
+ - 505:5. Artist and curator sign off
+ - 512:### Installation Best Practices
+ - 533:### Insurance
+ - 536:1. **Property Insurance**: Building and contents
+ - 537:2. **Fine Art Insurance**: Artwork while in gallery
+ - 538:3. **Transit Insurance**: Artwork in shipping
+ - 539:4. **Liability Insurance**: Visitor injuries, accidents
+ - 540:5. **Directors & Officers**: Board protection
+ - 551:## Marketing & PR
+ - 553:### Brand Guidelines
+ - 556:- **Logo**: Breadfond wordmark + gallery location
+ - 557:- **Colors**: Earth tones (brown, tan, terracotta) + accent colors
+ - 558:- **Typography**: Modern sans-serif for headers, serif for body
+ - 559:- **Photography**: Focus on artists and their work
+ - 567:### PR Strategy
+ - 570:- **Art Media**: Artforum, Artnet, Hyperallergic
+ - 571:- **Local Media**: City magazines, alt-weeklies, TV
+ - 572:- **Philanthropy**: Chronicle of Philanthropy, Inside Philanthropy
+ - 573:- **Tech**: TechCrunch, Wired (blockchain angle)
+ - 586:### Social Media Content Calendar
+ - 605:## Financial Management
+ - 607:### Revenue Tracking
+ - 610:1. Art Sales (track commission vs. artist payment)
+ - 611:2. Memberships (by tier)
+ - 612:3. Event Rentals (private events)
+ - 613:4. Workshop Fees
+ - 614:5. Merchandise
+ - 615:6. Grants (gallery-specific)
+ - 616:7. Donations (gallery operations)
+ - 624:### Expense Management
+ - 627:1. Rent & Utilities
+ - 628:2. Salaries & Benefits
+ - 629:3. Marketing & PR
+ - 630:4. Exhibition Costs (shipping, insurance, installation)
+ - 631:5. Events & Programming
+ - 632:6. Technology & Software
+ - 633:7. Supplies & Materials
+ - 634:8. Professional Services (accountant, lawyer)
+ - 644:## Performance Metrics
+ - 646:### Monthly KPIs
+ - 671:### Quarterly Reviews
+ - 680:### Annual Reports
+ - 701:## Appendices
+ - 703:### Appendix A: Sample Exhibition Budget
+ - 706:### Appendix B: Sample Event Checklist
+ - 709:### Appendix C: Staff Position Descriptions
+ - 712:### Appendix D: Vendor Contact List
+ - 715:### Appendix E: Emergency Procedures
+ - 721:- **Author**: Breadfond Foundation
+ - 722:- **Version**: 1.0 (Draft)
+ - 723:- **Next Review**: Quarterly
+ - 724:- **Contact**: gallery@breadfond.org
+
+## projects/Sandbox/Breadfond 501c/docs/legal-kit/articles-of-incorporation.md
+ - 1:# Articles of Incorporation
+ - 2:## Breadfond Foundation
+ - 9:## ARTICLE I: Name
+ - 17:## ARTICLE II: Duration
+ - 23:## ARTICLE III: Purpose
+ - 25:### 3.1 General Purpose
+ - 29:### 3.2 Specific Purposes
+ - 33:1. **To provide microfinance and microcredit services** to artists, artisans, and creative professionals in economically disadvantaged communities worldwide, enabling them to develop their artistic practices, purchase materials and equipment, and build sustainable creative enterprises;
+ - 35:2. **To promote cultural preservation and artistic expression** by supporting traditional and contemporary art forms, particularly those at risk of being lost due to economic constraints;
+ - 37:3. **To educate the public** about the economic challenges facing artists in developing nations and the role of innovative financial technology in addressing poverty and cultural preservation;
+ - 39:4. **To develop, operate, and maintain** technological platforms and infrastructure that facilitate transparent, low-cost, and accessible lending to artists globally;
+ - 41:5. **To conduct research and publish findings** on the intersection of microfinance, blockchain technology, cultural preservation, and economic development;
+ - 43:6. **To partner with international organizations, educational institutions, and community groups** to identify, support, and empower artists in underserved communities;
+ - 45:7. **To engage in any other lawful activity** consistent with the foregoing purposes and the requirements for tax-exempt status under Section 501(c)(3) of the Code.
+ - 49:## ARTICLE IV: Powers
+ - 53:1. Receive, hold, invest, and administer funds and property;
+ - 54:2. Make loans and grants consistent with its charitable purposes;
+ - 55:3. Enter into contracts and agreements;
+ - 56:4. Employ personnel and engage contractors;
+ - 57:5. Purchase, lease, or otherwise acquire property;
+ - 58:6. Sue and be sued in its corporate name;
+ - 59:7. Engage in any lawful activities necessary or convenient for carrying out its purposes.
+ - 63:## ARTICLE V: Nonprofit Status and Distribution of Assets
+ - 65:### 5.1 Nonprofit Nature
+ - 69:1. The corporation shall be authorized to pay reasonable compensation for services rendered;
+ - 70:2. The corporation shall be authorized to make payments and distributions in furtherance of its exempt purposes.
+ - 72:### 5.2 Lobbying and Political Activities
+ - 76:### 5.3 Prohibited Activities
+ - 80:1. A corporation exempt from federal income tax under Section 501(c)(3) of the Code; or
+ - 81:2. A corporation, contributions to which are deductible under Section 170(c)(2) of the Code.
+ - 83:### 5.4 Dissolution and Distribution of Assets
+ - 91:## ARTICLE VI: Members
+ - 99:## ARTICLE VII: Board of Directors
+ - 101:### 7.1 Authority
+ - 105:### 7.2 Number and Qualifications
+ - 111:### 7.3 Initial Board
+ - 115:1. Paul [Last Name] - Initial Director and President
+ - 116:2. [Name] - Initial Director and Secretary
+ - 117:3. [Name] - Initial Director and Treasurer
+ - 123:### 7.4 Term of Office
+ - 127:### 7.5 Removal and Vacancies
+ - 133:## ARTICLE VIII: Officers
+ - 135:### 8.1 Required Officers
+ - 139:### 8.2 Selection and Term
+ - 143:### 8.3 Duties
+ - 149:## ARTICLE IX: Registered Agent and Office
+ - 151:### 9.1 Registered Agent
+ - 160:### 9.2 Principal Office
+ - 171:## ARTICLE X: Indemnification
+ - 173:### 10.1 Mandatory Indemnification
+ - 177:### 10.2 Insurance
+ - 183:## ARTICLE XI: Amendments
+ - 187:1. Notice of the proposed amendment is given to all directors at least ten (10) days prior to the meeting at which the amendment will be voted upon;
+ - 188:2. No amendment may be made that would cause the corporation to cease to qualify as a corporation exempt from federal income tax under Section 501(c)(3) of the Code.
+ - 194:## ARTICLE XII: Limitation of Liability
+ - 200:1. Acts or omissions involving intentional misconduct or a knowing violation of law;
+ - 201:2. Conduct violating RCW 24.03A.425 (unlawful distributions);
+ - 202:3. Any transaction from which the director or officer derived an improper personal benefit.
+ - 206:## ARTICLE XIII: Conflict of Interest
+ - 214:## ARTICLE XIV: Blockchain Technology and Digital Assets
+ - 216:### 14.1 Authority to Utilize Blockchain Technology
+ - 220:1. Recording loans, grants, and other financial transactions on public blockchains;
+ - 221:2. Utilizing cryptocurrency and digital assets for receiving donations, making grants, and conducting operations;
+ - 222:3. Implementing decentralized governance mechanisms that are consistent with the corporation's nonprofit status and fiduciary obligations.
+ - 224:### 14.2 Digital Asset Management
+ - 228:1. All digital asset activities must be conducted in compliance with applicable federal and state laws, including securities laws, money transmission laws, and tax regulations;
+ - 229:2. The Board of Directors shall establish policies and procedures for the secure custody, management, and accounting of digital assets;
+ - 230:3. Digital assets shall be treated as property of the corporation and shall be subject to the same restrictions on private inurement and use for exempt purposes as other corporate assets;
+ - 231:4. The corporation may convert digital assets to fiat currency or other forms of property as needed to carry out its exempt purposes.
+ - 233:### 14.3 Decentralized Governance
+ - 237:1. Final legal authority and fiduciary responsibility remain with the Board of Directors;
+ - 238:2. Such structures serve educational, charitable, or other exempt purposes;
+ - 239:3. Participation does not confer membership rights or economic interests inconsistent with Section 501(c)(3) status;
+ - 240:4. The Board of Directors retains authority to override or modify any decisions made through decentralized governance mechanisms if necessary to comply with legal obligations or fulfill fiduciary duties.
+ - 244:## ARTICLE XV: Effective Date
+ - 250:## EXECUTION
+ - 283:## FILING INSTRUCTIONS
+ - 287:1. **Review and Complete**: Fill in all bracketed placeholders with actual information
+ - 288:2. **Review Requirements**: Ensure compliance with RCW 24.03A.080 and current Washington law
+ - 289:3. **Prepare Filing Fee**: Check current fee schedule (approximately $30-$50)
+ - 290:4. **File Online or By Mail**:
+ - 293:5. **Certified Copies**: Request certified copies for your records (additional fee)
+ - 294:6. **IRS Form 1023**: After receiving confirmation of incorporation, file IRS Form 1023 or 1023-EZ for 501(c)(3) status
+
+## projects/Sandbox/Breadfond 501c/docs/roadmap.md
+ - 1:# Breadfond Foundation Development Roadmap
+ - 9:## Overview
+ - 20:## Phase 0: Foundation & Planning
+ - 24:### Month 1: Incorporation & Structure
+ - 27:- [ ] Retain nonprofit attorney (Washington State specialist)
+ - 28:- [ ] Draft Articles of Incorporation
+ - 29:- [ ] File with Washington Secretary of State
+ - 30:- [ ] Obtain EIN from IRS
+ - 31:- [ ] Open nonprofit bank account
+ - 34:- [ ] Recruit initial Board of Directors (5-7 members)
+ - 35:- [ ] Draft and approve Bylaws
+ - 36:- [ ] Hold first board meeting
+ - 37:- [ ] Adopt Conflict of Interest Policy
+ - 38:- [ ] Establish board committees (Finance, Governance, Programs)
+ - 41:- [ ] Hire or appoint Executive Director (Paul or candidate)
+ - 42:- [ ] Hire Technical Lead / CTO
+ - 43:- [ ] Engage legal counsel (ongoing)
+ - 44:- [ ] Engage accounting firm
+ - 53:### Month 2: Fundraising & Strategy
+ - 56:- [ ] Complete IRS Form 1023 or 1023-EZ
+ - 57:- [ ] Compile supporting documentation
+ - 58:- [ ] Submit to IRS (2-6 month processing)
+ - 61:- [ ] Develop fundraising pitch deck
+ - 62:- [ ] Identify target grant foundations
+ - 63:- [ ] Apply to Tezos Foundation grant
+ - 64:- [ ] Apply to Gitcoin Grants round
+ - 65:- [ ] Outreach to crypto philanthropists
+ - 66:- [ ] Apply to NEA, Ford Foundation, Knight Foundation
+ - 69:- [ ] Finalize technical architecture document
+ - 70:- [ ] Select blockchain stack (Etherlink + Tezos)
+ - 71:- [ ] Choose fiat onramp provider (Stripe vs. Transak)
+ - 72:- [ ] Design database schema
+ - 73:- [ ] Create UI/UX wireframes
+ - 76:- [ ] Research NYC gallery spaces (Brooklyn)
+ - 77:- [ ] Create gallery business plan
+ - 78:- [ ] Develop exhibition concepts
+ - 79:- [ ] Identify potential curator partners
+ - 89:### Month 3: Team Build-Out & Prep
+ - 92:- [ ] Hire Operations Manager
+ - 93:- [ ] Hire Part-Time Developer (contract)
+ - 94:- [ ] Onboard initial team
+ - 97:- [ ] Establish project management (Asana, Notion)
+ - 98:- [ ] Setup communication tools (Slack, email)
+ - 99:- [ ] Create internal documentation repository
+ - 100:- [ ] Implement accounting software (QuickBooks Nonprofit)
+ - 103:- [ ] Launch placeholder website
+ - 104:- [ ] Create social media accounts
+ - 105:- [ ] Begin content calendar (blog, Twitter)
+ - 106:- [ ] Reach out to artist communities abroad
+ - 109:- [ ] Contact potential NGO partners in target countries
+ - 110:- [ ] Approach universities for research partnerships
+ - 111:- [ ] Begin conversations with embassies
+ - 122:## Phase 1: MVP Development
+ - 126:### Month 4-5: Smart Contract Development
+ - 129:- [ ] Develop Loan Registry Contract
+ - 130:- [ ] Develop DAO Governance Contract
+ - 131:- [ ] Develop USD Oracle Contract
+ - 132:- [ ] Develop Swap Router Contract
+ - 133:- [ ] Develop Bridge Contract (Etherlink ↔ Tezos)
+ - 134:- [ ] Write comprehensive test suite
+ - 137:- [ ] Unit tests for each contract
+ - 138:- [ ] Integration tests across contracts
+ - 139:- [ ] Security vulnerability assessment
+ - 140:- [ ] Gas optimization
+ - 143:- [ ] Technical specifications
+ - 144:- [ ] API documentation
+ - 145:- [ ] User guides
+ - 151:### Month 6-7: Frontend & Backend Development
+ - 154:- [ ] Artist profile pages
+ - 155:- [ ] Loan browsing interface
+ - 156:- [ ] Lending flow (credit card + crypto)
+ - 157:- [ ] Donor dashboard (track loans & repayments)
+ - 158:- [ ] Admin panel (artist review, DAO proposals)
+ - 161:- [ ] User authentication (wallet + email)
+ - 162:- [ ] Artist application processing
+ - 163:- [ ] Repayment tracking
+ - 164:- [ ] Email notifications
+ - 165:- [ ] IPFS integration (artist media)
+ - 168:- [ ] Integrate Stripe or Transak
+ - 169:- [ ] KYC/AML compliance flows
+ - 170:- [ ] Automatic USD → XTZ conversion
+ - 176:### Month 8: Security Audit & Testing
+ - 179:- [ ] Engage audit firm (Trail of Bits, OpenZeppelin, etc.)
+ - 180:- [ ] Remediate findings
+ - 181:- [ ] Re-audit critical issues
+ - 182:- [ ] Publish audit report
+ - 185:- [ ] Launch bug bounty program ($10k pool)
+ - 186:- [ ] Monitor submissions
+ - 187:- [ ] Reward vulnerabilities found
+ - 190:- [ ] Beta testing with 20 volunteers
+ - 191:- [ ] Gather feedback and iterate
+ - 192:- [ ] Usability improvements
+ - 198:### Month 9: Gallery Site Selection & Design
+ - 201:- [ ] Tour 10-15 potential spaces in Brooklyn
+ - 202:- [ ] Negotiate lease terms
+ - 203:- [ ] Sign lease (target: Bushwick or Williamsburg)
+ - 204:- [ ] Hire architect/designer for build-out
+ - 205:- [ ] Obtain permits
+ - 208:- [ ] Post job listings (Gallery Director, Coordinator)
+ - 209:- [ ] Interview candidates
+ - 210:- [ ] Hire Gallery Director (start Month 10)
+ - 213:- [ ] Recruit contract curator
+ - 214:- [ ] Develop first 3 exhibition concepts
+ - 215:- [ ] Begin artist outreach (loan recipients)
+ - 225:## Phase 2: Beta Launch & Gallery Build-Out
+ - 229:### Month 10: Platform Beta Launch
+ - 232:- [ ] Deploy contracts to Etherlink testnet
+ - 233:- [ ] Deploy frontend to staging environment
+ - 234:- [ ] Invite 50 beta testers (artists + donors)
+ - 237:- [ ] Open applications in 2 countries (e.g., Nigeria, Guatemala)
+ - 238:- [ ] Partner with local NGOs for outreach
+ - 239:- [ ] Review and approve 50 artists via DAO vote
+ - 240:- [ ] Disburse first loans ($50-$100 each = $2.5k-$5k total)
+ - 243:- [ ] Recruit 200 initial lenders
+ - 244:- [ ] Provide white-glove onboarding
+ - 245:- [ ] Collect feedback on lending experience
+ - 254:### Month 11: Gallery Build-Out
+ - 257:- [ ] Complete gallery build-out (walls, lighting, flooring)
+ - 258:- [ ] Install technology (Wi-Fi, A/V, security)
+ - 259:- [ ] Furnish space (displays, seating, office)
+ - 260:- [ ] Exterior signage
+ - 263:- [ ] Gallery Coordinator hired
+ - 264:- [ ] Recruit part-time docents (3 people)
+ - 265:- [ ] Staff training on Breadfond mission, lending platform
+ - 268:- [ ] Finalize first exhibition: "Introducing Breadfond"
+ - 269:- [ ] Contact pilot artists for artwork
+ - 270:- [ ] Arrange international shipping
+ - 271:- [ ] Write exhibition materials (wall text, catalog)
+ - 274:- [ ] Gallery website page
+ - 275:- [ ] Social media launch campaign
+ - 276:- [ ] Press release to NYC art media
+ - 277:- [ ] Invitations to opening gala
+ - 287:### Month 12: Gallery Grand Opening
+ - 290:- [ ] Grand opening gala (invite 200-300)
+ - 291:- [ ] Press preview day
+ - 292:- [ ] Ribbon cutting ceremony
+ - 293:- [ ] Artist video calls (live from loan recipient countries)
+ - 294:- [ ] First lending conversions from gallery visitors
+ - 297:- [ ] Deploy contracts to Etherlink mainnet
+ - 298:- [ ] Migrate from beta to production
+ - 299:- [ ] Public announcement and PR campaign
+ - 302:- [ ] Receive determination letter
+ - 303:- [ ] Update website and materials
+ - 304:- [ ] Begin accepting tax-deductible donations
+ - 322:## Phase 3: Public Launch & Scale
+ - 326:### Year 2 Milestones
+ - 329:- [ ] Scale to 200 artists funded
+ - 330:- [ ] Expand to 5 countries
+ - 331:- [ ] Refine DAO governance (first proposals)
+ - 332:- [ ] NYC gallery: 2nd & 3rd exhibitions
+ - 333:- [ ] Target: 1,000 lenders acquired
+ - 336:- [ ] Scale to 500 artists funded
+ - 337:- [ ] Expand to 10 countries
+ - 338:- [ ] **Open LA gallery** (Month 18)
+ - 339:- [ ] Launch artist education program (financial literacy)
+ - 340:- [ ] Target: 2,000 lenders total
+ - 343:- [ ] Scale to 1,000 artists funded
+ - 344:- [ ] Launch platform token (governance + rewards)
+ - 345:- [ ] LA gallery: First exhibitions
+ - 346:- [ ] Apply for major foundation grants ($500k+)
+ - 347:- [ ] Target: 3,500 lenders total
+ - 350:- [ ] Scale to 2,000 artists funded
+ - 351:- [ ] Expand to 15 countries
+ - 352:- [ ] **Open SF gallery** (Month 24)
+ - 353:- [ ] Launch booster pack expansions (themed trait releases for crypto fundraising)
+ - 354:- [ ] Target: 5,000 lenders total
+ - 358:## Phase 4: Maturity & Expansion
+ - 362:### Year 3 Goals
+ - 363:- **Artists Funded**: 5,000 cumulative (3,000 new in Year 3)
+ - 364:- **Loan Pool**: $1.5M disbursed (cumulative)
+ - 365:- **Lenders**: 10,000+ active
+ - 366:- **Galleries**: NYC, LA, SF, **Miami** (open Q4)
+ - 367:- **Repayment Rate**: 95%+ maintained
+ - 368:- **Revenue**: $790k (self-sustaining core operations)
+ - 370:### Year 4 Goals
+ - 371:- **Artists Funded**: 8,000 cumulative
+ - 372:- **Galleries**: Add **Chicago**, **Seattle**
+ - 373:- **International Expansion**: Partner galleries in London, Berlin
+ - 374:- **Platform Features**: Mobile app, artist marketplace
+ - 375:- **Endowment**: $2M+ reserve fund
+ - 377:### Year 5 Goals
+ - 378:- **Artists Funded**: 12,000 cumulative
+ - 379:- **Galleries**: Add **Austin**, **Washington DC**
+ - 380:- **Global Reach**: 30+ countries, all continents
+ - 381:- **Cultural Impact**: UNESCO partnership, major exhibitions
+ - 382:- **Sustainability**: 100% self-funded from platform fees + endowment
+ - 386:## Key Metrics Dashboard
+ - 388:### Platform Metrics
+ - 396:### Gallery Metrics
+ - 405:### Financial Metrics
+ - 415:## Critical Path & Dependencies
+ - 417:### Must-Have Before Launch
+ - 418:1. ✅ 501(c)(3) status approved
+ - 419:2. ✅ Smart contracts audited
+ - 420:3. ✅ Fiat onramp functional
+ - 421:4. ✅ Seed funding secured ($250k minimum)
+ - 422:5. ✅ Partnership with 2+ artist NGOs established
+ - 424:### Gallery Dependencies
+ - 425:1. ✅ Platform operational (loans flowing)
+ - 426:2. ✅ Loan recipients producing art
+ - 427:3. ✅ Funding for build-out secured
+ - 428:4. ✅ Gallery Director hired
+ - 430:### Scaling Dependencies
+ - 431:1. ✅ Repayment rate >90%
+ - 432:2. ✅ DAO governance functional
+ - 433:3. ✅ Artist satisfaction >80% (surveys)
+ - 434:4. ✅ Lender retention >60%
+ - 438:## Risk Mitigation Timeline
+ - 440:### Legal Risks
+ - 441:- **Month 1**: Retain specialized nonprofit attorney
+ - 442:- **Month 2**: File 501(c)(3) application (allow 6 months)
+ - 443:- **Ongoing**: Quarterly legal compliance reviews
+ - 445:### Technical Risks
+ - 446:- **Month 8**: Third-party security audit
+ - 447:- **Month 10**: Beta testing with real users
+ - 448:- **Month 12**: Bug bounty program launch
+ - 450:### Financial Risks
+ - 451:- **Month 2-3**: Secure seed funding before burn
+ - 452:- **Month 6**: Apply for Year 2 grants (lead time)
+ - 453:- **Month 12**: Evaluate sustainability; adjust if needed
+ - 455:### Gallery Risks
+ - 456:- **Month 9**: Negotiate flexible lease terms
+ - 457:- **Month 11**: Build contingency budget (10% overage)
+ - 458:- **Month 12**: Soft opening before grand gala (test operations)
+ - 462:## Governance Milestones
+ - 464:### Board Governance
+ - 465:- **Month 1**: Initial board formation
+ - 466:- **Month 3**: First board meeting, approve bylaws
+ - 467:- **Month 6**: Quarterly board meeting, financial review
+ - 468:- **Month 9**: Approve gallery expansion
+ - 469:- **Month 12**: Annual meeting, elect officers
+ - 470:- **Ongoing**: Quarterly meetings + ad hoc as needed
+ - 472:### DAO Governance
+ - 473:- **Month 10**: Beta DAO launched (testnet)
+ - 474:- **Month 12**: DAO activated (mainnet)
+ - 475:- **Month 13+**: Weekly artist application votes
+ - 476:- **Month 18**: First major DAO proposal (platform upgrades)
+ - 477:- **Year 2+**: DAO increasingly autonomous, board oversight only
+ - 481:## Appendices
+ - 483:### Appendix A: Detailed Budget Breakdown
+ - 486:### Appendix B: Technical Milestones
+ - 489:### Appendix C: Fundraising Pipeline
+ - 492:### Appendix D: Gallery Rollout Schedule
+ - 506:## Success Criteria
+ - 508:### By Month 12 (End of Phase 2)
+ - 509:- [x] 501(c)(3) status granted
+ - 510:- [x] 50+ artists funded
+ - 511:- [x] 200+ lenders acquired
+ - 512:- [x] Platform live on mainnet
+ - 513:- [x] NYC gallery open and operational
+ - 514:- [x] Zero security incidents
+ - 515:- [x] 90%+ artist satisfaction
+ - 516:- [x] $250k+ in follow-on funding secured
+ - 518:### By Month 24 (End of Phase 3)
+ - 519:- [x] 2,000+ artists funded
+ - 520:- [x] 5,000+ lenders acquired
+ - 521:- [x] $750k+ in loans disbursed
+ - 522:- [x] 3 galleries operational (NYC, LA, SF)
+ - 523:- [x] 95%+ repayment rate
+ - 524:- [x] Break-even operational budget (excluding galleries)
+ - 525:- [x] Media coverage in 10+ major outlets
+ - 527:### By Year 5 (Maturity)
+ - 528:- [x] 12,000+ artists funded globally
+ - 529:- [x] 25,000+ active lenders
+ - 530:- [x] $3.6M+ in loans disbursed
+ - 531:- [x] 7 galleries across US
+ - 532:- [x] 95%+ repayment rate maintained
+ - 533:- [x] $3M+ endowment established
+ - 534:- [x] Self-sustaining model achieved
+ - 538:## Document Control
+ - 539:- **Author**: Breadfond Founding Team
+ - 540:- **Version**: 2.0 (Gallery Network Integrated)
+ - 541:- **Last Updated**: November 2025
+ - 542:- **Next Review**: Quarterly
+ - 543:- **Status**: Living Document
+
+## projects/Sandbox/Lil Guys Platformer/IN-GAME-RIGGING-SUMMARY.md
+ - 1:# In-Game Rigging System - Quick Summary
+ - 8:## 🎯 The Concept in 30 Seconds
+ - 12:1. Player selects unrigged Lil Guy NFT
+ - 13:2. Game opens **Rigging Studio** interface
+ - 14:3. Player clicks to place **18 skeleton joints** on their character
+ - 15:4. Game validates and tests the rig
+ - 16:5. Rig is saved (local or blockchain)
+ - 17:6. Character is now playable with full animations!
+ - 21:## ✅ What's Been Created
+ - 23:### 1. **In-Game Rigging System Design** (25 pages)
+ - 40:### 2. **Art Asset Specifications** (15 pages)
+ - 53:## 🎨 Art Assets You Need to Create
+ - 55:### Essential Assets (Priority 1) - 17 files
+ - 61:- **Time**: 30-60 minutes
+ - 68:- **Size**: 32×32px each
+ - 69:- **Time**: 20-30 minutes
+ - 76:- **Size**: 120×40px each
+ - 77:- **Time**: 60-90 minutes
+ - 83:## 🦴 The Skeleton Structure
+ - 88:1. HEAD
+ - 89:2. NECK
+ - 90:3. SPINE_UPPER (chest)
+ - 91:4. SPINE_MIDDLE (mid back)
+ - 92:5. SPINE_LOWER (lower back)
+ - 93:6. ROOT (pelvis/hips)
+ - 120:## 🎮 How It Works in Practice
+ - 122:### Player Experience (5-10 minutes per character)
+ - 145:## 💡 Why This Approach Is Brilliant
+ - 147:### Problem It Solves
+ - 148:- **Can't pre-rig 1000+ variations** (too much work)
+ - 149:- **Each NFT is unique** (different body shapes, proportions)
+ - 150:- **New collections keep releasing** (scalability issue)
+ - 152:### Solution Benefits
+ - 153:1. ✅ **Scales infinitely** (works for any 2D character, not just Lil Guys)
+ - 154:2. ✅ **Community-driven** (players do the work, feel ownership)
+ - 155:3. ✅ **Gamifiable** (reward players for rigging well)
+ - 156:4. ✅ **Zero pre-production** (no rigging 1000s of characters before launch)
+ - 157:5. ✅ **Shareable** (community can share rig templates)
+ - 158:6. ✅ **Marketable** (unique selling point, no other NFT game does this)
+ - 160:### Potential Issues & Solutions
+ - 177:## 🚀 Implementation Priority
+ - 179:### Phase 1: Core Tool (Month 1) - MVP
+ - 190:### Phase 2: Polish (Month 2)
+ - 201:### Phase 3: Advanced (Month 3+)
+ - 212:## 📊 Success Metrics
+ - 214:### Goals for Beta (First 100 Users)
+ - 233:## 🎨 Art Asset Quick Checklist
+ - 235:### You Need to Create:
+ - 237:- [ ] **Reference Skeleton** (1 image, 512×512px)
+ - 241:- [ ] **Joint Markers** (4 images, 32×32px each)
+ - 247:- [ ] **Buttons** (12 images, 120×40px each)
+ - 253:### Optional (Phase 2):
+ - 254:- [ ] Tutorial overlay images (5-10 images)
+ - 255:- [ ] Auto-detect button (3 states)
+ - 256:- [ ] Preview background (1 image)
+ - 263:## 🛠️ Technical Implementation
+ - 265:### Tech Stack
+ - 273:- **Phase 1**: Browser localStorage (fast, simple)
+ - 274:- **Phase 2**: IPFS + blockchain (permanent, portable)
+ - 280:## 📈 Business Impact
+ - 282:### Marketing Angle
+ - 291:### Virality Potential
+ - 297:### Long-Term Value
+ - 298:- **Rig templates marketplace** (buy/sell rigs)
+ - 299:- **White-label opportunity** (license tool to other NFT projects)
+ - 300:- **Educational tool** (teach 2D animation in fun way)
+ - 304:## 🎯 Next Steps for You
+ - 306:### Immediate (This Week):
+ - 307:1. **Review all documentation** thoroughly
+ - 308:2. **Create reference skeleton template** (first asset)
+ - 309:3. **Test style** - does it match your game's aesthetic?
+ - 310:4. **Get feedback** from team/community on design
+ - 312:### Short-Term (Next 2 Weeks):
+ - 313:5. **Create all joint marker icons**
+ - 314:6. **Create UI buttons** (all states)
+ - 315:7. **Organize assets** in correct folder structure
+ - 316:8. **Deliver to developer** for implementation
+ - 318:### Medium-Term (Next Month):
+ - 319:9. **Developer implements** rigging tool (Phase 1)
+ - 320:10. **Test with 5-10 different NFTs** (varied body types)
+ - 321:11. **Iterate** based on testing
+ - 322:12. **Alpha test** with community (50 users)
+ - 326:## 🏆 Why This Will Work
+ - 328:1. ✅ **Solves real problem** (can't pre-rig 1000s of NFTs)
+ - 329:2. ✅ **Engages community** (players become co-creators)
+ - 330:3. ✅ **Scales infinitely** (works for any future collection)
+ - 331:4. ✅ **Unique feature** (no other NFT game has this)
+ - 332:5. ✅ **Low art budget** (only need ~20 simple assets)
+ - 333:6. ✅ **Gamifiable** (rewards, leaderboards, marketplace)
+ - 334:7. ✅ **Viral potential** (shareable content, tutorials)
+ - 338:## 📞 Questions?
+ - 354:## 🎉 Final Thoughts
+
+## projects/Sandbox/Lil Guys Platformer/PROJECT_SUMMARY.md
+ - 1:# Lil Guys Platformer - Project Summary
+ - 9:## 🎮 Project Overview
+ - 17:## 📚 Complete Documentation
+ - 19:### 1. **README.md** ✅
+ - 36:### 2. **Game Design Document** ✅
+ - 42:- **Game Overview**: High concept, genre, USPs, target audience
+ - 43:- **Story & Setting**: The Trait Realm, narrative structure, tone
+ - 44:- **Core Gameplay**: Movement mechanics, combat, exploration
+ - 45:- **Character System**: NFT integration, base stats, trait modifiers
+ - 46:- **Trait-Based Abilities**: 50+ abilities mapped to traits
+ - 51:- **Level Design**: 5 major zones, Metroidvania structure, gating mechanics
+ - 52:- **Enemies & Combat**: 10 enemy types, pattern-based bosses
+ - 53:- **Progression & Unlocks**: Collectible-based upgrades, shortcuts
+ - 54:- **UI/UX**: Character select, HUD, menus
+ - 55:- **Multiplayer** (Future): 2-4 player co-op with synergy abilities
+ - 56:- **Technical Requirements**: Performance targets, accessibility features
+ - 66:### 3. **Technical Specifications** ✅
+ - 72:- **System Architecture**: Client-server diagram, blockchain integration flow
+ - 73:- **Engine Choice**: Godot 4 (recommended) vs. Phaser 3
+ - 76:- **Character System**: Data structures, controller code examples
+ - 77:- **Physics & Movement**: Fine-tuned platformer feel (acceleration, jump, coyote time)
+ - 78:- **Animation System**: State machine, 12+ required animations per character
+ - 79:- **Blockchain Integration**: 
+ - 83:- **Level Design & Tilemap**: JSON format, tilemap setup
+ - 84:- **Audio System**: Music, SFX, dynamic audio
+ - 85:- **Save System**: Local storage + optional cloud backup
+ - 86:- **Performance Optimization**: Object pooling, culling, texture atlasing
+ - 87:- **Build & Deployment**: Web export, desktop builds
+ - 98:### 4. **Character Rigging Guide** ✅
+ - 108:1. **Art Preparation**: Export trait layers, separate into body parts, standardize pivots
+ - 109:2. **Base Rig Creation**: Create skeleton in Spine/DragonBones (15-20 bones)
+ - 110:3. **Animation**: Animate skeleton (Tier 1-3 animations, 12+ total)
+ - 111:4. **Skin Setup**: Create skins for each trait variation
+ - 112:5. **Runtime Integration**: Load NFT traits → swap skins → play animations
+ - 115:- **Spine 2D** (Professional, $69-$329) — Recommended
+ - 116:- **DragonBones** (Free, open-source) — Budget option
+ - 117:- **Godot Skeleton2D** (Free, manual) — Prototype option
+ - 118:- **Hand-drawn sprites** (Traditional, not recommended for this project)
+ - 132:## 🎯 Key Features
+ - 134:### 1. NFT Integration
+ - 135:- **Connect Wallet**: Temple, Kukai, Umami (Tezos)
+ - 136:- **Load Characters**: Fetch all owned Lil Guys from blockchain
+ - 137:- **Select & Play**: Choose which Lil Guy to control
+ - 138:- **Trait Parsing**: Automatically map traits to abilities
+ - 140:### 2. Trait-Based Abilities (50+)
+ - 143:- **Hat** → Double Jump
+ - 144:- **Mohawk** → Dash
+ - 145:- **Headphones** → Sound Wave (break blocks, stun enemies)
+ - 146:- **Crown** → Hover (slow descent)
+ - 147:- **Horns** → Charge Attack (break walls)
+ - 148:- **Bandana** → Wall Jump
+ - 149:- **Goggles** → X-Ray Vision (reveal secrets)
+ - 150:- **Antenna** → Telekinesis (move objects)
+ - 153:- **Slim** → +20% Speed
+ - 154:- **Buff** → +30% Attack
+ - 155:- **Chubby** → +2 Hearts
+ - 156:- **Tall** → +15% Jump Height
+ - 158:### 3. Metroidvania World
+ - 159:- **Hub World**: Central nexus connecting all zones
+ - 160:- **5 Major Zones**: Each with unique theme, boss, and challenges
+ - 166:- **Ability Gates**: Need specific traits to access areas (encourages collecting)
+ - 167:- **Shortcuts**: Unlock fast travel and backtrack routes
+ - 169:### 4. Replayability
+ - 170:- **Character Variety**: Each Lil Guy plays differently based on traits
+ - 171:- **Hidden Secrets**: 3-5 per level (collectibles, hidden rooms)
+ - 172:- **Multiple Paths**: Approach challenges in different ways
+ - 173:- **Speedrun Mode**: Leaderboards for fastest completion times
+ - 177:## 📊 Development Roadmap
+ - 179:### Phase 1: Prototype (Months 1-3) - $0k
+ - 182:- [ ] Set up project (Godot or Phaser)
+ - 183:- [ ] Basic character controller (walk, jump, physics)
+ - 184:- [ ] Wallet connection (testnet)
+ - 185:- [ ] Load NFT metadata, display owned Lil Guys
+ - 186:- [ ] 1 test level
+ - 187:- [ ] 3 trait abilities implemented
+ - 188:- [ ] Playable 5-10 minute demo
+ - 194:### Phase 2: Vertical Slice (Months 4-6) - $5k-$10k
+ - 197:- [ ] Rig and animate 10+ trait variations (Spine/DragonBones)
+ - 198:- [ ] Automated trait → skin pipeline
+ - 199:- [ ] 3 interconnected levels
+ - 200:- [ ] 10+ trait abilities
+ - 201:- [ ] 3 enemy types
+ - 202:- [ ] Combat system
+ - 203:- [ ] Collectibles and power-ups
+ - 204:- [ ] HUD and menus
+ - 205:- [ ] Audio (music + SFX)
+ - 217:### Phase 3: Alpha (Months 7-9) - $10k-$20k
+ - 220:- [ ] Full world (10-15 levels)
+ - 221:- [ ] All 50+ trait abilities
+ - 222:- [ ] 3-5 boss fights
+ - 223:- [ ] Save system (wallet-linked)
+ - 224:- [ ] Leaderboards (speedrun times)
+ - 225:- [ ] Closed alpha with NFT holders (50-100 testers)
+ - 234:### Phase 4: Beta & Polish (Months 10-12) - $15k-$30k
+ - 237:- [ ] Public beta (all NFT holders)
+ - 238:- [ ] Balance pass (difficulty, abilities)
+ - 239:- [ ] Juice (screen shake, particles, camera effects)
+ - 240:- [ ] Performance optimization
+ - 241:- [ ] Full QA testing
+ - 242:- [ ] Launch trailer
+ - 243:- [ ] Marketing materials
+ - 252:### Phase 5: Launch (Month 13) - $5k
+ - 255:- [ ] Deploy to web (lilguys.game or own domain)
+ - 256:- [ ] Announce to Lil Guys community
+ - 257:- [ ] Press outreach (NFT + indie game media)
+ - 258:- [ ] Community events (speedrun competitions)
+ - 259:- [ ] Monitor analytics and feedback
+ - 268:### Phase 6: Post-Launch (Months 13+) - Ongoing
+ - 269:- [ ] Bug fixes and patches
+ - 270:- [ ] New levels (DLC or free updates)
+ - 271:- [ ] Multiplayer co-op mode
+ - 272:- [ ] Mobile version
+ - 273:- [ ] Seasonal events
+ - 282:## 💰 Budget Breakdown
+ - 284:### Minimal Budget (DIY, $5k)
+ - 289:- **Total**: ~$5,000
+ - 295:### Recommended Budget ($35k-$50k)
+ - 303:- **Total**: $45,000
+ - 309:### Premium Budget ($100k+)
+ - 320:## 🎨 Technical Stack
+ - 322:### Recommended: Godot 4
+ - 323:- **Pros**: Free, best 2D engine, built-in animation, cross-platform
+ - 324:- **Cons**: Blockchain integration requires bridging (HTTP calls)
+ - 325:- **Best For**: Performance, native builds, long-term project
+ - 327:### Alternative: Phaser 3
+ - 328:- **Pros**: Web-native, easy blockchain integration, JavaScript ecosystem
+ - 329:- **Cons**: Web-only (no native builds), less robust animation
+ - 330:- **Best For**: Rapid prototyping, web-first approach
+ - 332:### Blockchain
+ - 333:- **Network**: Etherlink (mainnet) + testnet
+ - 334:- **Wallets**: Temple, Kukai, Umami
+ - 335:- **Integration**: Beacon SDK (Tezos) or ethers.js
+ - 339:## 📈 Success Metrics
+ - 341:### Launch (Month 1)
+ - 347:### Month 6
+ - 353:### Long-Term
+ - 360:## 🚀 Next Steps
+ - 362:### For You (Project Lead)
+ - 365:1. **Review all documentation** thoroughly
+ - 366:2. **Choose engine** (Godot vs. Phaser)
+ - 367:3. **Set up development environment**
+ - 368:4. **Export test traits** from Lil Guys NFT project (5-10 variations)
+ - 369:5. **Create GitHub repository** (public or private)
+ - 372:6. **Prototype character controller** (walk, jump, basic physics)
+ - 373:7. **Test wallet connection** (on testnet)
+ - 374:8. **Fetch & display NFT metadata**
+ - 375:9. **Implement 1 trait ability** (e.g., double jump if Hat)
+ - 376:10. **Build 1 test level** (simple platforming)
+ - 379:11. **Begin rigging process** (learn Spine or DragonBones)
+ - 380:12. **Create base skeleton** and first animations
+ - 381:13. **Implement skin swapping** (runtime trait loading)
+ - 382:14. **Expand to 3 levels** and 5 abilities
+ - 383:15. **Share prototype** with Lil Guys community for feedback
+ - 387:### For Community (Lil Guys NFT Holders)
+ - 390:- **Playtesting**: Sign up for alpha/beta access
+ - 391:- **Feedback**: Shape game direction through surveys and Discord discussions
+ - 392:- **Speedrunning**: Build competitive community
+ - 393:- **Content Creation**: Stream, create tutorials, fan art
+ - 403:## 🏆 Why This Will Succeed
+ - 405:### 1. Proven Concept
+ - 410:### 2. Strong Foundation
+ - 415:### 3. Community-Driven
+ - 420:### 4. Scalable
+ - 425:### 5. Realistic Budget
+ - 432:## 📞 Resources & Support
+ - 434:### Documentation
+ - 439:### Communities
+ - 440:- **Godot Discord**: #2d-game-dev channel
+ - 441:- **r/gamedev**: For general game dev advice
+ - 442:- **Lil Guys Discord**: For project-specific feedback
+ - 443:- **Spine Forums**: For animation help
+ - 445:### Learning Resources
+ - 446:- **Godot Docs**: https://docs.godotengine.org
+ - 447:- **Phaser 3 Docs**: https://photonstorm.github.io/phaser3-docs/
+ - 448:- **Spine Tutorials**: http://esotericsoftware.com/spine-examples
+ - 449:- **Platformer Design**: YouTube (GMTK, Game Maker's Toolkit)
+ - 453:## 🎉 Conclusion
+
+## projects/Sandbox/Lil Guys Platformer/README.md
+ - 1:# Lil Guys Platformer
+ - 12:## 🎮 Concept
+ - 16:### Core Hook
+ - 20:- **Head trait** → Special ability (double jump, dash, glide, etc.)
+ - 21:- **Body trait** → Movement stats (speed, jump height)
+ - 22:- **Accessory trait** → Passive bonus (health, attack, defense)
+ - 23:- **Background trait** → Visual flair and rarity-based boosts
+ - 27:## 🌟 Key Features
+ - 29:### 1. **Play as Your NFTs**
+ - 35:### 2. **Trait-Based Abilities**
+ - 40:### 3. **Metroidvania Progression**
+ - 45:### 4. **Multiplayer Co-op** (Future)
+ - 50:### 5. **Leaderboards & Challenges**
+ - 58:## 📂 Project Structure
+ - 106:## 🎨 Art Pipeline: NFT to Game Character
+ - 108:### Step 1: Export NFT Layers
+ - 114:### Step 2: Create Base Rig
+ - 120:### Step 3: Animate Base Character
+ - 130:### Step 4: Swap Skins Programmatically
+ - 138:## 🎯 Core Gameplay Loop
+ - 141:1. Connect Wallet
+ - 143:2. Select Lil Guy from owned NFTs
+ - 145:3. Spawn in hub world
+ - 147:4. Explore interconnected levels
+ - 149:5. Use trait abilities to progress
+ - 151:6. Defeat enemies, solve puzzles
+ - 153:7. Collect power-ups and secrets
+ - 155:8. Unlock new areas (requires specific traits)
+ - 157:9. Switch to different Lil Guy (different abilities)
+ - 159:10. Complete challenges, earn rewards
+ - 164:## 🛠️ Technology Stack
+ - 166:### Recommended: **Godot 4**
+ - 180:### Alternative: **Phaser 3** (JavaScript/TypeScript)
+ - 193:## 📊 Development Roadmap
+ - 195:### Phase 1: Prototype (Months 1-3)
+ - 198:- [ ] Set up project in chosen engine
+ - 199:- [ ] Create base Lil Guy character controller
+ - 202:- [ ] Implement wallet connection (testnet)
+ - 203:- [ ] Load NFT metadata and display owned Lil Guys
+ - 204:- [ ] Create 1 test level (simple platforming)
+ - 205:- [ ] Implement 3 trait-based abilities
+ - 206:- [ ] Playable prototype (5-10 minutes of gameplay)
+ - 212:### Phase 2: Vertical Slice (Months 4-6)
+ - 215:- [ ] Rig and animate 10+ trait variations
+ - 216:- [ ] Create automated trait-to-skin pipeline
+ - 217:- [ ] Design and build 3 interconnected levels
+ - 218:- [ ] Implement 10+ trait-based abilities
+ - 219:- [ ] Add enemies (3 types)
+ - 220:- [ ] Add collectibles and power-ups
+ - 221:- [ ] Basic combat system
+ - 222:- [ ] HUD and menus
+ - 223:- [ ] Audio (music and SFX)
+ - 229:### Phase 3: Alpha (Months 7-9)
+ - 232:- [ ] Complete world (10-15 levels)
+ - 233:- [ ] All trait abilities implemented (50+)
+ - 234:- [ ] Boss fights (3-5)
+ - 235:- [ ] Save system (progress tied to wallet)
+ - 236:- [ ] Leaderboards (speedrun times)
+ - 237:- [ ] Closed alpha test with NFT holders
+ - 243:### Phase 4: Beta & Polish (Months 10-12)
+ - 246:- [ ] Public beta with all NFT holders
+ - 247:- [ ] Balance pass (difficulty, abilities)
+ - 248:- [ ] Juice (screen shake, particles, feedback)
+ - 249:- [ ] Performance optimization
+ - 250:- [ ] Full QA testing
+ - 251:- [ ] Launch trailer and marketing
+ - 257:### Phase 5: Launch (Month 13)
+ - 258:- [ ] Deploy to web (hosted on own domain)
+ - 259:- [ ] Announce to Lil Guys community
+ - 260:- [ ] Press outreach (NFT + indie game media)
+ - 261:- [ ] Community events (speedrun competitions)
+ - 265:### Phase 6: Post-Launch (Months 13+)
+ - 266:- [ ] Bug fixes and patches
+ - 267:- [ ] New levels (DLC or free updates)
+ - 268:- [ ] Multiplayer co-op mode
+ - 269:- [ ] Mobile version (if web performs well)
+ - 270:- [ ] Seasonal events and challenges
+ - 274:## 🎮 Player Experience
+ - 276:### First-Time Player Journey
+ - 307:## 🏆 Monetization & Sustainability
+ - 309:### Primary Goal: NFT Utility
+ - 312:### Optional Revenue Streams (Future)
+ - 314:1. **Cosmetic Skins** (Non-NFT)
+ - 319:2. **Season Pass**
+ - 324:3. **Lil Guys "Franchise Collection" Integration**
+ - 329:4. **Token Rewards** (Existing Platform Token)
+ - 336:## 🔗 Connection to Lil Guys NFT Project
+ - 338:### Shared Universe
+ - 343:### NFT Holder Benefits
+ - 344:- **Exclusive Access**: Only NFT holders can play (at least initially)
+ - 345:- **All Abilities**: Full game access with any Lil Guy NFT
+ - 346:- **Early Updates**: NFT holders get early access to new content
+ - 347:- **Governance**: NFT holders vote on new features/levels
+ - 349:### Marketing Synergy
+ - 356:## 🎨 Visual Style
+ - 358:### Art Direction
+ - 359:- **Pixel Art** (recommended)
+ - 365:- **HD 2D** (alternative)
+ - 370:### Inspiration
+ - 371:- **Celeste**: Tight controls, challenging platforming
+ - 372:- **Hollow Knight**: Metroidvania structure, beautiful world
+ - 373:- **Dead Cells**: Fast action, satisfying combat
+ - 374:- **Ori and the Blind Forest**: Fluid animation, emotional storytelling
+ - 378:## 🎵 Audio
+ - 380:### Music
+ - 385:### SFX
+ - 393:## 🧪 Testing & QA
+ - 395:### Playtesting Focus
+ - 396:1. **Feel**: Does jumping feel good? (most important in platformers)
+ - 397:2. **Clarity**: Do players understand trait abilities?
+ - 398:3. **Challenge**: Is difficulty curve balanced?
+ - 399:4. **Performance**: Does it run smoothly (especially web)?
+ - 401:### NFT Holder Beta
+ - 409:## 📈 Success Metrics
+ - 411:### Launch Metrics (Month 1)
+ - 412:- **Active Players**: 50% of NFT holders try game
+ - 413:- **Retention**: 20% return after first session
+ - 414:- **Session Length**: 15+ minutes average
+ - 415:- **Social**: Players share screenshots/clips
+ - 417:### Long-Term Metrics (Month 6)
+ - 418:- **Monthly Active Users**: 30% of NFT holders
+ - 419:- **Completion Rate**: 40% finish main story
+ - 420:- **Speedrun Community**: 10+ active speedrunners
+ - 421:- **NFT Sales Impact**: Measurable increase in floor price
+ - 425:## 🚀 Getting Started
+ - 427:### For Developers
+ - 436:1. Clone this repository
+ - 437:2. Open project in Godot (or install Phaser dependencies)
+ - 438:3. Review `/docs/game-design-document.md`
+ - 439:4. Follow `/docs/technical-specifications.md`
+ - 440:5. Start with prototype (Phase 1 roadmap)
+ - 444:## 📞 Contact & Community
+ - 453:## 📜 License
+ - 461:## 🙏 Credits
+
+## projects/Sandbox/Lil Guys Platformer/design/ai-prompts-for-assets.md
+ - 1:# AI Prompts for Generating Rigging System Assets
+ - 8:## Prompt 1: Reference Skeleton Template
+ - 10:### For Gemini / DALL-E / Midjourney
+ - 36:1. HEAD (top center)
+ - 37:2. NECK (below head)
+ - 38:3. SPINE_UPPER (chest area)
+ - 39:4. SPINE_MIDDLE (mid torso)
+ - 40:5. SPINE_LOWER (lower back)
+ - 41:6. ROOT/PELVIS (hip center)
+ - 75:## Prompt 2: Joint Marker Icons (All 4 Variants)
+ - 77:### Unplaced Joint Icon
+ - 101:### Placed Joint Icon
+ - 125:### Current Joint Icon (Active State)
+ - 151:### Invalid Joint Icon (Error State)
+ - 175:## Prompt 3: UI Buttons
+ - 177:### Save Button (Normal State)
+ - 201:### Save Button (Hover State)
+ - 223:### Save Button (Pressed State)
+ - 245:### Test Button (Normal State)
+ - 267:### Undo Button (Normal State)
+ - 289:### Reset Button (Normal State)
+ - 311:## Batch Generation Tips
+ - 313:### For Midjourney
+ - 323:### For DALL-E 3
+ - 329:### For Stable Diffusion
+ - 338:## Post-Generation Editing
+ - 342:1. **Remove background**: Use Photoshop, GIMP, or remove.bg
+ - 343:2. **Adjust colors**: Ensure hex codes match exactly (#00AAFF, etc.)
+ - 344:3. **Clean edges**: Remove artifacts, smooth jagged edges
+ - 345:4. **Resize precisely**: Crop to exact pixel dimensions
+ - 346:5. **Export as PNG**: 32-bit color depth, transparency preserved
+ - 350:## Alternative: Manual Creation Guide
+ - 354:### Tools:
+ - 355:- **Figma** (free, web-based) - Best for UI elements
+ - 356:- **Aseprite** ($20) - Best for pixel art style
+ - 357:- **Photoshop** or **GIMP** (free) - General purpose
+ - 359:### Reference Skeleton (Manual):
+ - 360:1. Create 512×512 canvas, transparent
+ - 361:2. Use Ellipse tool to create 20px circles
+ - 362:3. Position at coordinates (from specifications doc)
+ - 363:4. Color by group (blue/green/red)
+ - 364:5. Draw 4px white lines between parent-child joints
+ - 365:6. Export as PNG
+ - 369:### Joint Icons (Manual):
+ - 370:1. Create 32×32 canvas, transparent
+ - 371:2. Draw 26px circle, centered
+ - 372:3. Apply styling (hollow/filled, colors, symbols)
+ - 373:4. Export as PNG
+ - 379:## Quality Checklist
+ - 383:- [ ] Correct dimensions (512×512 or 32×32 or 120×40)
+ - 384:- [ ] Transparent background (where specified)
+ - 385:- [ ] Exact hex colors (#00AAFF, #00FF88, #FF4444, etc.)
+ - 386:- [ ] Clean edges (no artifacts or blurriness)
+ - 387:- [ ] Centered on canvas
+ - 388:- [ ] PNG format, 32-bit
+ - 389:- [ ] File size reasonable (<100KB per file)
+ - 390:- [ ] Looks good at 100% zoom (no pixelation unless pixel art style)
+ - 394:## Iteration Strategy
+ - 396:1. **Generate skeleton first** (most important asset)
+ - 397:2. **Test in-game** (does it work as reference guide?)
+ - 398:3. **Adjust if needed** (colors, size, position)
+ - 399:4. **Generate joint icons** (based on skeleton style)
+ - 400:5. **Generate buttons** (match overall aesthetic)
+ - 401:6. **Maintain consistency** (same style across all assets)
+ - 405:## Expected Results
+ - 428:## Final Tip
+ - 431:1. Different AI model
+ - 432:2. Adjusted prompt (more/less detail)
+ - 433:3. Manual creation (often faster for simple geometric shapes)
+
+## projects/Sandbox/Lil Guys Platformer/design/art-asset-specifications.md
+ - 1:# Art Asset Specifications for In-Game Rigging System
+ - 8:## 🎨 Quick Summary
+ - 12:1. **Reference Skeleton Template** (1 image)
+ - 13:2. **Joint Marker Icons** (4 variations)
+ - 14:3. **UI Buttons** (5 buttons × 3 states = 15 images)
+ - 15:4. **Tutorial Overlays** (optional, 5-10 images)
+ - 22:## Asset 1: Reference Skeleton Template
+ - 24:### Purpose
+ - 27:### Specifications
+ - 45:### Visual Reference (ASCII mockup):
+ - 73:### Actual Pixel Coordinates (Example)
+ - 98:### Design Notes
+ - 106:## Asset 2: Joint Marker Icons
+ - 108:### Purpose
+ - 111:### Specifications
+ - 115:1. **Unplaced Joint** (`joint_unplaced.png`)
+ - 116:2. **Placed Joint** (`joint_placed.png`)
+ - 117:3. **Current Joint** (`joint_current.png`)
+ - 118:4. **Invalid Joint** (`joint_invalid.png`)
+ - 126:### 1. Unplaced Joint
+ - 149:### 2. Placed Joint
+ - 172:### 3. Current Joint
+ - 199:### 4. Invalid Joint
+ - 222:## Asset 3: UI Buttons
+ - 224:### Purpose
+ - 227:### Specifications
+ - 230:1. Save
+ - 231:2. Test
+ - 232:3. Undo
+ - 233:4. Reset
+ - 234:5. Auto-Detect (optional, later phase)
+ - 247:### Button Style Guide
+ - 255:- **Normal**: Background #4CAF50 (green), text white
+ - 256:- **Hover**: Background #66BB6A (lighter green)
+ - 257:- **Pressed**: Background #388E3C (darker green), slightly indented look
+ - 261:### 1. Save Button
+ - 274:### 2. Test Button
+ - 287:### 3. Undo Button
+ - 300:### 4. Reset Button
+ - 313:### 5. Auto-Detect Button (Phase 2)
+ - 326:## Asset 4: Tutorial Overlays (Optional)
+ - 328:### Purpose
+ - 331:### Specifications
+ - 343:### Example Overlay 1: "Place Head Joint"
+ - 354:### Tutorial Sequence
+ - 356:1. **Welcome**: "Welcome to Rigging Studio!"
+ - 357:2. **Step 1**: "Place HEAD joint here" (points to character head)
+ - 358:3. **Step 2**: "Now place NECK below" (points to neck area)
+ - 359:4. **Step 3**: "Great! Continue with SPINE_UPPER..."
+ - 360:5. **Step 4**: "Use the reference skeleton as guide" (highlights reference panel)
+ - 361:6. **Step 5**: "Test your rig anytime!" (points to Test button)
+ - 362:7. **Complete**: "You're ready to rig! Good luck!"
+ - 366:## Quick Reference: File List
+ - 368:### Essential Files (Priority 1)
+ - 395:### Optional Files (Priority 2)
+ - 415:## Design Tips
+ - 417:### For Pixel Art Style
+ - 423:### For Modern/HD Style
+ - 429:### Color Accessibility
+ - 436:## Creation Workflow
+ - 438:### Recommended Tools
+ - 451:### Step-by-Step: Creating Reference Skeleton
+ - 453:1. **Create new 512×512 canvas** (transparent background)
+ - 454:2. **Add guide lines** for symmetry (vertical center at 256px)
+ - 455:3. **Place joint circles** (20px diameter) at coordinates above
+ - 457:4. **Color joints** by body part (blue, green, red)
+ - 458:5. **Draw bone lines** between connected joints
+ - 460:6. **Add subtle drop shadow** on circles (optional)
+ - 464:7. **Export as PNG** with transparency preserved
+ - 466:### Step-by-Step: Creating Joint Markers
+ - 468:1. **Create new 32×32 canvas** (transparent)
+ - 469:2. **Draw circle** (26px diameter, centered)
+ - 470:3. **Apply styling**:
+ - 475:4. **Export each variation** as separate PNG
+ - 477:### Step-by-Step: Creating Buttons
+ - 479:1. **Create new 120×40 canvas**
+ - 480:2. **Draw rounded rectangle** (8px border radius)
+ - 481:3. **Apply button color** (green for Save, blue for Test, etc.)
+ - 482:4. **Add icon** (left side, 24×24px)
+ - 483:5. **Add text label** (right side, bold sans-serif font)
+ - 484:6. **Create hover version**: Lighten background color 10-15%
+ - 485:7. **Create pressed version**: Darken background 10-15%, shift content 1px down/right
+ - 486:8. **Export all 3 states**
+ - 490:## Quality Checklist
+ - 494:### Visual Quality
+ - 495:- [ ] All images have transparent backgrounds (where specified)
+ - 496:- [ ] No stray pixels or artifacts
+ - 497:- [ ] Consistent style across all assets
+ - 498:- [ ] Colors match specification (use hex codes)
+ - 499:- [ ] Dimensions exactly as specified
+ - 501:### Technical Quality
+ - 502:- [ ] PNG format, 32-bit color depth
+ - 503:- [ ] File sizes reasonable (<100KB per image)
+ - 504:- [ ] File names match exactly (case-sensitive)
+ - 505:- [ ] Organized in correct folder structure
+ - 507:### Accessibility
+ - 508:- [ ] High contrast (readable on various backgrounds)
+ - 509:- [ ] Not relying on color alone (icons + text)
+ - 510:- [ ] Clear at different zoom levels (test at 50%, 100%, 150%)
+ - 514:## Delivery Format
+ - 516:### Folder Structure
+ - 541:### Delivery Method
+ - 548:## Timeline Estimate
+ - 555:- **Total**: 2-3 hours
+ - 562:- **Total**: 4 hours
+ - 566:## Budget Estimate
+ - 569:- **Pixel artist** (experienced): $50-$150 flat rate
+ - 570:- **UI designer** (modern style): $75-$200 flat rate
+ - 571:- **Hourly rate**: $25-$50/hour × 2-4 hours = $50-$200
+ - 577:## Next Steps
+ - 579:1. **Review this specification** with your artist (or yourself)
+ - 580:2. **Create a test asset** (reference skeleton) to establish style
+ - 581:3. **Get feedback** on style before creating all assets
+ - 582:4. **Batch create** remaining assets once style is approved
+ - 583:5. **Test in-game** with placeholder implementation
+ - 584:6. **Iterate** based on how they look in actual UI
+
+## projects/Sandbox/Lil Guys Platformer/docs/character-rigging-guide.md
+ - 1:# Lil Guys Platformer - Character Rigging Guide
+ - 9:## Table of Contents
+ - 11:1. [Overview](#overview)
+ - 12:2. [Art Preparation](#art-preparation)
+ - 13:3. [Rigging Methods](#rigging-methods)
+ - 14:4. [Animation Creation](#animation-creation)
+ - 15:5. [Runtime Skin Swapping](#runtime-skin-swapping)
+ - 16:6. [Tools & Software](#tools--software)
+ - 17:7. [Workflow Pipeline](#workflow-pipeline)
+ - 18:8. [Troubleshooting](#troubleshooting)
+ - 22:## Overview
+ - 24:### The Challenge
+ - 27:### The Solution: Skeletal Animation + Skin Swapping
+ - 30:1. Create a **base skeleton rig** (bones for head, body, limbs)
+ - 31:2. Animate the skeleton (walk, jump, attack, etc.)
+ - 32:3. At runtime, **swap skins** (trait images) onto the skeleton
+ - 33:4. Result: Same animations work for all Lil Guys, but each looks unique
+ - 43:## Art Preparation
+ - 45:### Step 1: Export Trait Layers from NFT Project
+ - 76:### Step 2: Decompose Traits into Body Parts
+ - 81:- **Static NFT**: Single image of muscular torso + arms
+ - 82:- **For Rigging**: Need separate images:
+ - 92:### Step 3: Create Consistent Pivot Points
+ - 107:## Rigging Methods
+ - 109:### Method 1: Spine 2D (Professional, Recommended)
+ - 121:1. Import body part images (head, torso, limbs)
+ - 122:2. Create bones for each part
+ - 123:3. Bind images to bones (parent-child relationships)
+ - 124:4. Set up IK (Inverse Kinematics) for limbs
+ - 125:5. Create animations (key frames for bones)
+ - 126:6. Set up skins (trait variations)
+ - 127:7. Export to Spine JSON + atlas
+ - 156:### Method 2: DragonBones (Free Alternative)
+ - 173:### Method 3: Godot's Built-in Skeleton2D (Free, Manual)
+ - 186:1. Create `Skeleton2D` node
+ - 187:2. Add `Bone2D` children for each body part
+ - 188:3. Attach `Sprite2D` to each bone
+ - 189:4. Animate using `AnimationPlayer`
+ - 190:5. Use `RemoteTransform2D` for complex chains
+ - 196:### Method 4: Hand-Drawn Sprite Sheets (Traditional, Labor-Intensive)
+ - 212:## Animation Creation
+ - 214:### Required Animations (Priority Order)
+ - 217:1. **Idle**: 2-4 frames, looping
+ - 218:2. **Walk**: 6-8 frames, looping
+ - 219:3. **Jump_Up**: 2 frames, plays once
+ - 220:4. **Jump_Peak**: 1 frame, holds
+ - 221:5. **Jump_Down**: 2 frames, plays once
+ - 222:6. **Land**: 3 frames, plays once, transitions to Idle
+ - 225:7. **Attack**: 4-6 frames, plays once
+ - 226:8. **Hurt**: 3 frames, plays once
+ - 227:9. **Die**: 6 frames, plays once, holds on last frame
+ - 230:10. **Dash**: 3 frames (if Mohawk trait)
+ - 231:11. **Double Jump**: 3 frames (if Hat trait)
+ - 232:12. **Wall Slide**: 2 frames, looping (if Bandana trait)
+ - 233:13. **Charge Attack**: 5 frames (if Horns trait)
+ - 234:14. ... (one animation per unique ability)
+ - 237:15. **Run**: Faster walk cycle
+ - 238:16. **Crouch**: 2 frames
+ - 239:17. **Climb Ladder**: 4 frames, looping
+ - 240:18. **Push Object**: 4 frames, looping
+ - 241:19. **Emotes**: Celebrate, Sad, Confused (for multiplayer)
+ - 243:### Animation Principles for Platformers
+ - 252:- **Tool**: Spine's mesh deformation perfect for this
+ - 267:### Frame Counts & Timing
+ - 286:## Runtime Skin Swapping
+ - 288:### The Core Mechanic
+ - 291:1. Player selects Lil Guy NFT (token ID: 123)
+ - 292:2. Fetch NFT metadata (traits: Hat, Slim, Sword, Cosmic)
+ - 293:3. Load base skeleton (same for all)
+ - 294:4. **Swap skins**:
+ - 299:5. Play animations (skeleton + swapped skins)
+ - 301:### Implementation (Spine + Godot)
+ - 342:### Dynamic Texture Loading (Alternative)
+ - 355:## Tools & Software
+ - 357:### Recommended Toolchain
+ - 360:- **Aseprite** ($20): Pixel art editor, animation tools
+ - 361:- **Photoshop** or **GIMP** (free): Layer preparation, separation
+ - 364:- **Spine** ($69-$329): Professional skeletal animation
+ - 365:- **DragonBones** (Free): Open-source alternative
+ - 368:- **Godot 4** (Free): Export Spine animations via plugin
+ - 369:- **Phaser 3** (Free): Use Spine runtime for web
+ - 372:- **TexturePacker** ($40): Pack sprites into atlases
+ - 373:- **Aseprite CLI**: Automate sprite sheet exports
+ - 375:### Free Workflow (Budget Option)
+ - 377:1. **Art**: GIMP (free)
+ - 378:2. **Animation**: DragonBones (free)
+ - 379:3. **Engine**: Godot (free)
+ - 380:4. **Total Cost**: $0
+ - 382:### Professional Workflow
+ - 384:1. **Art**: Aseprite ($20) + Photoshop ($10/month)
+ - 385:2. **Animation**: Spine Professional ($329 one-time)
+ - 386:3. **Engine**: Godot (free) or Unity + Spine runtime
+ - 387:4. **Total Cost**: ~$450 (mostly one-time)
+ - 391:## Workflow Pipeline
+ - 393:### End-to-End Process
+ - 396:1. Export all trait PNGs from NFT project
+ - 397:2. Separate traits into body parts (head, torso, arms, legs, accessories)
+ - 398:3. Standardize pivot points and canvas sizes
+ - 399:4. Organize in folder structure
+ - 402:1. Import one set of body parts into Spine/DragonBones
+ - 403:2. Create skeleton (bones for each part)
+ - 404:3. Bind sprites to bones
+ - 405:4. Set up IK constraints
+ - 406:5. Test basic movement
+ - 409:1. Create Idle, Walk, Jump animations
+ - 410:2. Test feel in-game (export, import, playtest)
+ - 411:3. Iterate based on feel
+ - 412:4. Complete Tier 1 & 2 animations
+ - 415:1. Create skin for each trait variant
+ - 416:2. Test skin swapping (manually swap in Spine editor)
+ - 417:3. Ensure all skins align correctly
+ - 418:4. Export final skeleton + all skins
+ - 421:1. Import Spine JSON + atlas into Godot/Phaser
+ - 422:2. Write skin swapping script (fetch NFT traits → set skins)
+ - 423:3. Test with 10-20 random NFTs
+ - 424:4. Fix any alignment issues
+ - 427:1. Create unique animations for each trait ability
+ - 428:2. Dash, Double Jump, Wall Slide, etc.
+ - 429:3. Integrate with ability system code
+ - 432:1. Add particles (dust on landing, dash trails, etc.)
+ - 433:2. Screen shake on impactful actions
+ - 434:3. Juice and feel improvements
+ - 440:## Troubleshooting
+ - 442:### Issue: Skins Don't Align
+ - 451:1. Re-export all trait PNGs with standardized pivots
+ - 452:2. In Spine, ensure all skins use same bone structure
+ - 453:3. Use "Skin Placeholder" attachments to verify alignment
+ - 457:### Issue: Animations Look Stiff
+ - 467:1. Add more in-between frames
+ - 468:2. Use Spine's graph editor to add easing curves (ease-in, ease-out)
+ - 469:3. Offset timing of limbs (arms lag behind body by 1-2 frames)
+ - 473:### Issue: Performance Problems (Lag)
+ - 483:1. Use texture atlases (pack all sprites into one image)
+ - 484:2. Simplify mesh (fewer deformation points)
+ - 485:3. Reduce animation updates (30 FPS for distant characters)
+ - 489:### Issue: Trait Variation Explosion
+ - 498:- **Don't create pre-made skins**
+ - 507:# Load head trait texture dynamically
+ - 514:## Advanced Techniques
+ - 516:### Mesh Deformation (Squash & Stretch)
+ - 523:1. Create mesh from sprite (Spine auto-generates)
+ - 524:2. Weight vertices to bones
+ - 525:3. Add control bones for squash/stretch
+ - 526:4. Animate control bones
+ - 532:### Layered VFX (Particles & Trails)
+ - 546:### Alternate Animations per Trait
+ - 562:## Checklist: Ready for Game Integration
+ - 566:- [ ] All Tier 1 & 2 animations complete
+ - 567:- [ ] Skins set up for 5+ trait variations (test diversity)
+ - 568:- [ ] Skeleton exported to JSON + atlas PNG
+ - 569:- [ ] Manually tested skin swapping in Spine
+ - 570:- [ ] Pivot points standardized across all traits
+ - 571:- [ ] Animations loop smoothly (no pops/jumps)
+ - 572:- [ ] Frame rates feel good in motion (not too slow/fast)
+ - 573:- [ ] IK constraints work correctly (limbs don't hyperextend)
+ - 574:- [ ] File size reasonable (<10 MB for skeleton + atlas)
+ - 578:## Resources
+ - 580:### Tutorials
+ - 581:- **Spine 2D Official Docs**: http://esotericsoftware.com/spine-user-guide
+ - 582:- **DragonBones Tutorials**: https://docs.egret.com/dragonbones
+ - 583:- **Godot Skeleton2D**: https://docs.godotengine.org/en/stable/classes/class_skeleton2d.html
+ - 585:### Inspiration (Study These Games)
+ - 586:- **Celeste**: Simple but expressive character animation
+ - 587:- **Hollow Knight**: Elegant skeletal animation (Spine)
+ - 588:- **Dead Cells**: Fast, fluid combat animation
+ - 589:- **Ori and the Blind Forest**: Beautiful mesh deformation
+ - 591:### Communities
+ - 592:- **Spine Discord**: Helpful community for rigging questions
+ - 593:- **Godot Discord**: #2d-animation channel
+ - 594:- **r/gamedev**: Animation feedback threads
+
+## projects/Sandbox/Lil Guys Platformer/docs/game-design-document.md
+ - 1:# Lil Guys Platformer - Game Design Document (GDD)
+ - 9:## Table of Contents
+ - 11:1. [Game Overview](#game-overview)
+ - 12:2. [Story & Setting](#story--setting)
+ - 13:3. [Core Gameplay](#core-gameplay)
+ - 14:4. [Character System](#character-system)
+ - 15:5. [Trait-Based Abilities](#trait-based-abilities)
+ - 16:6. [Level Design](#level-design)
+ - 17:7. [Enemies & Combat](#enemies--combat)
+ - 18:8. [Progression & Unlocks](#progression--unlocks)
+ - 19:9. [UI/UX](#uiux)
+ - 20:10. [Multiplayer (Future)](#multiplayer-future)
+ - 21:11. [Technical Requirements](#technical-requirements)
+ - 25:## Game Overview
+ - 27:### High Concept
+ - 30:### Genre
+ - 35:### Target Audience
+ - 36:- **Primary**: Lil Guys NFT holders (ages 18-35)
+ - 37:- **Secondary**: Indie game fans who discover it organically
+ - 38:- **Skill Level**: Easy to learn, hard to master (casual to hardcore)
+ - 40:### Unique Selling Points (USPs)
+ - 41:1. **Play as your actual NFTs** (blockchain-integrated character system)
+ - 42:2. **50+ unique abilities** based on trait combinations
+ - 43:3. **Replayability** through collecting diverse Lil Guys
+ - 44:4. **Free-to-play** for NFT holders (utility, not cash grab)
+ - 45:5. **Community-driven** (holder feedback shapes development)
+ - 47:### Platform & Distribution
+ - 48:- **Primary**: Web (browser-based, Desktop & Mobile)
+ - 49:- **Distribution**: Hosted on lilguys.game (or integrated into main site)
+ - 50:- **Future**: Native builds (Steam, Itch.io) if community demands
+ - 54:## Story & Setting
+ - 56:### Premise
+ - 61:### Themes
+ - 62:- **Individuality**: Every Lil Guy is unique and valuable
+ - 63:- **Collaboration**: Different abilities complement each other (encourages collecting)
+ - 64:- **Resilience**: Overcoming challenges with creativity
+ - 66:### Tone
+ - 72:### Narrative Structure
+ - 73:- **Hub World**: Central area where Lil Guys gather
+ - 74:- **5 Major Zones**: Each themed and with unique challenges
+ - 75:- **Boss Encounters**: Manifestations of The Glitch
+ - 76:- **Ending**: Restore The Trait Realm, unlock True Ending (requires 100% completion)
+ - 80:## Core Gameplay
+ - 82:### Core Loop
+ - 83:1. **Select** a Lil Guy from your owned NFTs
+ - 84:2. **Explore** interconnected levels
+ - 85:3. **Use** trait-specific abilities to overcome obstacles
+ - 86:4. **Encounter** gated areas (require abilities you don't have)
+ - 87:5. **Return to hub**, switch to different Lil Guy
+ - 88:6. **Revisit** levels with new abilities to access previously blocked areas
+ - 89:7. **Discover** secrets, collectibles, and shortcuts
+ - 90:8. **Progress** through story, unlock new zones
+ - 92:### Movement Mechanics (Base, all characters)
+ - 93:- **Walk/Run**: Left/right movement (analog or digital)
+ - 94:- **Jump**: Press once to jump (variable height based on hold duration)
+ - 95:- **Crouch**: Duck under low obstacles
+ - 96:- **Ledge Grab**: Auto-grab ledges, climb up or drop down
+ - 97:- **Wall Slide**: Slide down walls (slower than falling)
+ - 104:### Combat Mechanics
+ - 105:- **Basic Attack**: Short-range melee (punch/kick)
+ - 106:- **Charged Attack**: Hold button for stronger attack
+ - 107:- **Dash Attack**: Attack while dashing (if character has dash ability)
+ - 108:- **Ability-Based Combat**: Some traits grant ranged attacks, AOE, etc.
+ - 116:### Exploration & Secrets
+ - 117:- **Hidden Rooms**: Behind breakable walls, secret passages
+ - 118:- **Collectibles**: Trait Shards (collectibles for lore/achievements)
+ - 119:- **Shortcuts**: Unlock paths back to hub or between zones
+ - 120:- **Alternate Routes**: Multiple ways to approach challenges
+ - 124:## Character System
+ - 126:### NFT Integration
+ - 129:1. Prompt player to connect wallet (Tezos/Etherlink)
+ - 130:2. Fetch all Lil Guys NFTs owned by wallet address
+ - 131:3. Query metadata for each NFT (traits, image, token ID)
+ - 132:4. Display character selection screen with owned Lil Guys
+ - 140:### Base Stats (All Characters)
+ - 141:- **Health**: 5 hearts (can be upgraded)
+ - 142:- **Movement Speed**: 8 units/second (trait-modified)
+ - 143:- **Jump Height**: 4 tiles (trait-modified)
+ - 144:- **Attack Damage**: 1 heart per hit (trait-modified)
+ - 146:### Trait-Modified Stats
+ - 156:## Trait-Based Abilities
+ - 158:### Ability Design Philosophy
+ - 159:- **Unique per Trait**: Each trait grants a distinct ability
+ - 160:- **Contextual Use**: Abilities solve specific obstacles or combat situations
+ - 161:- **Synergies**: Some trait combinations create powerful synergies
+ - 162:- **Balanced**: No single trait makes the game trivial
+ - 164:### Head Traits → Special Abilities (Primary)
+ - 179:### Body Traits → Movement Modifiers
+ - 189:### Accessory Traits → Passive Bonuses
+ - 200:### Background Traits → Visual & Rare Boosts
+ - 212:## Level Design
+ - 214:### World Structure
+ - 258:### Level Design Principles
+ - 266:- **Ability Gates**: Require specific traits to pass (e.g., wall jump to scale cliff)
+ - 267:- **Combat Gates**: Clear all enemies to open door
+ - 268:- **Puzzle Gates**: Use abilities to solve puzzle
+ - 269:- **Key Gates**: Find collectible key to unlock
+ - 272:- **70% Platforming**: Jumping, dodging, precision
+ - 273:- **20% Combat**: Enemy encounters
+ - 274:- **10% Puzzles**: Ability-based problem solving
+ - 282:## Enemies & Combat
+ - 284:### Enemy Types
+ - 287:1. **Gloop**: Walks back and forth, 1 HP, easy to jump over
+ - 288:2. **Spiker**: Stationary, shoots spikes periodically
+ - 289:3. **Hopper**: Jumps toward player when in range
+ - 290:4. **Flyer**: Flies in sine wave pattern, 2 HP
+ - 293:5. **Glitch Clone**: Mimics player movements, 3 HP
+ - 294:6. **Shield Bot**: Blocks frontal attacks, must hit from behind
+ - 295:7. **Turret**: Tracks player, rapid fire, 4 HP
+ - 296:8. **Charger**: Rushes player when line of sight, 3 HP
+ - 299:9. **Phantom**: Phases in/out of reality, 5 HP
+ - 300:10. **Mini-Boss**: Unique mechanics, 10 HP, appears in mid-zone
+ - 302:### Boss Design
+ - 329:## Progression & Unlocks
+ - 331:### Character Progression
+ - 338:- **Trait Shards**: Collectibles scattered in levels
+ - 349:### World Unlocks
+ - 361:1. Zones 1-2: Mobility abilities (double jump, dash, wall jump)
+ - 362:2. Zones 3-4: Utility abilities (sound wave, hover, charge)
+ - 363:3. Zone 5: All abilities needed to access all secrets
+ - 367:## UI/UX
+ - 369:### Main Menu
+ - 370:- **Title Screen**: Animated Lil Guys in background
+ - 371:- **Connect Wallet**: Prominent button
+ - 372:- **Options**: Volume, controls, accessibility
+ - 373:- **Credits**: Development team and community
+ - 375:### Character Select Screen
+ - 376:- **Grid View**: Show all owned Lil Guys (4-6 per row)
+ - 377:- **Hover Info**:
+ - 382:- **Filter/Sort**:
+ - 386:- **Preview**: Animated idle pose
+ - 388:### In-Game HUD
+ - 389:- **Top-Left**: Health (heart icons)
+ - 390:- **Top-Right**: Current ability cooldowns (if applicable)
+ - 391:- **Bottom-Center**: Collectible count (Trait Shards)
+ - 392:- **Minimap** (optional): Toggle in settings
+ - 399:### Pause Menu
+ - 400:- **Resume**
+ - 401:- **Character Swap** (if at hub or checkpoint)
+ - 402:- **Map** (show explored areas, % completion)
+ - 403:- **Collectibles** (track found Trait Shards)
+ - 404:- **Options**
+ - 405:- **Quit to Hub**
+ - 409:## Multiplayer (Future)
+ - 411:### Co-op Mode (2-4 Players)
+ - 420:- **Synergy Abilities**: Some puzzles require two specific abilities at once
+ - 422:- **Revive System**: Downed player can be revived by teammate
+ - 423:- **Shared Collectibles**: All players benefit from upgrades
+ - 434:## Technical Requirements
+ - 436:### Performance Targets
+ - 437:- **Frame Rate**: 60 FPS (minimum, aim for locked)
+ - 438:- **Load Times**: < 3 seconds per level
+ - 439:- **File Size**: < 500 MB total
+ - 440:- **Browser Compatibility**: Chrome, Firefox, Safari, Edge (latest 2 versions)
+ - 442:### Blockchain Integration Requirements
+ - 443:- **Wallet Support**: Temple, Kukai, Umami (Tezos wallets)
+ - 444:- **Network**: Etherlink mainnet (production) + testnet (development)
+ - 445:- **API Calls**: Efficient caching (don't fetch NFT data every frame)
+ - 446:- **Offline Mode**: Local save file if wallet disconnected mid-session
+ - 448:### Accessibility Features
+ - 449:- **Difficulty Settings**: Easy, Normal, Hard (affects enemy damage and health)
+ - 450:- **Colorblind Modes**: 3 palettes (Deuteranopia, Protanopia, Tritanopia)
+ - 451:- **Remappable Controls**: All inputs customizable
+ - 452:- **Assist Mode**: Toggle-able god mode, infinite jumps, etc.
+ - 456:## Monetization & Economy
+ - 458:### Free-to-Play for NFT Holders
+ - 462:### Optional Monetization (If Needed)
+ - 463:1. **Cosmetic DLC**: Non-gameplay-affecting skins, trails, emotes
+ - 464:2. **Tip Jar**: Voluntary donations to support development
+ - 465:3. **Merch**: Physical goods (T-shirts, plushies) separate from game
+ - 467:### In-Game Economy (No Real Money)
+ - 468:- **Trait Shards**: Collectible in levels, spend on upgrades
+ - 469:- **Platform Tokens**: (If integrated) Earn tokens for challenges, spend on cosmetics
+ - 473:## Success Metrics
+ - 475:### Launch Metrics (Month 1)
+ - 476:- **Player Acquisition**: 50% of NFT holders play
+ - 477:- **Completion Rate**: 30% finish Zone 1
+ - 478:- **Session Length**: 20+ minutes average
+ - 479:- **Return Rate**: 40% play 3+ times
+ - 481:### Long-Term Metrics (Month 6)
+ - 482:- **Monthly Active Players**: 30% of NFT holders
+ - 483:- **Full Completion**: 20% finish entire game
+ - 484:- **Speedrun Community**: 20+ active speedrunners
+ - 485:- **User-Generated Content**: Fan art, videos, streams
+ - 489:## Appendices
+ - 491:### Appendix A: Complete Trait Ability Matrix
+ - 494:### Appendix B: Level Maps (Annotated)
+ - 497:### Appendix C: Boss Battle Scripts
+ - 500:### Appendix D: Audio Design Document
+ - 503:### Appendix E: Narrative & Lore
+ - 508:## Document Control
+
+## projects/Sandbox/Lil Guys Platformer/docs/in-game-rigging-system.md
+ - 1:# In-Game Character Rigging System
+ - 9:## 🎯 Concept Overview
+ - 13:### Why This Approach?
+ - 22:## 📋 User Flow
+ - 24:### First-Time Setup (Per Character)
+ - 27:1. Player selects unrigged Lil Guy from collection
+ - 29:2. Game detects: "This character needs rigging!"
+ - 31:3. Opens Rigging Studio interface
+ - 33:4. Player places 15 joints on character image
+ - 35:5. Game validates rig (are joints in reasonable positions?)
+ - 37:6. Player tests rig (preview idle/walk/jump animations)
+ - 39:7. Player saves rig or adjusts
+ - 41:8. Rig saved to blockchain/IPFS (optional) or local cache
+ - 43:9. Character now playable!
+ - 46:### Subsequent Use
+ - 53:## 🎨 Rigging Studio Interface
+ - 55:### Layout
+ - 86:### UI Elements
+ - 110:- **Save**: Save rig data
+ - 111:- **Test**: Preview animations with current rig
+ - 112:- **Undo**: Remove last placed joint
+ - 113:- **Reset**: Start over
+ - 114:- **Auto-Detect**: AI attempts to place joints automatically (optional feature)
+ - 118:## 🦴 Skeleton Structure (15 Joints)
+ - 120:### Joint Hierarchy
+ - 143:### Joint Placement Order (Recommended)
+ - 146:1. **ROOT** (pelvis/center of hips)
+ - 147:2. **SPINE_LOWER** (lower back, above ROOT)
+ - 148:3. **SPINE_MIDDLE** (mid torso)
+ - 149:4. **SPINE_UPPER** (chest/shoulders area)
+ - 150:5. **NECK** (base of neck)
+ - 151:6. **HEAD** (center of head, or top of neck)
+ - 154:7. **LEFT_SHOULDER** (left shoulder joint)
+ - 155:8. **LEFT_ELBOW** (left elbow)
+ - 156:9. **LEFT_HAND** (left wrist or hand center)
+ - 157:10. **RIGHT_SHOULDER**
+ - 158:11. **RIGHT_ELBOW**
+ - 159:12. **RIGHT_HAND**
+ - 162:13. **LEFT_HIP** (left hip joint, below ROOT)
+ - 163:14. **LEFT_KNEE**
+ - 164:15. **LEFT_FOOT** (ankle or foot center)
+ - 165:16. **RIGHT_HIP**
+ - 166:17. **RIGHT_KNEE**
+ - 167:18. **RIGHT_FOOT**
+ - 173:## 🖱️ Joint Placement Interaction
+ - 175:### Mouse/Touch Controls
+ - 178:- **Click/Tap** on NFT image to place current joint
+ - 179:- **Drag** placed joint to reposition
+ - 180:- **Right-Click** (or long-press) on joint to delete and re-place
+ - 183:- **Next joint to place**: Highlighted in instructions, shows as crosshair cursor
+ - 184:- **Placed joints**: Colored dots (green = placed, blue = current, grey = not yet placed)
+ - 185:- **Skeleton lines**: Automatically draw between parent-child joints
+ - 191:### Keyboard Shortcuts (Optional)
+ - 192:- **Space**: Place joint at current mouse position
+ - 193:- **Z**: Undo last placement
+ - 194:- **R**: Reset all joints
+ - 195:- **T**: Test animation
+ - 196:- **S**: Save rig
+ - 200:## 🎬 Animation Preview (Test Mode)
+ - 202:### Preview Window
+ - 223:1. **Idle**: Breathing/bobbing loop
+ - 224:2. **Walk**: Simple walk cycle
+ - 225:3. **Jump**: Jump up and down
+ - 231:## 💾 Rig Data Structure
+ - 233:### Saved Rig Format (JSON)
+ - 283:### Storage Options
+ - 288:- **Pros**: Fast, free, no blockchain needed
+ - 289:- **Cons**: Not portable (loses data if cache cleared)
+ - 294:- **Pros**: Permanent, shareable, portable
+ - 295:- **Cons**: Requires IPFS pinning service, blockchain transaction
+ - 300:- **Pros**: Fast, portable, easy to implement
+ - 301:- **Cons**: Centralized (relies on server)
+ - 307:## ✅ Rig Validation
+ - 309:### Automatic Validation
+ - 312:1. **Disconnected Joints**: Ensure all joints connected to parent
+ - 313:2. **Extreme Distances**: Joints too far from parent (bone too long)
+ - 314:3. **Reversed Hierarchy**: Knee above hip, elbow above shoulder
+ - 315:4. **Overlapping Joints**: Two joints in same position
+ - 346:### Community Validation (Optional)
+ - 363:## 🎮 Gamification Features
+ - 365:### Rig Challenges
+ - 373:### Rig Marketplace (Optional)
+ - 384:### Leaderboards
+ - 395:## 🤖 Auto-Rigging AI (Advanced Feature)
+ - 397:### Concept
+ - 402:1. Player clicks "Auto-Detect" button
+ - 403:2. ML model analyzes NFT image
+ - 404:3. Detects humanoid features (head, limbs, torso)
+ - 405:4. Places joints automatically
+ - 406:5. Player reviews and adjusts if needed
+ - 425:## 🎨 Art Assets Needed
+ - 427:### 1. Reference Skeleton Template
+ - 441:- **Front View** (default, what players see)
+ - 442:- **T-Pose** (arms extended, optional reference)
+ - 443:- **Side View** (optional, for 3D-like rigging)
+ - 476:### 2. Joint Marker Icons
+ - 497:### 3. UI Elements
+ - 517:### 4. Animation Preview Background
+ - 530:### 5. Tutorial Overlays (Optional)
+ - 546:## 🛠️ Technical Implementation
+ - 548:### Data Flow
+ - 551:1. Player selects NFT
+ - 553:2. Fetch NFT image from IPFS/Arweave
+ - 555:3. Check if rig exists (localStorage or IPFS)
+ - 557:4. If NO RIG:
+ - 563:5. If RIG EXISTS:
+ - 569:### Code Structure (Godot GDScript)
+ - 576:# UI nodes
+ - 582:# Rigging data
+ - 686:## 📱 Mobile Considerations
+ - 688:### Touch Interface
+ - 695:1. **Zoom Mode**: Tap to zoom in on area, place joint precisely
+ - 696:2. **Offset Cursor**: Show crosshair above finger tap point
+ - 697:3. **Larger Hit Areas**: Joints have generous tap radius
+ - 698:4. **Two-Finger Pan/Zoom**: Standard mobile gestures
+ - 700:### Simplified Mobile UI
+ - 708:## 🎓 Tutorial System
+ - 710:### First-Time User Experience
+ - 713:1. Player enters Rigging Studio for first time
+ - 714:2. Show interactive tutorial overlay
+ - 715:3. Guide through placing first 3 joints
+ - 716:4. Let player complete rest independently
+ - 740:### Help System
+ - 751:## 🔄 Iteration & Improvement
+ - 753:### Community Feedback
+ - 769:### Version 2 Features (Post-Launch)
+ - 771:1. **Auto-Rig AI**: Detect joints automatically
+ - 772:2. **Rig Templates**: Apply similar character's rig as starting point
+ - 773:3. **Rig Marketplace**: Buy/sell/share rigs
+ - 774:4. **Advanced Mode**: Fine-tune IK, bone constraints, deformation
+ - 775:5. **Multiplayer Rigging**: Collaborate with friend on same rig
+ - 779:## ✅ Art Asset Checklist for You
+ - 781:### High Priority (Must Have)
+ - 783:- [ ] **Reference Skeleton Template** (front view)
+ - 788:- [ ] **Joint Marker Icons** (4 variants)
+ - 795:### Medium Priority (Nice to Have)
+ - 797:- [ ] **UI Button Graphics**
+ - 802:- [ ] **Tutorial Overlays** (5-10 images)
+ - 806:### Low Priority (Optional)
+ - 808:- [ ] **Preview Background**
+ - 812:- [ ] **Loading Spinner/Animation**
+ - 818:## 🎨 Art Style Guide
+ - 823:- **Joint Markers**:
+ - 829:- **Skeleton Lines**: White (#FFFFFF) with slight transparency (80%)
+ - 831:- **Reference Template**: Light blue (#88AAFF) with 50% transparency
+ - 837:## 🚀 Implementation Roadmap
+ - 839:### Phase 1: Core Rigging Tool (Month 1)
+ - 840:- [ ] Basic UI layout
+ - 841:- [ ] Joint placement system
+ - 842:- [ ] Visual feedback (markers, lines)
+ - 843:- [ ] Save rig to localStorage
+ - 844:- [ ] Test animation preview
+ - 846:### Phase 2: Validation & Polish (Month 2)
+ - 847:- [ ] Automatic rig validation
+ - 848:- [ ] Error messages and warnings
+ - 849:- [ ] Tutorial system
+ - 850:- [ ] Mobile touch support
+ - 851:- [ ] Undo/redo functionality
+ - 853:### Phase 3: Advanced Features (Month 3+)
+ - 854:- [ ] Auto-rig AI
+ - 855:- [ ] Community validation system
+ - 856:- [ ] Rig templates and marketplace
+ - 857:- [ ] Gamification (challenges, rewards)
+ - 858:- [ ] IPFS storage integration
+ - 862:## 📊 Success Metrics
+ - 864:### Goals (First Month)
+ - 866:- **80%+ completion rate** (players who start rigging finish)
+ - 867:- **Average time < 5 minutes** per rig
+ - 868:- **90%+ rigs pass validation** on first try
+ - 869:- **75%+ players** rate rigging tool as "Easy" or "Very Easy"
+
+## projects/Sandbox/Lil Guys Platformer/docs/technical-specifications.md
+ - 1:# Lil Guys Platformer - Technical Specifications
+ - 9:## Table of Contents
+ - 11:1. [System Architecture](#system-architecture)
+ - 12:2. [Engine Choice & Setup](#engine-choice--setup)
+ - 13:3. [Character System](#character-system)
+ - 14:4. [Physics & Movement](#physics--movement)
+ - 15:5. [Animation System](#animation-system)
+ - 16:6. [Blockchain Integration](#blockchain-integration)
+ - 17:7. [Level Design & Tilemap](#level-design--tilemap)
+ - 18:8. [Audio System](#audio-system)
+ - 19:9. [Save System](#save-system)
+ - 20:10. [Performance Optimization](#performance-optimization)
+ - 21:11. [Build & Deployment](#build--deployment)
+ - 25:## System Architecture
+ - 27:### High-Level Architecture
+ - 74:## Engine Choice & Setup
+ - 76:### Option 1: Godot 4.x (Recommended)
+ - 87:1. Download Godot 4.2+ from https://godotengine.org
+ - 88:2. Create new project: "Lil Guys Platformer"
+ - 89:3. Set project settings:
+ - 93:4. Enable plugins:
+ - 124:### Option 2: Phaser 3 (JavaScript/TypeScript)
+ - 134:1. Install Node.js (v18+)
+ - 135:2. Create project:
+ - 142:3. Configure TypeScript (`tsconfig.json`)
+ - 143:4. Set up build tool (Webpack, Vite, or Parcel)
+ - 168:## Character System
+ - 170:### Character Data Structure
+ - 202:### Character Controller (Godot GDScript)
+ - 205:# LilGuyController.gd
+ - 209:# Character properties
+ - 214:# Trait-modified stats
+ - 220:# Abilities (set by trait system)
+ - 225:# State
+ - 304:## Physics & Movement
+ - 306:### Physics Settings (Godot)
+ - 309:# Project Settings > Physics > 2D
+ - 314:# Collision Layers
+ - 322:### Movement Feel Parameters
+ - 325:# Fine-tuned for responsive platformer feel
+ - 332:# Jump feel
+ - 337:### Collision Detection
+ - 340:# Use RayCast2D for grounded check (more reliable than is_on_floor())
+ - 349:## Animation System
+ - 351:### Animation States
+ - 354:1. **Idle**: Breathing loop (2-4 frames, 0.5s)
+ - 355:2. **Walk**: Walk cycle (6-8 frames, 0.6s)
+ - 356:3. **Run**: Run cycle (8 frames, 0.4s)
+ - 357:4. **Jump_Up**: Rising (2 frames, 0.1s)
+ - 358:5. **Jump_Peak**: At apex (1 frame, hold)
+ - 359:6. **Jump_Down**: Falling (2 frames, 0.1s)
+ - 360:7. **Land**: Impact (3 frames, 0.2s, transitions to idle)
+ - 361:8. **Attack**: Melee swing (4-6 frames, 0.3s)
+ - 362:9. **Hurt**: Damage reaction (3 frames, 0.2s)
+ - 363:10. **Die**: Death animation (6 frames, 0.6s)
+ - 364:11. **Dash**: (if trait provides, 3 frames, 0.2s)
+ - 365:12. **Ability_X**: Trait-specific ability animations
+ - 367:### Animation State Machine (Godot AnimationTree)
+ - 401:### Sprite Sheet Format
+ - 404:- **Resolution**: 64×64 pixels per frame (character ~48 pixels tall)
+ - 405:- **Layout**: Horizontal strip (all frames in one row per animation)
+ - 406:- **Naming**: `{character_id}_{animation_name}.png`
+ - 416:## Blockchain Integration
+ - 418:### Wallet Connection Flow
+ - 472:### Trait Parser
+ - 513:### Caching Strategy
+ - 542:## Level Design & Tilemap
+ - 544:### Tilemap Setup (Godot)
+ - 547:# TileMap node settings
+ - 552:# Tileset organization
+ - 560:### Level Data Format (JSON)
+ - 609:### Level Editor
+ - 623:## Audio System
+ - 625:### Audio Files
+ - 638:### Audio Manager (Godot)
+ - 641:# AudioManager.gd (singleton/autoload)
+ - 677:## Save System
+ - 679:### Save Data Structure
+ - 705:### Save/Load (Godot)
+ - 708:# SaveManager.gd
+ - 731:### Cloud Backup (Optional)
+ - 739:## Performance Optimization
+ - 741:### Target Performance
+ - 742:- **60 FPS** minimum (locked)
+ - 743:- **Load Time**: <3 seconds per level
+ - 744:- **Memory**: <500 MB RAM
+ - 746:### Optimization Techniques
+ - 750:# For enemies, projectiles, particles
+ - 781:## Build & Deployment
+ - 783:### Web Export (Godot)
+ - 785:1. **Project > Export > Add > HTML5**
+ - 786:2. **Settings**:
+ - 790:3. **Export**:
+ - 792:4. **Host**:
+ - 796:### Desktop Builds
+ - 798:- **Windows**: Export as `.exe`
+ - 799:- **Mac**: Export as `.app` (requires Mac for signing)
+ - 800:- **Linux**: Export as binary
+ - 802:### Versioning
+ - 810:## Development Workflow
+ - 812:### Git Branching Strategy
+ - 825:### Testing Pipeline
+ - 827:1. **Local Testing** (dev machine)
+ - 828:2. **Internal Playtesting** (team)
+ - 829:3. **Alpha Testing** (50 NFT holders)
+ - 830:4. **Beta Testing** (all interested NFT holders)
+ - 831:5. **Release**
+
+## projects/Sandbox/Visualize Anything/ARCHITECTURE_AUDIT.md
+ - 1:# Visualize Anything - Architecture Audit & Remediation Plan
+ - 3:## Executive Summary
+ - 9:## Critical Issues
+ - 11:### 1. **WebGL Uniform Array Incompatibility** ⚠️ CRITICAL
+ - 28:### 2. **Dual Renderer Architecture Problem** ⚠️ CRITICAL
+ - 37:1. Preview's `BoneShaderDeformer` may fail silently (no error propagation)
+ - 38:2. Each deformer rebuilds the shader independently
+ - 39:3. `shaderFailed` flag is per-instance - if preview fails, main doesn't know
+ - 47:### 3. **Coordinate Space Confusion** ⚠️ HIGH
+ - 56:### 4. **Bind Pose Timing Issue** ⚠️ HIGH
+ - 70:### 5. **No Error Propagation** ⚠️ MEDIUM
+ - 82:## Architecture Bottlenecks
+ - 84:### 1. **Per-Frame Bone Data Collection**
+ - 98:### 2. **Duplicate WebGL Context Creation**
+ - 107:### 3. **Transform Calculation Duplication**
+ - 120:## Remediation Plan
+ - 122:### Phase 1: Fix the Shader (Immediate)
+ - 170:### Phase 2: Unify Rendering Pipeline
+ - 217:### Phase 3: Optimize Data Flow
+ - 255:### Phase 4: Improve Error Handling
+ - 288:## Recommended Implementation Order
+ - 290:1. **Immediate (Today):**
+ - 294:2. **Short-term (This Week):**
+ - 298:3. **Medium-term (Next Week):**
+ - 302:4. **Long-term:**
+ - 308:## Alternative Approaches
+ - 310:### A. CPU-Based Deformation (Fallback)
+ - 342:### B. Web Workers for CPU Deformation
+ - 358:### C. Switch to Three.js
+ - 377:## Files to Modify
+ - 389:## Success Criteria
+ - 391:1. ✅ Main canvas shows deformed image during playback
+ - 392:2. ✅ Preview canvas shows IDENTICAL deformation
+ - 393:3. ✅ Multiple bones contribute to deformation
+ - 394:4. ✅ No silent shader failures
+ - 395:5. ✅ Stable 30+ FPS during playback
+ - 396:6. ✅ Works in Chrome, Firefox, Safari
+
+## projects/Sandbox/Visualize Anything/BONE_SYSTEM_REDESIGN.md
+ - 1:# Bone System Redesign
+ - 3:## Current Issues
+ - 5:### 1. Influence Zone Problem
+ - 20:### 2. Bone Movement Problem
+ - 24:### 3. Wave Effect Problem
+ - 28:### 4. No Rigidity Control
+ - 34:## Proposed Architecture
+ - 36:### Joint Properties
+ - 46:### Bone Properties
+ - 66:### Effect Types (Redesigned)
+ - 68:#### Translate Effect
+ - 72:#### Rotate Effect  
+ - 76:#### Wave Effect (NEW behavior)
+ - 81:#### Pulse Effect (NEW)
+ - 87:## Influence Zone Calculation
+ - 89:### Current (Circular from start):
+ - 95:### New (Capsule along bone):
+ - 115:## Joint Rigidity System
+ - 117:### How it works:
+ - 118:1. Effect is applied to a bone
+ - 119:2. Effect calculates desired movement for start and end joints
+ - 120:3. Movement is multiplied by (1 - rigidity)
+ - 121:4. Locked joints don't move at all
+ - 143:## Effect Propagation
+ - 145:### Energy Flow:
+ - 154:### Implementation:
+ - 174:## Wave Effect (Redesigned)
+ - 176:### Current behavior:
+ - 180:### New behavior:
+ - 185:### Shader implementation:
+ - 201:## UI Changes Needed
+ - 203:### Joint Properties Panel:
+ - 208:### Bone Properties Panel:
+ - 213:### Family Properties Panel:
+ - 220:## Implementation Priority
+ - 222:1. **Phase 1: Fix influence zone** (shader change)
+ - 226:2. **Phase 2: Add joint rigidity** (Bone.js + UI)
+ - 231:3. **Phase 3: Redesign wave effect** (WaveEffect.js + shader)
+ - 235:4. **Phase 4: Effect propagation** (Skeleton.js)
+ - 239:5. **Phase 5: Bone families** (UI + data model)
+
+## projects/Sandbox/Visualize Anything/BUILD_COMPLETE.md
+ - 1:# 🎉 Visualize Anything - Build Complete!
+ - 9:## 🚀 What's Been Built
+ - 11:### Core Application (100% Complete)
+ - 52:- **Rotate Effect**: Bone rotation based on audio (configurable min/max angle)
+ - 53:- **Scale Effect**: Bone scaling (configurable min/max scale)
+ - 54:- **Translate Effect**: Position offset on X/Y axes
+ - 55:- **Bend Effect**: Curved motion along bone
+ - 56:- **Wave Effect**: Sinusoidal distortion
+ - 90:## 📂 Project Structure
+ - 143:## 🎯 How to Use (Quick Start)
+ - 145:### 1. App is Already Running!
+ - 148:### 2. Upload an Image
+ - 153:### 3. Create a Skeleton
+ - 158:### 4. Add Child Bones
+ - 165:### 5. Load Music
+ - 170:### 6. Add an Effect
+ - 179:### 7. Watch it Dance!
+ - 185:## 🧪 Testing Recommendations
+ - 187:### Test 1: Basic Functionality
+ - 189:1. Open app
+ - 190:2. Upload test image (512x512 PNG)
+ - 191:3. Create 3 bones (root + 2 children)
+ - 192:4. Drag bones around
+ - 193:5. Delete a bone
+ - 197:### Test 2: Audio Reactivity
+ - 199:1. Create simple skeleton (1-2 bones)
+ - 200:2. Load audio with strong bass
+ - 201:3. Assign rotate effect to a bone → bass
+ - 202:4. Play audio
+ - 206:### Test 3: Complex Rig
+ - 208:1. Upload character image
+ - 209:2. Create 10+ bone skeleton
+ - 210:3. Assign different effects to different bones:
+ - 214:4. Play music
+ - 220:## 🐛 Known Limitations (MVP)
+ - 222:### 1. Shader Bone Limit
+ - 227:### 2. Performance Not Optimized
+ - 232:### 3. No Save/Load Yet
+ - 237:### 4. Basic UI
+ - 244:## ⚡ Performance Targets
+ - 256:## 🎨 Suggested Test Images
+ - 258:### Easy Tests:
+ - 263:### Medium Tests:
+ - 268:### Hard Tests:
+ - 275:## 🎵 Suggested Test Audio
+ - 277:### Easy:
+ - 282:### Medium:
+ - 287:### Hard:
+ - 294:## 🔧 Debugging Tips
+ - 296:### If Nothing Appears:
+ - 297:1. Open console (F12)
+ - 298:2. Look for red errors
+ - 299:3. Check if p5.js loaded (see canvas element)
+ - 300:4. Verify server is running on port 5173
+ - 302:### If Image Won't Load:
+ - 303:1. Check file format (must be PNG, JPG, or supported type)
+ - 304:2. Check file size (< 10MB recommended)
+ - 305:3. Look for console errors
+ - 306:4. Try a different image
+ - 308:### If Bones Don't Create:
+ - 309:1. Make sure you uploaded an image first
+ - 310:2. Check that correct tool is selected (button highlighted)
+ - 311:3. Click within the canvas area
+ - 312:4. Check console for errors
+ - 314:### If Audio Won't Play:
+ - 315:1. Click anywhere on page first (browser security)
+ - 316:2. Check browser console for "AudioContext suspended"
+ - 317:3. Verify file format (MP3 or WAV)
+ - 318:4. Check browser audio permissions
+ - 320:### If Effects Don't Work:
+ - 321:1. Verify effect is in the effects list
+ - 322:2. Check that audio source is selected
+ - 323:3. Ensure audio is actually playing
+ - 324:4. Increase bone influence radius
+ - 325:5. Try a different frequency band
+ - 327:### Debug Console Commands:
+ - 343:## 📈 What's Next?
+ - 345:### Immediate (Now):
+ - 346:1. **TEST** the app with MVP_TEST_GUIDE.md
+ - 347:2. **Report** any bugs or issues
+ - 348:3. **Try** creating a simple animation
+ - 350:### Short Term (After Testing):
+ - 351:1. Fix any bugs found
+ - 352:2. Add image deformation rendering
+ - 353:3. Improve performance
+ - 354:4. Add save/load functionality
+ - 356:### Medium Term:
+ - 357:1. UI polish and better visuals
+ - 358:2. Effect presets
+ - 359:3. Example projects
+ - 360:4. Tutorial mode
+ - 362:### Long Term:
+ - 363:1. Animation recording (export to video)
+ - 364:2. Inverse kinematics
+ - 365:3. Physics simulation
+ - 366:4. Community preset sharing
+ - 370:## 💡 Creative Ideas to Try
+ - 372:### 1. Dancing Logo
+ - 375:### 2. Album Art Visualizer
+ - 378:### 3. Character Performance
+ - 381:### 4. Abstract Art
+ - 384:### 5. VJ Tool
+ - 389:## 🎓 Learning Resources
+ - 407:## ✨ Success Metrics
+ - 419:## 🎉 Congratulations!
+ - 424:1. Open http://localhost:5173
+ - 425:2. Follow MVP_TEST_GUIDE.md
+ - 426:3. Create your first animation!
+ - 427:4. Report any issues for fixes
+
+## projects/Sandbox/Visualize Anything/DEBUG_BLANK_SCREEN.md
+ - 1:# Debug: Blank Screen Issue
+ - 3:## Changes Made to Fix Blank Screen
+ - 5:### 1. Fixed Canvas Sizing
+ - 9:### 2. Added Debug Information
+ - 15:### 3. Added Visual Border
+ - 18:### 4. Added Console Logging
+ - 28:## How to Debug
+ - 30:### Step 1: Open Browser Console
+ - 31:1. Press **F12** (or Cmd+Option+I on Mac)
+ - 32:2. Click **Console** tab
+ - 33:3. Refresh page
+ - 35:### Step 2: Check Initialization
+ - 45:### Step 3: Upload Image
+ - 46:1. Click upload button
+ - 47:2. Select an image file
+ - 48:3. Watch console for messages
+ - 60:### Step 4: Check Canvas
+ - 74:## What to Check If Still Blank
+ - 76:### Check 1: Canvas Exists
+ - 84:### Check 2: p5.js Loaded
+ - 92:### Check 3: Image Handler
+ - 102:### Check 4: Canvas Elements
+ - 112:## Common Issues
+ - 114:### Issue: "TypeError: Cannot read property 'createCanvas'"
+ - 118:### Issue: Canvas shows but image doesn't
+ - 122:### Issue: No console messages at all
+ - 126:### Issue: Canvas is tiny or wrong size
+ - 132:## Quick Test
+ - 134:1. **Refresh page** (Cmd+R or Ctrl+R)
+ - 135:2. **Open console** (F12)
+ - 136:3. **Look for** initialization messages
+ - 137:4. **Upload image** - any PNG or JPG
+ - 138:5. **Look at screen** - should see:
+ - 155:## Emergency Reset
+ - 159:1. **Close browser completely**
+ - 160:2. **Stop dev server** (Ctrl+C in terminal)
+ - 161:3. **Restart dev server**: `npm run dev`
+ - 162:4. **Open in fresh browser window**
+ - 163:5. **Try uploading image again**
+ - 167:## Report Back
+ - 171:1. **Browser**: Chrome/Firefox/Safari/Edge + version
+ - 172:2. **Console output**: Copy/paste everything
+ - 173:3. **What you see**: Screenshot if possible
+ - 174:4. **What you expect**: Describe expected behavior
+ - 175:5. **Steps taken**: What you clicked/did
+
+## projects/Sandbox/Visualize Anything/GETTING_STARTED.md
+ - 1:# Getting Started with Visualize Anything
+ - 7:## ⚡ Quick Start
+ - 9:### 1. Install Dependencies
+ - 21:### 2. Start Development Server
+ - 31:## 🎮 First Steps
+ - 33:### Try the Basic Workflow:
+ - 35:1. **Upload an Image**
+ - 40:2. **Create Root Bone**
+ - 45:3. **Add Child Bones**
+ - 51:4. **Load Audio**
+ - 56:5. **Assign an Effect**
+ - 65:6. **Play and Watch!**
+ - 71:## 🎨 Example Workflow: Animate a Simple Character
+ - 75:### Step 1: Image Preparation
+ - 81:### Step 2: Build Skeleton (5 bones)
+ - 95:### Step 3: Assign Effects
+ - 96:- **Left Arm** → Bass → Rotate (-45° to 45°)
+ - 97:- **Right Arm** → Bass → Rotate (45° to -45°)
+ - 98:- **Head** → Mid → Scale (0.9 to 1.1)
+ - 100:### Step 4: Play!
+ - 105:## 🔧 Troubleshooting
+ - 107:### "The app won't load"
+ - 112:### "I can't see my image"
+ - 117:### "The skeleton doesn't move"
+ - 123:### "It's too slow"
+ - 128:### "No sound"
+ - 135:## 💡 Pro Tips
+ - 137:### Tip 1: Start Small
+ - 143:### Tip 2: Use the Debug Panel
+ - 149:### Tip 3: Experiment with Effects
+ - 156:### Tip 4: Keyboard Shortcuts
+ - 163:### Tip 5: Save Your Work
+ - 169:## 🎯 What to Build Next
+ - 173:### Easy Projects:
+ - 178:### Medium Projects:
+ - 183:### Advanced Projects:
+ - 190:## 📚 Learn More
+ - 192:### Core Concepts:
+ - 193:- **Skeleton**: Hierarchy of bones (like puppet strings)
+ - 194:- **Node Grid**: Invisible mesh that deforms the image
+ - 195:- **Effects**: Rules for how bones respond to audio
+ - 196:- **Frequency Bands**: Different ranges of sound (bass, mid, treble)
+ - 198:### Detailed Documentation:
+ - 203:### External Resources:
+ - 204:- [p5.js Learn](https://p5js.org/learn/) - Graphics library tutorials
+ - 205:- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) - Audio processing
+ - 206:- [Skeletal Animation](https://en.wikipedia.org/wiki/Skeletal_animation) - Theory
+ - 210:## 🎉 Have Fun!
+ - 222:## 🆘 Need Help?
+ - 224:1. Check the browser console (F12) for errors
+ - 225:2. Read the README.md for detailed info
+ - 226:3. Look at PROJECT_SUMMARY.md for architecture
+ - 227:4. Try the troubleshooting section above
+
+## projects/Sandbox/Visualize Anything/MVP_TEST_GUIDE.md
+ - 1:# MVP Testing Guide
+ - 7:## ✅ Phase 1 Tests (Current)
+ - 9:### Test 1: Canvas Loads
+ - 10:- [ ] Open http://localhost:5173
+ - 11:- [ ] You should see a dark gray canvas
+ - 12:- [ ] Text says "Upload an image to begin"
+ - 13:- [ ] Debug panel shows FPS in top right
+ - 15:### Test 2: Image Upload
+ - 16:- [ ] Click 📁 button (or file upload icon)
+ - 17:- [ ] Select a PNG image
+ - 18:- [ ] Image should appear centered on canvas
+ - 19:- [ ] Empty state text should disappear
+ - 21:### Test 3: Skeleton Creation
+ - 22:- [ ] Click 🦴 button (Root Bone tool)
+ - 23:- [ ] Click anywhere on the image
+ - 24:- [ ] A blue circle with white outline should appear
+ - 25:- [ ] Tool should automatically switch back to select mode
+ - 27:### Test 4: Add Child Bones
+ - 28:- [ ] Click on the root bone to select it (turns pink)
+ - 29:- [ ] Click ➕ button (Child Bone tool)
+ - 30:- [ ] Click somewhere else to create child bone
+ - 31:- [ ] A white line connects the bones
+ - 32:- [ ] Repeat to create more bones
+ - 34:### Test 5: Select and Drag
+ - 35:- [ ] Click on any bone to select it
+ - 36:- [ ] Drag it to move it
+ - 37:- [ ] Child bones should follow parent
+ - 39:### Test 6: Delete Bone
+ - 40:- [ ] Select a bone
+ - 41:- [ ] Click 🗑️ button (or press D key)
+ - 42:- [ ] Bone and its children should disappear
+ - 46:## 🐛 Known Issues for MVP
+ - 48:1. **No image deformation yet** - Image doesn't deform with skeleton (Phase 2)
+ - 49:2. **No audio yet** - Audio controls not hooked up (Phase 3)
+ - 50:3. **No effects yet** - Effect system not connected (Phase 4)
+ - 54:## 🔍 Debug Commands
+ - 72:## 📋 Expected Behavior
+ - 96:## 🚀 Next Steps
+ - 99:1. ✅ Hook up audio loading
+ - 100:2. ✅ Connect FFT analysis
+ - 101:3. ✅ Add rotate effect
+ - 102:4. ✅ Test with music!
+
+## projects/Sandbox/Visualize Anything/PROJECT_SUMMARY.md
+ - 1:# Visualize Anything - Project Summary
+ - 9:## 🎯 What This Project Does
+ - 13:1. **Upload** a PNG image
+ - 14:2. **Build** a custom skeletal rig by placing bones
+ - 15:3. **Assign** bones to audio sources (MIDI channels or frequency bands)
+ - 16:4. **Configure** effects (rotate, scale, translate, bend, wave)
+ - 17:5. **Play** music and watch the image come alive
+ - 21:## 📁 Project Structure Overview
+ - 82:## 🚀 Quick Start
+ - 84:### Installation
+ - 91:### Run Development Server
+ - 99:### Build for Production
+ - 107:## 🎮 How to Use
+ - 109:### Step 1: Upload Image
+ - 113:### Step 2: Create Skeleton
+ - 120:### Step 3: Load Audio
+ - 125:### Step 4: Assign Effects
+ - 134:### Step 5: Animate!
+ - 140:## 🧩 Key Systems
+ - 142:### 1. Skeleton System
+ - 150:### 2. Bone Shader System
+ - 158:### 3. Audio Processing
+ - 161:- **MP3/WAV**: FFT analysis extracts 7 frequency bands
+ - 162:- **MIDI**: Listens to all channels (0-127)
+ - 165:### 4. Effects System
+ - 168:- **Rotate**: Rotates bone based on audio
+ - 169:- **Scale**: Scales bone length
+ - 170:- **Translate**: Moves bone position
+ - 171:- **Bend**: Creates curved motion
+ - 172:- **Wave**: Sine wave distortion
+ - 176:### 5. Rendering
+ - 186:## 🎨 Customization
+ - 188:### Adjust Bone Influence
+ - 192:### Effect Parameters
+ - 194:- **Min/Max Range**: Output value range
+ - 195:- **Smoothing**: 0.0 (instant) to 1.0 (very smooth)
+ - 199:## ⌨️ Keyboard Shortcuts
+ - 212:## 🐛 Known Limitations (Current Skeleton)
+ - 214:1. **Performance**: Rendering uses pixel-by-pixel mapping (slow for large images)
+ - 217:2. **No Animation Recording**: Can't export to video yet
+ - 220:3. **No Preset System**: Effects must be configured manually each time
+ - 223:4. **Simple IK**: No inverse kinematics support
+ - 226:5. **Grid Artifacts**: Visible triangulation on extreme deformations
+ - 231:## 📊 Performance Targets
+ - 242:## 🔧 Development Phases (from README)
+ - 244:### ✅ Phase 1: Foundation (Complete)
+ - 250:### 🔄 Phase 2: Skeleton System (In Progress)
+ - 256:### ⏳ Phase 3: Node Grid & Deformation (Next)
+ - 262:### ⏳ Phase 4: Audio System
+ - 267:### ⏳ Phase 5: Effect System
+ - 272:### ⏳ Phase 6: Polish
+ - 278:### ⏳ Phase 7: Advanced Features
+ - 285:## 🧪 Testing Checklist
+ - 289:- [ ] Upload various image sizes (small, medium, large)
+ - 290:- [ ] Test transparent PNGs
+ - 291:- [ ] Create simple skeleton (3-5 bones)
+ - 292:- [ ] Create complex skeleton (15+ bones)
+ - 293:- [ ] Test with MP3 audio file
+ - 294:- [ ] Test with MIDI input (if available)
+ - 295:- [ ] Assign effects to bones
+ - 296:- [ ] Play audio and verify animation
+ - 297:- [ ] Save project to JSON
+ - 298:- [ ] Load project from JSON
+ - 299:- [ ] Test all keyboard shortcuts
+ - 300:- [ ] Check performance (FPS counter)
+ - 304:## 📚 Key Concepts to Remember
+ - 306:### 1. Forward Kinematics
+ - 309:### 2. Influence Radius
+ - 312:### 3. Barycentric Coordinates
+ - 315:### 4. FFT (Fast Fourier Transform)
+ - 318:### 5. Node Grid Deformation
+ - 323:## 🎯 Next Steps for Development
+ - 325:1. **Run the app** and test basic image loading
+ - 326:2. **Test skeleton creation** - ensure bones can be created and moved
+ - 327:3. **Load an audio file** and verify FFT analysis works
+ - 328:4. **Assign a simple effect** (rotate on bass) and test
+ - 329:5. **Optimize rendering** if performance is poor
+ - 330:6. **Add example images** to `assets/examples/`
+ - 331:7. **Write additional documentation** in `docs/`
+ - 335:## 💡 Tips for Success
+ - 337:### Start Simple
+ - 342:### Debug Mode
+ - 349:### Performance Issues?
+ - 355:### Effect Not Working?
+ - 356:1. Check audio source is selected
+ - 357:2. Verify audio is playing (or MIDI connected)
+ - 358:3. Check effect parameters (min/max range)
+ - 359:4. Increase smoothing if too jittery
+ - 360:5. Increase influence radius if no visible change
+ - 364:## 🌟 Example Use Case
+ - 368:1. Upload character PNG (e.g., standing person)
+ - 369:2. Create skeleton:
+ - 378:3. Load music with strong bass
+ - 379:4. Assign effects:
+ - 384:5. Press play and watch your character dance!
+ - 388:## 🔗 Resources
+ - 390:- **p5.js Documentation**: https://p5js.org/reference/
+ - 391:- **Web Audio API**: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API
+ - 392:- **Web MIDI API**: https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API
+ - 393:- **Skeletal Animation**: https://en.wikipedia.org/wiki/Skeletal_animation
+ - 397:## 📝 Notes for AI Assistants
+ - 401:1. **Maintain the architecture** defined in README.md
+ - 402:2. **Follow the class structure** already established
+ - 403:3. **Keep the UI minimal** - avoid adding complexity
+ - 404:4. **Optimize for performance** - this is real-time
+ - 405:5. **Test with various inputs** - different image sizes, audio types
+ - 406:6. **Document new features** - update README and this summary
+ - 407:7. **Remember**: Transparent pixels should not be affected by skeleton
+ - 409:### Common Pitfalls to Avoid
+ - 425:## 🎉 Project Goals
+
+## projects/Sandbox/Visualize Anything/README.md
+ - 1:# Visualize Anything
+ - 9:## 🎯 Project Overview
+ - 13:### Core Concept
+ - 15:- **Upload** → **Rig** → **Assign** → **Animate**
+ - 22:## 🏗️ Technical Architecture
+ - 24:### Technology Stack
+ - 26:- **Frontend Framework**: Vanilla JavaScript + p5.js (v1.7.0+)
+ - 27:- **Audio Processing**: Web Audio API + Tone.js (v15.0+)
+ - 28:- **MIDI Input**: Web MIDI API
+ - 29:- **Image Processing**: p5.Image + custom pixel manipulation
+ - 30:- **UI Framework**: Custom CSS with minimal dependencies
+ - 31:- **Build Tool**: Vite (for development server and hot reload)
+ - 33:### File Structure
+ - 82:## 🧩 Core Systems
+ - 84:### 1. Skeleton System (`Skeleton.js`, `Bone.js`)
+ - 131:1. Implement hierarchical transform propagation (parent → children)
+ - 132:2. Store both local and world positions for each bone
+ - 133:3. Calculate bone influence on nearby pixels using distance falloff
+ - 134:4. Support adding/removing bones dynamically
+ - 135:5. Implement bone selection via mouse click (with visual feedback)
+ - 139:### 2. Bone Warp Shader (`rendering/BoneShaderDeformer.js`)
+ - 145:1. **Bind Pose Capture** – Every bone stores its world-space start/end when the rig is idle (auto-updated until playback).
+ - 146:2. **Per-frame Data** – `Skeleton.getBoneShaderData()` packages bind/current start/end plus influence radii into typed arrays (capped at 64 bones).
+ - 147:3. **Shader uniforms** – Arrays are sent to the WebGL shader (`boneWarp.vert/frag`). Each pixel computes its displacement by blending the transforms of nearby bones.
+ - 148:4. **Warped texture** – The fragment shader offsets the lookup coordinate before sampling the original image, producing smooth per-pixel deformation on the GPU.
+ - 184:### 3. Audio Engine (`AudioEngine.js`, `MIDIEngine.js`)
+ - 188:#### MP3/WAV Processing (`AudioEngine.js`)
+ - 239:#### MIDI Processing (`MIDIEngine.js`)
+ - 282:1. Implement Web Audio API for MP3/WAV playback
+ - 283:2. Use FFT analysis to extract frequency data in real-time
+ - 284:3. Define 7 frequency bands (sub-bass to brilliance)
+ - 285:4. Calculate average amplitude for each band every frame
+ - 286:5. Implement MIDI input detection and channel value storage
+ - 287:6. Normalize all values to 0.0 - 1.0 range for consistency
+ - 288:7. Add error handling for browser compatibility
+ - 292:### 4. Effect System (`effects/`)
+ - 315:1. **Rotate** (`Rotate.js`)
+ - 332:2. **Scale** (`Scale.js`)
+ - 342:3. **Translate** (`Translate.js`)
+ - 345:4. **Bend** (`Bend.js`)
+ - 348:5. **Wave** (`Wave.js`)
+ - 352:1. Create base Effect class with apply() method
+ - 353:2. Implement each effect with configurable parameters
+ - 354:3. Support multiple effects per bone (stack them)
+ - 355:4. Add smoothing/interpolation to prevent jittery motion
+ - 356:5. Allow min/max range configuration per effect
+ - 357:6. Implement effect priority system
+ - 361:### 5. Rendering System (`rendering/`)
+ - 388:1. Capture bind pose automatically until playback begins.
+ - 389:2. Update typed arrays only when bones move (auto-bind or audio).
+ - 390:3. Keep preview popup in sync by reusing shared bone data.
+ - 391:4. Provide debug toggles (bind pose overlay, influence radii, shader stats).
+ - 392:5. Optimize shader loop (early exit when `i >= boneCount`, clamp influence radius).
+ - 396:### 6. UI System (`ui/`)
+ - 400:#### Toolbar (`Toolbar.js`)
+ - 428:1. **File Operations**
+ - 432:2. **Skeleton Tools**
+ - 437:3. **Playback Controls**
+ - 442:4. **Bone Properties Panel** (expands when bone selected)
+ - 450:#### Context Menu (`ContextMenu.js`)
+ - 458:#### Modal Dialogs (`Modal.js`)
+ - 465:1. Use pure CSS for minimal, flat design
+ - 466:2. Implement collapsible sections in toolbar
+ - 467:3. Add icon-only mode for toolbar (toggle)
+ - 468:4. Use HTML5 dropdowns and range inputs
+ - 469:5. Implement keyboard shortcuts:
+ - 477:6. Add hover tooltips for all buttons
+ - 478:7. Implement responsive canvas sizing
+ - 482:## 🚀 Build Instructions (Step-by-Step)
+ - 484:### Phase 1: Foundation (Days 1-3)
+ - 486:1. **Setup Project**
+ - 493:2. **Create `index.html`**
+ - 498:3. **Implement `main.js`**
+ - 503:4. **Build UI Layout** (`styles/main.css`, `styles/toolbar.css`)
+ - 508:5. **Implement `ImageHandler.js`**
+ - 517:### Phase 2: Skeleton System (Days 4-7)
+ - 519:1. **Implement `Bone.js`**
+ - 524:2. **Implement `Skeleton.js`**
+ - 530:3. **Add Mouse Interaction** (`main.js`)
+ - 536:4. **Implement Toolbar Buttons** (`ui/Toolbar.js`)
+ - 546:### Phase 3: Shader Deformation (Days 8-12)
+ - 548:1. **Capture Bind Pose**
+ - 553:2. **Implement `Skeleton.getBoneShaderData()`**
+ - 558:3. **Implement `BoneShaderDeformer`**
+ - 563:4. **Integrate with `Renderer`**
+ - 568:5. **Performance Tuning**
+ - 577:### Phase 4: Audio System (Days 13-16)
+ - 579:1. **Implement `AudioEngine.js`**
+ - 586:2. **Implement `MIDIEngine.js`**
+ - 592:3. **Add Audio Controls to Toolbar** (`ui/Toolbar.js`)
+ - 598:4. **Test Audio Input**
+ - 607:### Phase 5: Effect System (Days 17-20)
+ - 609:1. **Implement Base `Effect.js` Class**
+ - 613:2. **Implement Each Effect Type**
+ - 620:3. **Implement `EffectManager.js`**
+ - 626:4. **Add Effect UI** (`ui/Toolbar.js`)
+ - 637:### Phase 6: Polish & Features (Days 21-25)
+ - 639:1. **Implement Save/Load** (`utils/Storage.js`)
+ - 645:2. **Add Keyboard Shortcuts** (`main.js`)
+ - 648:3. **Improve Rendering**
+ - 653:4. **Create Documentation**
+ - 658:5. **Testing & Bug Fixes**
+ - 669:### Phase 7: Advanced Features (Optional, Days 26+)
+ - 671:1. **Animation Recording**
+ - 675:2. **Presets System**
+ - 679:3. **Advanced Effects**
+ - 684:4. **Multiplayer/Streaming**
+ - 690:## 🎨 UI Design Specifications
+ - 692:### Color Palette (Dark Theme)
+ - 707:### Typography
+ - 709:- **Font**: Inter, Roboto, or system default
+ - 710:- **Sizes**:
+ - 715:### Button Styles
+ - 743:### Skeleton Rendering
+ - 769:## 📊 Performance Targets
+ - 771:- **Frame Rate**: 60 FPS with complex skeleton (20+ bones)
+ - 772:- **Image Size**: Support up to 2000x2000px
+ - 773:- **Shader Warp**: 64 bones max, per-pixel blend on GPU
+ - 774:- **Audio Latency**: < 10ms from input to visual response
+ - 776:### Optimization Tips
+ - 778:1. **Use WEBGL mode** in p5.js for hardware acceleration
+ - 779:2. **Cache transforms** - only recalculate when bones change
+ - 780:3. **Bone culling** - skip bones with zero influence radius
+ - 781:4. **Lazy evaluation** - skip deformation if audio silent
+ - 782:5. **Throttle FFT** - analyze every 2-3 frames instead of every frame
+ - 783:6. **Use typed arrays** for shader uniforms (bind/current data)
+ - 787:## 🐛 Debugging Tools
+ - 789:### Debug Modes (add to toolbar)
+ - 791:1. **Show Bind Pose**: Overlay bind skeleton to compare against animated pose
+ - 792:2. **Show Influence Zones**: Visualize influence radii per bone
+ - 793:3. **Audio Monitor**: Real-time graph of frequency bands / MIDI channels
+ - 794:4. **Performance Overlay**: FPS, render time, audio latency
+ - 795:5. **Console Logging**: Verbose mode for troubleshooting
+ - 797:### Common Issues & Solutions
+ - 809:## 🎯 Feature Checklist
+ - 811:### MVP (Minimum Viable Product)
+ - 813:- [ ] Upload PNG image
+ - 814:- [ ] Create root bone
+ - 815:- [ ] Add child bones
+ - 816:- [ ] Delete bones
+ - 817:- [ ] Select bones
+ - 818:- [ ] Load MP3/WAV file
+ - 819:- [ ] Assign frequency band to bone
+ - 820:- [ ] Apply rotate effect
+ - 821:- [ ] Apply scale effect
+ - 822:- [ ] Play/pause audio
+ - 823:- [ ] Real-time image deformation
+ - 824:- [ ] Transparent pixel handling
+ - 826:### V1.0 Features
+ - 828:- [ ] MIDI input support
+ - 829:- [ ] All 5 effect types
+ - 830:- [ ] Multiple effects per bone
+ - 831:- [ ] Save/load project files
+ - 832:- [ ] Keyboard shortcuts
+ - 833:- [ ] Context menu
+ - 834:- [ ] Effect parameter adjustment
+ - 835:- [ ] Influence radius control
+ - 836:- [ ] Professional UI polish
+ - 838:### V1.1 Features
+ - 840:- [ ] Animation recording
+ - 841:- [ ] Preset system
+ - 842:- [ ] Advanced effects (IK, physics)
+ - 843:- [ ] Example projects
+ - 844:- [ ] Tutorial documentation
+ - 848:## 🧪 Testing Plan
+ - 850:### Unit Tests
+ - 858:### Integration Tests
+ - 864:### Manual Testing Scenarios
+ - 866:1. **Simple character rig** (head, torso, 2 arms, 2 legs)
+ - 867:2. **Complex character** (15+ bones with multiple levels)
+ - 868:3. **Fully transparent PNG** (only outline visible)
+ - 869:4. **Large image** (1920x1080 or higher)
+ - 870:5. **Very small image** (256x256)
+ - 871:6. **Looping audio** (4-bar loop, 120 BPM)
+ - 872:7. **Live MIDI input** (keyboard controller)
+ - 873:8. **Multiple effects on single bone**
+ - 874:9. **Deeply nested bone chains** (5+ levels)
+ - 875:10. **Save and reload project**
+ - 879:## 📚 Learning Resources
+ - 881:### p5.js
+ - 882:- [p5.js Reference](https://p5js.org/reference/)
+ - 883:- [p5.js Tutorials](https://p5js.org/learn/)
+ - 884:- [2D Transformations](https://genekogan.com/code/p5js-transformations/)
+ - 886:### Web Audio API
+ - 887:- [MDN Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+ - 888:- [Web Audio FFT Tutorial](https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode)
+ - 890:### Web MIDI API
+ - 891:- [MDN Web MIDI API](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API)
+ - 892:- [Web MIDI Tutorial](https://www.smashingmagazine.com/2018/03/web-midi-api/)
+ - 894:### Skeletal Animation
+ - 895:- [2D Skeletal Animation Explanation](https://en.wikipedia.org/wiki/Skeletal_animation)
+ - 896:- [Forward Kinematics](https://www.alanzucconi.com/2017/04/06/forward-kinematics/)
+ - 898:### Image Deformation
+ - 899:- [Mesh Deformation Techniques](https://en.wikipedia.org/wiki/Free-form_deformation)
+ - 900:- [Delaunay Triangulation](https://en.wikipedia.org/wiki/Delaunay_triangulation)
+ - 904:## 🚢 Deployment
+ - 906:### Local Development
+ - 910:# Open http://localhost:5173
+ - 913:### Production Build
+ - 917:# Deploy dist/ folder to any static host
+ - 920:### Hosting Options
+ - 922:- **GitHub Pages** (free)
+ - 923:- **Netlify** (free tier)
+ - 924:- **Vercel** (free tier)
+ - 925:- **AWS S3 + CloudFront**
+ - 929:## 💡 Design Philosophy
+ - 931:### Simplicity First
+ - 936:### Performance Matters
+ - 941:### Fail Gracefully
+ - 947:### Accessibility
+ - 955:## 🎬 Example Use Cases
+ - 957:1. **Music Video VJ Tool**
+ - 960:2. **Podcast Visualization**
+ - 963:3. **Game Character Prototyping**
+ - 966:4. **Art Installation**
+ - 969:5. **Live Streaming Enhancement**
+ - 974:## 🔮 Future Vision
+ - 985:## 📝 Contributing
+ - 997:## 📄 License
+
+## projects/Sandbox/Visualize Anything/RENDERER_OPTIONS_ANALYSIS.md
+ - 1:# Renderer Options Analysis: Custom vs p5.js vs Alternatives
+ - 3:## The Core Problem
+ - 9:## Option 1: Sequential Processing (Current Direction)
+ - 17:### Implementation
+ - 28:### Pros
+ - 33:### Cons
+ - 34:- **Performance:** N bones = N render passes = N texture reads/writes
+ - 35:- **Quality:** Accumulated sampling errors (each pass samples the previous result)
+ - 36:- **Latency:** Sequential processing can't be parallelized
+ - 37:- **Complexity:** Managing intermediate buffers
+ - 39:### Performance Estimate
+ - 46:## Option 2: Custom WebGL Renderer (Bypass p5.js)
+ - 50:### Implementation Architecture
+ - 89:### Shader Using Texture Lookup
+ - 120:### Pros
+ - 121:- **Full control:** No p5.js limitations
+ - 122:- **Single pass:** All bones processed in one shader execution
+ - 123:- **Texture-based data:** No uniform array limits (can support 100+ bones)
+ - 124:- **Performance:** GPU-native, highly optimized
+ - 125:- **Portable:** Can extract and use elsewhere
+ - 127:### Cons
+ - 128:- **Development time:** ~2-3 days to build properly
+ - 129:- **Complexity:** Must handle WebGL state management
+ - 130:- **Integration:** Need to composite result back into p5.js canvas
+ - 131:- **Maintenance:** Two rendering systems to maintain
+ - 133:### Integration with p5.js
+ - 150:## Option 3: Parallel Tile Rendering
+ - 154:### Architecture
+ - 165:### Implementation
+ - 190:### Pros
+ - 191:- **Parallelism:** Multiple tiles can render simultaneously
+ - 192:- **Memory efficiency:** Only one tile in GPU memory at a time
+ - 193:- **Scalability:** Works with very large images
+ - 194:- **Fallback:** Can use CPU rendering for tiles if GPU fails
+ - 196:### Cons
+ - 197:- **Seam artifacts:** Bone influence crosses tile boundaries
+ - 198:- **Complexity:** Managing tile boundaries and overlap
+ - 199:- **Latency:** Must wait for slowest tile
+ - 200:- **Overhead:** Tile management adds CPU work
+ - 202:### Seam Problem
+ - 219:## Option 4: Three.js Migration
+ - 223:### Architecture
+ - 251:### Pros
+ - 252:- **Mature WebGL support:** Three.js has years of WebGL optimization
+ - 253:- **Skeletal animation built-in:** `THREE.SkinnedMesh`, `THREE.Skeleton`
+ - 254:- **Community:** Extensive documentation and examples
+ - 255:- **Future-proof:** Active development, WebGPU support coming
+ - 257:### Cons
+ - 258:- **Bundle size:** Three.js is ~150KB minified
+ - 259:- **Learning curve:** Different API paradigm
+ - 260:- **Overkill:** We only need 2D deformation
+ - 261:- **Integration complexity:** Two libraries managing WebGL
+ - 265:## Option 5: OffscreenCanvas + Web Workers
+ - 269:### Architecture
+ - 290:### Pros
+ - 291:- **Non-blocking:** Main thread stays responsive
+ - 292:- **Full WebGL:** Worker has unrestricted WebGL access
+ - 293:- **Clean separation:** Deformation logic isolated
+ - 295:### Cons
+ - 296:- **Data transfer:** Must serialize bone data each frame
+ - 297:- **Latency:** Worker communication adds ~1-2ms
+ - 298:- **Browser support:** OffscreenCanvas not in all browsers
+ - 299:- **Complexity:** Debugging workers is harder
+ - 303:## Recommendation Matrix
+ - 318:## My Recommendation: Custom WebGL Renderer
+ - 320:### Why?
+ - 322:1. **One-time investment:** Build it once, works forever
+ - 323:2. **No limitations:** Texture-based bone data supports 100+ bones
+ - 324:3. **Single pass:** Best possible performance
+ - 325:4. **Clean integration:** p5.js still handles UI, custom renderer handles deformation
+ - 326:5. **Portable:** Can extract for other projects
+ - 327:6. **Educational:** Understanding WebGL deeply helps with future issues
+ - 329:### Implementation Plan
+ - 349:### File Structure
+ - 364:## Quick Win Alternative
+ - 368:1. **Keep current single-bone shader** (it works)
+ - 369:2. **Add bone priority system** - most influential bone gets shader
+ - 370:3. **CPU blend for secondary bones** - simple displacement, no shader
+ - 390:## Decision Needed
+ - 392:1. **Quick fix + Custom WebGL later** - Ship something now, build proper solution
+ - 393:2. **Custom WebGL now** - 2-3 days, but best long-term solution
+ - 394:3. **Three.js migration** - If you want industry-standard skeletal animation
+ - 395:4. **Sequential processing** - Simplest, but performance limited
+
+## projects/Sandbox/Visualize Anything/TESTING_STATUS.md
+ - 1:# Visualize Anything - Testing Status
+ - 8:## ✅ Completed Features
+ - 10:### 1. Basic Setup ✅
+ - 11:- [x] Vite dev server running
+ - 12:- [x] p5.js instance mode configured
+ - 13:- [x] Canvas renders (1280x720)
+ - 14:- [x] Debug panel displays
+ - 15:- [x] Toolbar UI structured
+ - 17:### 2. Image System ✅
+ - 18:- [x] File upload button functional
+ - 19:- [x] Image loading via FileReader
+ - 20:- [x] Image display (centered on canvas)
+ - 21:- [x] Node grid generation (for future deformation)
+ - 22:- [x] Transparency detection algorithm
+ - 24:### 3. Skeleton System ✅
+ - 25:- [x] Root bone creation
+ - 26:- [x] Child bone creation
+ - 27:- [x] Bone selection
+ - 28:- [x] Bone deletion
+ - 29:- [x] Hierarchical transforms
+ - 30:- [x] Forward kinematics
+ - 31:- [x] Bone dragging
+ - 32:- [x] Visual feedback (selected bone turns pink)
+ - 34:### 4. Audio System ✅
+ - 35:- [x] MP3/WAV file loading
+ - 36:- [x] Web Audio API integration
+ - 37:- [x] FFT analysis setup
+ - 38:- [x] 7 frequency bands defined
+ - 39:- [x] Play/pause controls
+ - 40:- [x] MIDI initialization (optional)
+ - 42:### 5. Effects System ✅
+ - 43:- [x] Effect base class
+ - 44:- [x] RotateEffect implemented
+ - 45:- [x] ScaleEffect implemented
+ - 46:- [x] TranslateEffect implemented
+ - 47:- [x] BendEffect implemented
+ - 48:- [x] WaveEffect implemented
+ - 49:- [x] Effect parameter configuration
+ - 50:- [x] Effect assignment to bones
+ - 54:## 🔄 Needs Testing
+ - 56:### Critical Path Test
+ - 57:1. **Open app** → Should show canvas with "Upload an image to begin"
+ - 58:2. **Upload image** → Image should appear centered
+ - 59:3. **Create root bone** → Blue circle appears
+ - 60:4. **Add child bones** → White lines connect bones
+ - 61:5. **Load audio file** → Play button becomes enabled
+ - 62:6. **Assign rotate effect** → Select bone → Choose bass → Add rotate effect
+ - 63:7. **Press play** → Bone should rotate with bass frequency
+ - 67:## 🐛 Potential Issues to Check
+ - 69:### Issue 1: Module Loading
+ - 74:### Issue 2: p5.js Not Loading
+ - 79:### Issue 3: Audio Context Suspended
+ - 84:### Issue 4: Effect Not Applying
+ - 92:### Issue 5: Performance Issues
+ - 102:## 🎯 Test Scenarios
+ - 104:### Scenario 1: Simple Character Rig
+ - 112:### Scenario 2: Logo Animation
+ - 120:### Scenario 3: Complex Skeleton
+ - 130:## 📊 Performance Benchmarks
+ - 140:## 🔧 Debug Checklist
+ - 144:1. **Open Console** (F12)
+ - 148:2. **Run debugState()**
+ - 156:3. **Check Bone Properties**
+ - 161:4. **Verify Audio**
+ - 166:5. **Test Effect Manually**
+ - 174:## 🚀 Next Steps After MVP
+ - 176:### Phase 2: Shader Deformation Enhancements
+ - 177:- [ ] Stress-test GPU warp with 50+ bones
+ - 178:- [ ] Add shader diagnostics overlay (bind pose, weights)
+ - 179:- [ ] Expose bind-pose recapture button
+ - 180:- [ ] Profile performance on large (2K) images
+ - 182:### Phase 3: UI Polish
+ - 183:- [ ] Better bone visualization
+ - 184:- [ ] Effect preview
+ - 185:- [ ] Keyboard shortcuts hints
+ - 186:- [ ] Tooltips
+ - 188:### Phase 4: Advanced Features
+ - 189:- [ ] Save/load projects
+ - 190:- [ ] Effect presets
+ - 191:- [ ] Animation recording
+ - 192:- [ ] MIDI device support
+ - 196:## 📝 Testing Notes
+ - 198:### Testing Session 1: [Date/Time]
+ - 202:- [ ] Canvas loads
+ - 203:- [ ] Image uploads
+ - 204:- [ ] Skeleton works
+ - 205:- [ ] Audio loads
+ - 206:- [ ] Effects apply
+ - 207:- [ ] Animation smooth
+ - 210:1. _______________________________
+ - 211:2. _______________________________
+ - 212:3. _______________________________
+ - 218:## ✨ Success Criteria
+ - 230:## 🎉 Current Status
+
+## projects/Sandbox/Visualize Anything/UPDATE_COMPLETE.md
+ - 1:# Visualize Anything - Major Update Complete! 🎉
+ - 8:## 🔧 What Was Fixed
+ - 10:### ✅ 1. Image Scaling
+ - 23:### ✅ 2. Bone Selection & Manipulation
+ - 37:### ✅ 3. Deep Bone Hierarchy
+ - 51:### ✅ 4. Image Deformation (CRITICAL FEATURE!)
+ - 54:- **Implemented shader-based texture warping**
+ - 61:1. Bones capture bind start/end positions while rig is idle
+ - 62:2. Current start/end + bind data are packed into typed uniform arrays
+ - 63:3. `BoneShaderDeformer` uploads arrays to a WebGL shader
+ - 64:4. Fragment shader blends contributions from up to 64 bones per pixel
+ - 65:5. Warped texture is composited under the skeleton
+ - 74:### ✅ 5. Bone Length & Angle Controls
+ - 77:- **Bone Length Slider**: 20-300px range
+ - 78:- **Bone Angle Slider**: -180° to 180° range
+ - 94:### ✅ 6. Bone Naming System
+ - 97:- **Child bones (depth 1) can be named**
+ - 115:### ✅ 7. Bone Family Colors
+ - 118:- **Each child branch gets unique color**
+ - 136:### ✅ 8. Bone Numbering
+ - 139:- **Bones numbered as they extend from root**
+ - 158:## 🎨 Visual Improvements
+ - 160:### Before → After
+ - 179:## 🎮 Updated Workflow
+ - 181:### Creating a Rig (New Intuitive Process):
+ - 183:1. **Upload Image** → Auto-scales to fit
+ - 184:2. **Create Root** (🦴 button) → Click center of image
+ - 185:3. **Add Children** (➕ button):
+ - 190:4. **Add Grandchildren**:
+ - 195:5. **Customize Bone**:
+ - 200:6. **Add Audio Effects**:
+ - 204:7. **Play Music** → **Watch Image Deform!** 🎵
+ - 208:## 🧪 Testing the New Features
+ - 210:### Test 1: Image Deformation
+ - 212:1. Upload a character image
+ - 213:2. Create a simple skeleton (3-5 bones)
+ - 214:3. Load audio with strong bass
+ - 215:4. Assign rotate effect to a limb bone
+ - 216:5. Press play
+ - 220:### Test 2: Bone Manipulation
+ - 222:1. Create a skeleton
+ - 223:2. Select a bone
+ - 224:3. Adjust length slider → bone length changes
+ - 225:4. Adjust angle slider → bone rotates
+ - 226:5. Children follow parent transforms
+ - 230:### Test 3: Bone Organization
+ - 232:1. Create complex skeleton (10+ bones)
+ - 233:2. Name child bones ("Left Arm", "Right Leg", etc.)
+ - 234:3. Observe color coding (each family different)
+ - 235:4. Check numbering (sequential from root)
+ - 241:## 📊 Technical Details
+ - 243:### Image Deformation Algorithm
+ - 273:## 🚀 Performance Characteristics
+ - 290:## 🎯 What Works Now
+ - 292:### Core Features ✅
+ - 293:- [x] Image upload and auto-scaling
+ - 294:- [x] Skeletal rigging (unlimited depth)
+ - 295:- [x] Bone selection and manipulation
+ - 296:- [x] **Image deformation with skeleton**
+ - 297:- [x] Audio loading (MP3/WAV)
+ - 298:- [x] FFT analysis (7 frequency bands)
+ - 299:- [x] 5 effect types
+ - 300:- [x] Real-time audio reactivity
+ - 302:### Organization Features ✅
+ - 303:- [x] Bone naming (child bones)
+ - 304:- [x] Bone family colors
+ - 305:- [x] Bone numbering
+ - 306:- [x] Properties panel
+ - 307:- [x] Visual feedback
+ - 309:### Manipulation Features ✅
+ - 310:- [x] Drag root bone
+ - 311:- [x] Adjust bone length
+ - 312:- [x] Adjust bone angle
+ - 313:- [x] Adjust influence radius
+ - 314:- [x] Delete bones
+ - 318:## 🐛 Known Limitations
+ - 320:### 1. Deformation Quality
+ - 325:### 2. Performance with Large Images
+ - 330:### 3. Only Root is Draggable
+ - 336:### 4. No Undo/Redo
+ - 343:## 💡 Pro Tips
+ - 345:### Creating Great Rigs
+ - 380:## 🎨 Creative Techniques
+ - 382:### Technique 1: Symmetric Rigs
+ - 384:1. Create left side bones (e.g., Left Arm)
+ - 385:2. Note their angles and lengths
+ - 386:3. Create right side bones
+ - 387:4. Use angle slider: negate angle for mirror
+ - 388:5. Copy length values
+ - 392:### Technique 2: Layered Deformation
+ - 394:1. Create outer bones (limbs)
+ - 395:2. Add inner bones (joints)
+ - 396:3. Set different influence radii
+ - 397:4. Inner bones override outer
+ - 401:### Technique 3: Named Presets
+ - 403:1. Name bones by function: "Bass", "Mid", "High"
+ - 404:2. Assign matching frequency bands
+ - 405:3. Easy to remember which does what
+ - 406:4. Great for live performance
+ - 411:## 📚 Updated Documentation
+ - 424:## 🎉 Summary
+ - 426:### What Changed:
+ - 427:- **8 major features added**
+ - 428:- **Image deformation now works!** (the big one!)
+ - 429:- **Much more intuitive UI**
+ - 430:- **Professional bone organization**
+ - 431:- **Real-time manipulation controls**
+ - 433:### Impact:
+ - 440:### Next Steps:
+ - 441:1. **Test the deformation** - This is the game changer!
+ - 442:2. **Create a complex rig** - Use all new features
+ - 443:3. **Try different images** - Characters, logos, abstract art
+ - 444:4. **Experiment with effects** - Combine with deformation
+ - 445:5. **Share your creations!** 🎵🎨
+ - 449:## 🚀 Ready to Use!
+ - 454:1. Upload a character or mascot image
+ - 455:2. Create a 10-bone skeleton
+ - 456:3. Name the limb bones
+ - 457:4. Notice the colors
+ - 458:5. Load a song
+ - 459:6. Add effects
+ - 460:7. **Watch your image ACTUALLY DEFORM with the music!**
+
+## projects/Sandbox/Visualize Anything/WORKFLOW_REDESIGN.md
+ - 1:# Visualize Anything - Workflow Redesign Complete! 🎉
+ - 8:## 🐛 Critical Bugs Fixed
+ - 10:### ✅ 1. Image Disappearing Bug
+ - 22:### ✅ 2. Root Bone Not Visible
+ - 34:### ✅ 3. Audio Plays But Nothing Happens
+ - 46:## 🔄 New Workflow Implementation
+ - 48:### Step 1: Upload Image → Auto-Scale ✅
+ - 63:### Step 2: Generate Node Grid (Manual) ✅
+ - 66:- **Rows Slider**: 10-100 (default 30)
+ - 67:- **Columns Slider**: 10-100 (default 30)  
+ - 68:- **Alpha Threshold**: 0-255 (default 10)
+ - 94:### Step 3: Split Viewport ✅
+ - 140:### Step 4: Reduced Toolbar Width ✅
+ - 163:## 🎮 New User Workflow
+ - 165:### Old Workflow (Broken):
+ - 166:1. Upload image → Image disappears ❌
+ - 167:2. Create root bone → Bone not visible ❌
+ - 168:3. Play audio → Nothing happens ❌
+ - 170:### New Workflow (Working):
+ - 171:1. **Upload Image** 📁
+ - 176:2. **Configure Grid** 🔲
+ - 183:3. **Build Skeleton** 🦴
+ - 189:4. **Load Audio** 🎵
+ - 193:5. **Assign Effects** ⚡
+ - 198:6. **Preview** ▶️
+ - 206:## 📊 Visual Comparison
+ - 208:### Before:
+ - 220:### After:
+ - 239:## 🎯 Technical Details
+ - 241:### Image Scaling Algorithm
+ - 251:### Grid Resolution Calculation
+ - 258:### Dual Canvas System
+ - 259:- **Main Canvas**: p5.js instance #1 in `#p5-canvas`
+ - 260:- **Preview Canvas**: p5.js instance #2 in `#p5-preview`
+ - 265:### Rendering Pipeline
+ - 273:## 🚀 Performance Improvements
+ - 284:## 🧪 Testing the New Workflow
+ - 286:### Quick Test (2 minutes):
+ - 287:1. Open app → blank canvas
+ - 288:2. Click 📁 → upload image → image appears in both views ✅
+ - 289:3. Adjust sliders → click 🔲 → grid overlays image ✅
+ - 290:4. Click 🦴 → place root bone → bone visible ✅
+ - 291:5. Select bone → click ➕ → add child → bones connect ✅
+ - 292:6. Load audio → click ▶️ → bones react ✅
+ - 293:7. Check preview pane → clean result visible ✅
+ - 299:## 📋 What Changed in Each File
+ - 301:### HTML (`index.html`)
+ - 308:### CSS
+ - 314:### JavaScript
+ - 325:## 💡 User Benefits
+ - 327:### Clearer Workflow ✅
+ - 333:### More Control ✅
+ - 339:### Better UX ✅
+ - 345:### More Reliable ✅
+ - 353:## 🎨 Grid Configuration Guide
+ - 355:### For Simple Images (logos, characters):
+ - 356:- **Rows**: 20-30
+ - 357:- **Cols**: 20-30
+ - 358:- **Alpha**: 5-15
+ - 361:### For Complex Images (detailed art):
+ - 362:- **Rows**: 40-60
+ - 363:- **Cols**: 40-60
+ - 364:- **Alpha**: 10-30
+ - 367:### For Performance:
+ - 368:- **Rows**: 15-20
+ - 369:- **Cols**: 15-20
+ - 370:- **Alpha**: 20
+ - 373:### For Quality:
+ - 374:- **Rows**: 60-80
+ - 375:- **Cols**: 60-80
+ - 376:- **Alpha**: 5
+ - 381:## 🔧 Debugging Tips
+ - 383:### If Image Doesn't Appear:
+ - 384:1. Check browser console for errors
+ - 385:2. Try smaller image (< 2MB)
+ - 386:3. Refresh page and try again
+ - 388:### If Grid Generation Fails:
+ - 389:1. Try different alpha threshold
+ - 390:2. Reduce rows/columns
+ - 391:3. Check image has some opaque pixels
+ - 393:### If Bones Not Visible:
+ - 394:1. Make sure grid is generated
+ - 395:2. Check root bone button is enabled
+ - 396:3. Click directly on image area
+ - 398:### If Preview Blank:
+ - 399:1. Grid must be generated
+ - 400:2. Skeleton must exist
+ - 401:3. Check preview pane is visible
+ - 405:## 🎉 Summary
+ - 407:### ✅ All Issues Fixed:
+ - 413:### ✅ New Features Added:
+ - 422:### ✅ Improvements:
+ - 432:## 🚀 Ready to Use!
+ - 439:1. Upload image
+ - 440:2. Generate grid
+ - 441:3. Create skeleton
+ - 442:4. Load audio
+ - 443:5. Assign effects
+ - 444:6. Play and watch!
+
+## projects/Sandbox/lil guy app/PROJECT_SUMMARY.md
+ - 1:# Lil Guys Studio - Project Summary
+ - 3:## ✅ Project Skeleton Complete!
+ - 9:## 📁 Directory Structure
+ - 108:## 🎯 What's Implemented
+ - 110:### ✅ Core Smart Contracts (100% Complete)
+ - 112:1. **FranchiseFactory.sol**
+ - 118:2. **CollectionFactory.sol**
+ - 123:3. **LilGuysToken.sol** (ERC-721)
+ - 130:4. **TraitToken.sol** (ERC-721)
+ - 136:5. **PlatformToken.sol** (ERC-20)
+ - 142:6. **CompositionRegistry.sol**
+ - 148:7. **MetadataManager.sol**
+ - 153:8. **TraitRegistry.sol**
+ - 159:9. **BlindMintEngine.sol**
+ - 165:10. **CustomMintEngine.sol**
+ - 170:11. **MintValidator.sol**
+ - 175:### ✅ Frontend Foundation (80% Complete)
+ - 192:### ✅ Backend Foundation (60% Complete)
+ - 208:### ✅ Documentation (100% Complete)
+ - 218:## 🚀 Quick Start Guide
+ - 220:### 1. Install Dependencies
+ - 223:# Root dependencies
+ - 226:# Contract dependencies
+ - 229:# Frontend dependencies
+ - 232:# Backend dependencies
+ - 236:### 2. Configure Environment
+ - 241:# Copy from README or use the template below
+ - 248:### 3. Compile Contracts
+ - 255:### 4. Run Tests (when implemented)
+ - 261:### 5. Deploy to Testnet
+ - 267:### 6. Start Development Servers
+ - 270:# Terminal 1: Backend
+ - 273:# Terminal 2: Frontend
+ - 279:## 📋 Next Steps for Development
+ - 281:### Phase 1: Core Functionality
+ - 282:1. **Add initial traits**
+ - 287:2. **Complete frontend minting**
+ - 292:3. **Implement backend routes**
+ - 297:### Phase 2: Studio Features
+ - 298:1. **Build trait composer**
+ - 303:2. **Add combination validation**
+ - 308:3. **Implement custom minting**
+ - 313:### Phase 3: User Dashboard
+ - 314:1. **My Tokens view**
+ - 319:2. **My Traits inventory**
+ - 324:3. **Version management**
+ - 329:### Phase 4: Testing & Security
+ - 330:1. **Write comprehensive tests**
+ - 335:2. **Security audit**
+ - 340:3. **Gas optimization**
+ - 345:### Phase 5: Launch Preparation
+ - 346:1. **Mainnet deployment**
+ - 351:2. **Production infrastructure**
+ - 356:3. **Marketing & Community**
+ - 363:## 🔑 Key Contract Addresses (After Deployment)
+ - 382:## 💡 Important Notes
+ - 384:### Security Considerations
+ - 390:### Gas Optimization
+ - 396:### Scalability
+ - 404:## 📞 Support & Resources
+ - 406:- **Documentation**: See `docs/` folder
+ - 407:- **Smart Contracts**: See `contracts/` folder
+ - 408:- **Frontend**: See `frontend/src/` folder
+ - 409:- **Backend**: See `backend/src/` folder
+ - 410:- **Deployment**: See `scripts/deploy.ts`
+ - 414:## 🧪 Testing Suite (NEW!)
+ - 418:### Test Files Created
+ - 425:### Test Coverage
+ - 426:- **Total Tests**: 75
+ - 427:- **Execution Time**: ~13 seconds
+ - 428:- **Coverage**: 95% statements, 90% branches
+ - 429:- **Scenarios**: Blind mint, custom mint, trait updates, versioning, edge cases
+ - 431:### Quick Start
+ - 443:## 🎉 Project Status: **Ready for Development & Testing**
+ - 447:1. ✅ **Test contracts locally** - Run `npm test` in contracts folder
+ - 448:2. ✅ Deploy contracts to testnet
+ - 449:3. ✅ Start developing frontend components
+ - 450:4. ✅ Implement backend API routes
+ - 451:5. ✅ Add trait images and initialize collections
+ - 452:6. ✅ Begin testing and iteration
+
+## projects/Sandbox/lil guy app/QUICKSTART.md
+ - 1:# 🚀 Lil Guys Studio - Quick Start Guide
+ - 3:## ⚡ Get Started in 5 Minutes
+ - 5:### Prerequisites
+ - 12:## 📦 Step 1: Install Everything
+ - 17:# Install root dependencies
+ - 20:# Install contract dependencies
+ - 23:# Install frontend dependencies
+ - 26:# Install backend dependencies
+ - 32:## 🔐 Step 2: Environment Setup
+ - 37:# Blockchain
+ - 42:# IPFS (Get free keys from https://pinata.cloud)
+ - 46:# API
+ - 51:# Pricing (in wei, 18 decimals)
+ - 56:# Collection
+ - 62:## 🔨 Step 3: Compile Contracts
+ - 76:## 🚢 Step 4: Deploy to Testnet
+ - 86:## 💾 Step 5: Update .env with Contract Addresses
+ - 105:## 🎨 Step 6: Add Initial Traits (Coming Soon)
+ - 122:## 🖥️ Step 7: Start Development Servers
+ - 148:## 🌐 Step 8: Open the App
+ - 156:## 🎯 What to Build Next
+ - 158:### Option A: Add Minting Functionality
+ - 159:1. Create trait images (PNG files)
+ - 160:2. Upload to IPFS
+ - 161:3. Add traits to TraitToken contract
+ - 162:4. Implement frontend minting UI
+ - 163:5. Test blind minting
+ - 165:### Option B: Build the Studio
+ - 166:1. Implement trait selector component
+ - 167:2. Create canvas for trait layering
+ - 168:3. Add combination validation
+ - 169:4. Enable custom minting
+ - 171:### Option C: Create Dashboard
+ - 172:1. Display user's tokens
+ - 173:2. Show owned traits
+ - 174:3. Enable trait updates
+ - 175:4. Add version management
+ - 179:## 📚 Helpful Commands
+ - 181:### Development
+ - 183:# Frontend
+ - 187:# Backend
+ - 191:# Contracts
+ - 197:### Deployment
+ - 204:### Testing
+ - 214:## 🔍 Troubleshooting
+ - 216:### "Cannot find module" errors
+ - 218:# Reinstall dependencies
+ - 223:### "Insufficient funds" when deploying
+ - 227:### Frontend won't connect to wallet
+ - 232:### Backend API errors
+ - 239:## 📖 Learn More
+ - 241:- **Full Documentation**: See `README.md`
+ - 242:- **Architecture**: See `docs/architecture.md`
+ - 243:- **Contract Specs**: See `docs/contract-specs.md`
+ - 244:- **API Reference**: See `docs/api-reference.md`
+ - 245:- **Project Status**: See `PROJECT_SUMMARY.md`
+ - 249:## 🆘 Need Help?
+ - 251:1. Check the documentation in the `docs/` folder
+ - 252:2. Review the `PROJECT_SUMMARY.md` for implementation status
+ - 253:3. Look at the contract comments for function details
+ - 254:4. Check the example code in the frontend components
+ - 258:## ✅ Checklist
+ - 262:- [ ] All dependencies installed
+ - 263:- [ ] `.env` file created and configured
+ - 264:- [ ] Contracts compiled successfully
+ - 265:- [ ] Contracts deployed to testnet
+ - 266:- [ ] Contract addresses saved in `.env`
+ - 267:- [ ] Backend server running
+ - 268:- [ ] Frontend server running
+ - 269:- [ ] Can access http://localhost:3000
+ - 270:- [ ] Can access http://localhost:3001/health
+ - 274:## 🎉 You're Ready!
+
+## projects/Sandbox/lil guy app/README.md
+ - 1:# Lil Guys Studio - Generative NFT Platform
+ - 3:## Project Overview
+ - 7:## AI Development Prompt
+ - 11:- **Blind Minting**: Users mint random character compositions; transaction hash determines traits
+ - 12:- **Trait Ownership**: Each trait is an ERC-721 token; collectors own both characters and individual traits
+ - 13:- **Dynamic Composition**: Collectors can remix characters using owned traits in a studio interface
+ - 14:- **Composition Registry**: Tracks minted combinations; custom compositions are removed from blind mint pool
+ - 15:- **Versioning System**: Characters can store multiple trait configurations; owners toggle displayed version
+ - 16:- **Franchise Hierarchy**: Account > Franchise > Collection > Token structure enables scalable expansions
+ - 17:- **Platform Economy**: Fungible token (ERC-20) for rewards, exclusive traits, and auctions
+ - 18:- **Security Model**: Admin-controlled factory functions, owner-controlled token updates, public minting only
+ - 20:## Core Concepts
+ - 22:### Ownership Model
+ - 38:### Token Lifecycle
+ - 39:1. **Blind Mint** → User pays fee → Random traits assigned via tx hash → Character + Trait tokens minted
+ - 40:2. **Studio Remix** → User selects owned traits → Creates custom combination → Mints new character (if combination available)
+ - 41:3. **Trait Update** → Owner modifies existing token → Old combination released to pool OR stored as alternate version (paid)
+ - 42:4. **Version Toggle** → Owner switches displayed trait configuration on their token
+ - 44:### Combination Registry
+ - 50:## Project Structure
+ - 76:## Smart Contract Architecture
+ - 78:### Core Contracts
+ - 80:#### FranchiseFactory.sol
+ - 88:#### CollectionFactory.sol
+ - 96:#### LilGuysToken.sol (ERC-721)
+ - 106:#### TraitToken.sol (ERC-721)
+ - 114:#### PlatformToken.sol (ERC-20)
+ - 122:### Registry Contracts
+ - 124:#### CompositionRegistry.sol
+ - 133:#### MetadataManager.sol
+ - 142:#### TraitRegistry.sol
+ - 151:### Minting Contracts
+ - 153:#### BlindMintEngine.sol
+ - 162:#### CustomMintEngine.sol
+ - 170:#### MintValidator.sol
+ - 178:### Access Control
+ - 180:#### AccessControl.sol
+ - 189:### Security Specifications
+ - 217:## Frontend Application
+ - 219:### Technology Stack
+ - 220:- **Framework**: Next.js 14 (React 18+)
+ - 221:- **Styling**: TailwindCSS with custom design system
+ - 222:- **State Management**: Zustand for global state
+ - 223:- **Web3**: ethers.js v6 for blockchain interactions
+ - 224:- **Canvas**: HTML5 Canvas API for trait layering
+ - 225:- **UI Components**: Custom components + Radix UI primitives
+ - 227:### Key Components
+ - 229:#### Wallet Integration
+ - 234:#### Minting Interfaces
+ - 240:#### Studio
+ - 248:#### Dashboard
+ - 255:#### Admin Panel
+ - 261:### User Experience Flow
+ - 263:1. **Connect Wallet** → User connects Tezos wallet
+ - 264:2. **Browse Gallery** → View all minted characters
+ - 265:3. **Blind Mint** → Pay fee → Receive random character + traits
+ - 266:4. **View Collection** → Dashboard shows owned tokens
+ - 267:5. **Enter Studio** → Select traits → Preview composition → Check availability
+ - 268:6. **Custom Mint** → Create unique character if combination available
+ - 269:7. **Edit Token** → Update existing character traits → Choose to version or replace
+ - 270:8. **Toggle Display** → Switch between saved versions
+ - 272:## Backend Services
+ - 274:### API Endpoints
+ - 276:#### Minting Routes
+ - 282:#### Trait Routes
+ - 288:#### Metadata Routes
+ - 293:#### Combination Routes
+ - 298:### Services
+ - 300:#### IPFS Service
+ - 306:#### Image Generator
+ - 312:#### Metadata Generator
+ - 318:#### Cache Service
+ - 324:## Installation & Setup
+ - 326:### Prerequisites
+ - 333:### Environment Variables
+ - 338:# Blockchain
+ - 343:# IPFS
+ - 348:# Contract Addresses (after deployment)
+ - 356:# API
+ - 360:# Database (optional)
+ - 364:# Security
+ - 369:### Quick Start
+ - 372:# Clone repository
+ - 376:# Install dependencies
+ - 379:# Install contract dependencies
+ - 384:# Install frontend dependencies
+ - 389:# Install backend dependencies
+ - 394:# Compile smart contracts
+ - 397:# Run contract tests
+ - 400:# Deploy contracts to testnet
+ - 403:# Start backend API server
+ - 406:# Start frontend development server (in new terminal)
+ - 409:# Open browser to http://localhost:3000
+ - 412:### Deployment Commands
+ - 415:# Deploy all contracts to testnet
+ - 418:# Deploy to mainnet (requires confirmation)
+ - 421:# Verify contracts on block explorer
+ - 424:# Add initial traits to collection
+ - 427:# Setup franchise and collections
+ - 431:## Development Roadmap
+ - 433:### Phase 1: Core Infrastructure ✓ (Current)
+ - 434:- [x] Project structure and skeleton
+ - 435:- [ ] Deploy FranchiseFactory and CollectionFactory contracts
+ - 436:- [ ] Implement LilGuysToken and TraitToken contracts
+ - 437:- [ ] Build CompositionRegistry and MetadataManager
+ - 438:- [ ] Create basic frontend with wallet connection
+ - 439:- [ ] Implement blind minting with transaction hash randomness
+ - 441:### Phase 2: Studio & Customization
+ - 442:- [ ] Build trait composition studio UI
+ - 443:- [ ] Implement custom minting with combination validation
+ - 444:- [ ] Create token update functionality
+ - 445:- [ ] Add versioning system for multiple trait configs
+ - 446:- [ ] Build dashboard for managing owned tokens
+ - 447:- [ ] Implement canvas rendering and export
+ - 449:### Phase 3: Platform Economy
+ - 450:- [ ] Deploy PlatformToken (ERC-20) contract
+ - 451:- [ ] Implement reward distribution system
+ - 452:- [ ] Create exclusive trait auction system
+ - 453:- [ ] Build admin panel for trait releases
+ - 454:- [ ] Add booster pack functionality
+ - 455:- [ ] Integrate marketplace royalties
+ - 457:### Phase 4: Expansion & Scaling
+ - 458:- [ ] Test franchise hierarchy with multiple collections
+ - 459:- [ ] Deploy Lil Guys 2 test collection
+ - 460:- [ ] Implement themed expansion packs
+ - 461:- [ ] Add marketplace integration (OpenSea, etc.)
+ - 462:- [ ] Performance optimization and gas reduction
+ - 463:- [ ] Load testing and optimization
+ - 465:### Phase 5: Community Features
+ - 466:- [ ] Add social features (sharing, galleries)
+ - 467:- [ ] Implement rarity ranking system
+ - 468:- [ ] Create limited edition drops
+ - 469:- [ ] Add collaborative creation features
+ - 470:- [ ] Build analytics dashboard for collectors
+ - 471:- [ ] Mobile-responsive design
+ - 473:## Testing Strategy
+ - 475:### Smart Contract Tests
+ - 477:# Run all contract tests
+ - 480:# Run specific test file
+ - 483:# Test with gas reporting
+ - 486:# Test with coverage
+ - 497:### Frontend Tests
+ - 499:# Run component tests
+ - 502:# Run E2E tests
+ - 505:# Run with watch mode
+ - 516:### Integration Tests
+ - 518:# Run full integration suite
+ - 521:# Test specific workflow
+ - 532:## Security Considerations
+ - 534:### Smart Contract Security
+ - 536:#### Access Control
+ - 542:#### Protection Mechanisms
+ - 543:- **Reentrancy Guards**: All state-changing functions protected
+ - 544:- **Integer Overflow**: Solidity 0.8+ built-in checks
+ - 545:- **Randomness**: Transaction hash + block data for unpredictability
+ - 546:- **Pausability**: Emergency stop mechanism
+ - 547:- **Rate Limiting**: Prevent spam minting
+ - 548:- **Input Validation**: Sanitize all parameters
+ - 550:#### Audit Checklist
+ - 551:- [ ] Third-party security audit before mainnet (CertiK, OpenZeppelin, etc.)
+ - 552:- [ ] Bug bounty program launch
+ - 553:- [ ] Testnet stress testing (3+ months)
+ - 554:- [ ] Community review period (1 month)
+ - 555:- [ ] Gradual mainnet rollout (limited initial supply)
+ - 557:### Frontend Security
+ - 565:## Gas Optimization
+ - 567:### Strategies Implemented
+ - 568:1. **Batch Operations**: Multi-trait minting in single transaction
+ - 569:2. **Efficient Storage**: Packed structs, uint8 where possible
+ - 570:3. **Lazy Computation**: Generate metadata off-chain, verify on-chain
+ - 571:4. **Event Emission**: Use events over storage for historical data
+ - 572:5. **Minimal On-Chain Logic**: Complex computations in backend
+ - 573:6. **Assembly Optimization**: Critical paths use inline assembly
+ - 575:### Gas Benchmarks (Target)
+ - 582:## Franchise Expansion Examples
+ - 584:### Initial Launch
+ - 596:### First Expansion (Month 3)
+ - 608:### Seasonal Update (Month 6)
+ - 620:### Major Expansion (Month 12)
+ - 632:## Token Standards & Compatibility
+ - 634:- **Character Tokens**: ERC-721 (NFT standard)
+ - 635:- **Trait Tokens**: ERC-721 (enables marketplace trading)
+ - 636:- **Platform Currency**: ERC-20 (fungible token standard)
+ - 637:- **Metadata**: ERC-721 Metadata JSON Schema
+ - 638:- **Royalties**: EIP-2981 (NFT Royalty Standard)
+ - 639:- **Marketplace**: OpenSea, Rarible, Objkt.com compatible
+ - 641:## Monetization & Economics
+ - 643:### Revenue Streams
+ - 644:1. **Blind Mint Fees**: 0.5 XTZ per random mint (primary revenue)
+ - 645:2. **Custom Mint Fees**: 0.3 XTZ per studio mint
+ - 646:3. **Version Addition Fees**: 0.2 XTZ to store alternate configuration
+ - 647:4. **Expansion Pack Sales**: Variable pricing for themed packs
+ - 648:5. **Platform Token Utility**: Limited editions, auctions, rewards
+ - 649:6. **Marketplace Royalties**: 5% on secondary sales
+ - 651:### Platform Token ($LILG) Use Cases
+ - 652:- **Rewards**: Airdrop to early adopters, active creators
+ - 653:- **Exclusive Access**: Limited trait releases for token holders
+ - 654:- **Governance**: Future DAO for franchise direction
+ - 655:- **Staking**: Earn tokens by holding characters (planned Phase 5)
+ - 656:- **Auctions**: Bid on rare/legendary traits
+ - 657:- **Discounts**: Reduced mint fees when paying with $LILG
+ - 659:### Economic Model
+ - 665:## Community & Governance
+ - 667:### DAO Structure (Phase 5)
+ - 675:### Governance Process
+ - 676:1. Proposal submitted by token holder (minimum 1000 $LILG)
+ - 677:2. Community discussion period (7 days)
+ - 678:3. Voting period (5 days)
+ - 679:4. Execution if quorum reached (10% of supply) and majority approves
+ - 681:## API Reference
+ - 683:### REST API Endpoints
+ - 685:#### Authentication
+ - 691:#### Minting
+ - 699:#### Tokens
+ - 709:#### Traits
+ - 717:#### Metadata
+ - 724:## Contributing
+ - 726:### Development Guidelines
+ - 734:### Code Review Process
+ - 735:1. Create feature branch from `develop`
+ - 736:2. Implement feature with tests
+ - 737:3. Ensure all tests pass and linter is happy
+ - 738:4. Submit PR with detailed description
+ - 739:5. Pass automated CI checks
+ - 740:6. Receive 2+ approvals from maintainers
+ - 741:7. Merge to `develop` (squash merge)
+ - 742:8. Release to `main` during deployment cycles
+ - 744:### Branching Strategy
+ - 751:## License
+ - 755:## Support & Resources
+ - 757:- **Documentation**: [Full docs site]
+ - 758:- **Discord**: [Community server link]
+ - 759:- **Twitter**: [@LilGuysStudio]
+ - 760:- **Email**: support@lilguys.studio
+ - 761:- **GitHub**: [Repository link]
+ - 763:## FAQ
+ - 795:## Technical Specifications
+ - 797:### Blockchain
+ - 798:- **Network**: Etherlink (Tezos Layer 2)
+ - 799:- **Consensus**: Proof of Stake (via Tezos)
+ - 800:- **EVM Compatibility**: Full Solidity support
+ - 801:- **Average Block Time**: ~15 seconds
+ - 802:- **Transaction Finality**: ~30 seconds
+ - 803:- **Wallet Support**: Temple, Kukai, Umami
+ - 805:### Frontend
+ - 806:- **Framework**: Next.js 14 (App Router)
+ - 807:- **Language**: TypeScript 5+
+ - 808:- **Styling**: TailwindCSS 3.4
+ - 809:- **State**: Zustand
+ - 810:- **Web3**: ethers.js v6
+ - 811:- **Canvas**: HTML5 Canvas API
+ - 812:- **Build**: Turbopack
+ - 813:- **Deploy**: Vercel
+ - 815:### Backend
+ - 816:- **Runtime**: Node.js 20 LTS
+ - 817:- **Language**: TypeScript 5+
+ - 818:- **Framework**: Express.js 4
+ - 819:- **Database**: PostgreSQL 16 + Redis 7
+ - 820:- **Storage**: IPFS (Pinata) + Arweave
+ - 821:- **Deploy**: Railway / Render
+ - 823:### DevOps
+ - 824:- **Version Control**: Git + GitHub
+ - 825:- **CI/CD**: GitHub Actions
+ - 826:- **Testing**: Hardhat, Jest, Playwright
+ - 827:- **Monitoring**: Sentry (errors) + Datadog (performance)
+ - 828:- **Analytics**: Mixpanel + Dune Analytics
+ - 829:- **Contract Verification**: Etherscan-equivalent for Etherlink
+ - 833:## Project Status
+ - 839:### Recent Updates
+ - 840:- [x] Project structure created
+ - 841:- [ ] Smart contracts in development
+ - 842:- [ ] Frontend prototype in progress
+ - 843:- [ ] Backend API planning
+
+## projects/Sandbox/lil guy app/TESTING_ADDED.md
+ - 1:# 🎉 Virtual Testing Suite Added!
+ - 3:## What Was Added
+ - 9:## 📦 New Files Created
+ - 11:### Test Files (5 files, 75 tests)
+ - 12:1. **`contracts/test/LilGuysToken.test.ts`** (20 tests)
+ - 19:2. **`contracts/test/BlindMintEngine.test.ts`** (15 tests)
+ - 26:3. **`contracts/test/CustomMintEngine.test.ts`** (12 tests)
+ - 32:4. **`contracts/test/CompositionRegistry.test.ts`** (10 tests)
+ - 38:5. **`contracts/test/FullWorkflow.test.ts`** (18 tests) ⭐
+ - 45:### Documentation Files (3 files)
+ - 46:1. **`contracts/test/README.md`**
+ - 51:2. **`TEST_GUIDE.md`**
+ - 56:3. **`TESTING_QUICKSTART.md`**
+ - 63:## 🚀 How to Use
+ - 65:### Quick Test (30 seconds)
+ - 80:## 🎯 What Gets Tested
+ - 82:### Complete Workflows
+ - 88:### All Core Features
+ - 99:### Edge Cases
+ - 107:### Security
+ - 116:## 📊 Test Statistics
+ - 118:- **Total Test Suites**: 5
+ - 119:- **Total Tests**: 75
+ - 120:- **Execution Time**: ~13 seconds
+ - 121:- **Coverage**: 95% statements, 90% branches
+ - 122:- **Gas Estimates**: Included for all operations
+ - 126:## 🎓 Example Test Output
+ - 199:## 💡 Key Benefits
+ - 201:### Before Deploying to Testnet
+ - 202:1. **Validate All Functionality** - Test everything works
+ - 203:2. **Catch Bugs Early** - Find issues before spending gas
+ - 204:3. **Understand Gas Costs** - Estimate transaction costs
+ - 205:4. **Test Edge Cases** - Ensure security and robustness
+ - 206:5. **Fast Iteration** - 13 seconds vs minutes on testnet
+ - 208:### Confidence
+ - 216:## 🔧 Useful Commands
+ - 218:### Basic Testing
+ - 220:# Run all tests
+ - 223:# Run specific test file
+ - 226:# Run tests matching pattern
+ - 230:### Advanced
+ - 232:# Gas reporting
+ - 235:# Coverage report
+ - 238:# Verbose output
+ - 244:## 📚 Documentation
+ - 246:### Quick References
+ - 247:- **TESTING_QUICKSTART.md** - 3-step quick start
+ - 248:- **TEST_GUIDE.md** - Complete testing guide
+ - 249:- **contracts/test/README.md** - Detailed test docs
+ - 251:### Full Documentation
+ - 252:- **README.md** - Project overview
+ - 253:- **docs/architecture.md** - Technical architecture
+ - 254:- **docs/contract-specs.md** - Contract specifications
+ - 258:## ✅ Pre-Deployment Checklist
+ - 262:- [ ] Run `npm test` - All tests pass
+ - 263:- [ ] Run `REPORT_GAS=true npm test` - Review gas costs
+ - 264:- [ ] Run `npx hardhat coverage` - Check coverage
+ - 265:- [ ] Review test output for any warnings
+ - 266:- [ ] Understand all scenarios tested
+ - 267:- [ ] Verify access controls work
+ - 268:- [ ] Confirm payment flows correct
+ - 272:## 🎯 Next Steps
+ - 274:### 1. Run Tests Now
+ - 282:### 2. Review Results
+ - 287:### 3. When Ready
+ - 289:# Deploy to testnet
+ - 292:# Test on actual testnet
+ - 293:# Use real wallet with testnet XTZ
+ - 295:# Deploy to mainnet (after thorough testing)
+ - 301:## 🎉 You Now Have
+ - 313:## 💪 Benefits Over Manual Testing
+ - 315:### Manual Testing on Testnet
+ - 322:### Automated Local Testing
+ - 331:## 📞 Need Help?
+ - 333:### Quick Help
+ - 334:1. **Read**: `TESTING_QUICKSTART.md`
+ - 335:2. **Detailed**: `TEST_GUIDE.md`
+ - 336:3. **Technical**: `contracts/test/README.md`
+ - 338:### Common Issues
+ - 345:## 🚀 Start Testing!
+
+## projects/Sandbox/lil guy app/TESTING_QUICKSTART.md
+ - 1:# 🚀 Testing Quick Start - 3 Simple Steps
+ - 3:## Step 1: Install & Compile (2 minutes)
+ - 15:## Step 2: Run Tests (13 seconds)
+ - 25:## Step 3: Review Results
+ - 93:## 🎉 What This Means
+ - 109:## 📊 What Was Tested
+ - 111:### 5 Test Files = 75 Tests
+ - 113:1. **LilGuysToken.test.ts** (20 tests)
+ - 116:2. **BlindMintEngine.test.ts** (15 tests)
+ - 119:3. **CustomMintEngine.test.ts** (12 tests)
+ - 122:4. **CompositionRegistry.test.ts** (10 tests)
+ - 125:5. **FullWorkflow.test.ts** (18 tests)
+ - 130:## 🔍 Useful Commands
+ - 132:### Run specific test file
+ - 137:### Check gas usage
+ - 142:### Generate coverage report
+ - 147:### Run tests matching pattern
+ - 154:## ❓ Troubleshooting
+ - 156:### Tests won't run?
+ - 166:### Need more info?
+ - 167:- **Detailed guide**: See `TEST_GUIDE.md`
+ - 168:- **Test documentation**: See `contracts/test/README.md`
+ - 169:- **Project overview**: See `README.md`
+ - 173:## ✅ Next Steps
+ - 177:1. ✅ **Review gas reports** (optional)
+ - 182:2. ✅ **Deploy to testnet** (when ready)
+ - 188:3. ✅ **Test on actual testnet** with real wallet
+ - 190:4. ✅ **Deploy to mainnet** (after thorough testing)
+ - 194:## 🎯 That's It!
+ - 206:### Questions?
+
+## projects/Sandbox/lil guy app/TEST_GUIDE.md
+ - 1:# 🧪 Virtual Testing Guide - Test Before Deploy!
+ - 3:## Quick Start
+ - 7:### 1. Install Dependencies
+ - 14:### 2. Compile Contracts
+ - 25:### 3. Run All Tests
+ - 37:### 4. View Results
+ - 82:## 🎯 What Gets Tested
+ - 84:### ✅ Core Functionality
+ - 86:1. **Token Minting**
+ - 92:2. **Trait Management**
+ - 98:3. **Combination Registry**
+ - 104:4. **Access Control**
+ - 110:5. **Payment & Economics**
+ - 116:6. **Supply Management**
+ - 123:## 📋 Test Scenarios
+ - 125:### Scenario 1: Alice's Journey (Blind Mint)
+ - 127:1. Alice connects wallet
+ - 128:2. Alice pays 0.5 XTZ for blind mint
+ - 129:3. Random traits generated from tx hash
+ - 130:4. Alice receives:
+ - 133:5. Combination registered in registry
+ - 134:6. Payment transferred to contract
+ - 144:### Scenario 2: Bob's Custom Creation
+ - 146:1. Bob does blind mint first (gets traits)
+ - 147:2. Bob opens studio
+ - 148:3. Bob selects specific traits he owns
+ - 149:4. Bob pays 0.3 XTZ for custom mint
+ - 150:5. System verifies:
+ - 153:6. Bob receives new custom Lil Guy
+ - 154:7. Combination marked as minted
+ - 163:### Scenario 3: Alice Updates Her Character
+ - 165:1. Alice mints another Lil Guy to get more traits
+ - 166:2. Alice selects existing token #0
+ - 167:3. Alice chooses new traits from her inventory
+ - 168:4. System:
+ - 172:5. Alice's character updated
+ - 181:### Scenario 4: Alice Adds Alternate Version
+ - 183:1. Alice wants to keep current look but try another
+ - 184:2. Alice pays 0.2 XTZ for version addition
+ - 185:3. Alice selects different traits
+ - 186:4. System:
+ - 190:5. Alice can toggle between versions anytime
+ - 199:### Scenario 5: Edge Cases
+ - 218:## 🔬 Detailed Test Commands
+ - 220:### Run Specific Test File
+ - 222:# Test only LilGuysToken
+ - 225:# Test only BlindMintEngine
+ - 228:# Test only full workflow
+ - 232:### Run Specific Test
+ - 234:# Run tests matching pattern
+ - 240:### Gas Reporting
+ - 242:# See gas usage for all functions
+ - 245:# Example output:
+ - 246:# blindMint: 145,234 gas
+ - 247:# customMint: 118,456 gas
+ - 248:# updateTraits: 78,234 gas
+ - 251:### Coverage Report
+ - 253:# Generate coverage report
+ - 256:# View in browser
+ - 262:## 📊 Test Metrics
+ - 264:### Performance
+ - 265:- **Total Tests**: 75
+ - 266:- **Execution Time**: ~13 seconds
+ - 267:- **Success Rate**: 100% (when code is correct)
+ - 269:### Coverage
+ - 270:- **Statements**: 95%
+ - 271:- **Branches**: 90%
+ - 272:- **Functions**: 95%
+ - 273:- **Lines**: 95%
+ - 275:### Gas Usage (Estimated)
+ - 284:## 🐛 Troubleshooting
+ - 286:### Tests Fail to Run
+ - 288:# Clean and reinstall
+ - 297:### Compilation Errors
+ - 299:# Check Solidity version
+ - 300:# Should be 0.8.20 in hardhat.config.ts
+ - 302:# Reinstall OpenZeppelin
+ - 306:### Timeout Errors
+ - 308:# Increase timeout (add to test file)
+ - 312:### Network Issues
+ - 314:# Reset Hardhat network
+ - 321:## ✅ Pre-Deployment Checklist
+ - 325:- [x] All tests pass (`npm test`)
+ - 326:- [x] Gas usage acceptable (`REPORT_GAS=true npm test`)
+ - 327:- [x] Coverage > 90% (`npx hardhat coverage`)
+ - 328:- [x] No linter errors (`npm run lint`)
+ - 329:- [x] Full workflow test passes
+ - 330:- [x] Edge cases handled
+ - 331:- [x] Access control verified
+ - 332:- [x] Payment flows correct
+ - 336:## 🎓 Understanding Test Output
+ - 338:### Green ✓ = Pass
+ - 341:### Red ✗ = Fail
+ - 343:1. Error message
+ - 344:2. Expected vs actual values
+ - 345:3. Stack trace
+ - 346:4. Recent code changes
+ - 348:### Common Errors
+ - 363:## 🔄 Continuous Testing Workflow
+ - 365:### Development Flow
+ - 367:1. Write/modify contract code
+ - 368:2. npx hardhat compile
+ - 369:3. npm test
+ - 370:4. Fix any failures
+ - 371:5. Repeat until all green ✓
+ - 372:6. Deploy to testnet
+ - 375:### Test-Driven Development
+ - 377:1. Write test first (it will fail)
+ - 378:2. Write minimal code to pass test
+ - 379:3. Refactor code
+ - 380:4. Ensure test still passes
+ - 381:5. Add next test
+ - 386:## 📚 Test File Breakdown
+ - 388:### `LilGuysToken.test.ts` (20 tests)
+ - 396:### `BlindMintEngine.test.ts` (15 tests)
+ - 403:### `CustomMintEngine.test.ts` (12 tests)
+ - 409:### `CompositionRegistry.test.ts` (10 tests)
+ - 415:### `FullWorkflow.test.ts` (18 tests)
+ - 423:## 🚀 Next Steps After Tests Pass
+ - 425:1. **Review gas reports**
+ - 430:2. **Check coverage**
+ - 435:3. **Deploy to testnet**
+ - 440:4. **Test on actual testnet**
+ - 445:5. **Security audit**
+ - 450:6. **Mainnet deployment**
+ - 457:## 💡 Pro Tips
+ - 459:### Speed Up Tests
+ - 461:# Run tests in parallel (if you have many files)
+ - 464:# Skip gas reporting for faster tests
+ - 468:### Debug Failing Tests
+ - 478:### Test Specific Functionality
+ - 480:# Test only minting
+ - 483:# Test only access control
+ - 486:# Test only payment
+ - 492:## 🎉 Success!
+
+## projects/Sandbox/lil guy app/contracts/test/README.md
+ - 1:# Lil Guys Studio - Test Suite
+ - 3:## Overview
+ - 7:## Test Files
+ - 9:### 1. `LilGuysToken.test.ts`
+ - 29:### 2. `BlindMintEngine.test.ts`
+ - 49:### 3. `CustomMintEngine.test.ts`
+ - 66:### 4. `CompositionRegistry.test.ts`
+ - 83:### 5. `FullWorkflow.test.ts` ⭐
+ - 87:1. **Alice's Blind Mint**
+ - 93:2. **Bob's Custom Creation**
+ - 98:3. **Alice Updates Traits**
+ - 104:4. **Alice Adds Version**
+ - 110:5. **Platform Token Rewards**
+ - 115:6. **Edge Cases**
+ - 120:7. **Revenue & Withdrawals**
+ - 125:## Running Tests
+ - 127:### Run All Tests
+ - 133:### Run Specific Test File
+ - 142:### Run Tests with Gas Reporting
+ - 147:### Run Tests with Coverage
+ - 152:### Run Specific Test Suite
+ - 154:# Run only LilGuysToken deployment tests
+ - 157:# Run only minting tests
+ - 161:### Watch Mode (auto-run on file changes)
+ - 166:## Expected Output
+ - 168:### Successful Test Run
+ - 212:## Test Statistics
+ - 214:- **Total Test Suites**: 5
+ - 215:- **Total Tests**: ~75
+ - 216:- **Coverage Areas**: 
+ - 227:## Understanding Test Results
+ - 229:### Green ✓
+ - 232:### Red ✗
+ - 235:### Yellow Warning
+ - 238:## Common Test Scenarios
+ - 240:### Testing New Features
+ - 241:1. Add test file or test case
+ - 242:2. Run specific test: `npx hardhat test test/YourTest.test.ts`
+ - 243:3. Debug if needed: Add `console.log()` in test or contract
+ - 244:4. Run full suite to ensure no regressions
+ - 246:### Debugging Failed Tests
+ - 248:# Run with verbose logging
+ - 251:# Run single test
+ - 254:# Add console.logs in contracts (Hardhat will show them)
+ - 258:### Gas Optimization Testing
+ - 260:# Generate gas report
+ - 263:# Check gas report
+ - 267:## Test Coverage Goals
+ - 269:### Current Coverage
+ - 270:- **Statements**: ~95%
+ - 271:- **Branches**: ~90%
+ - 272:- **Functions**: ~95%
+ - 273:- **Lines**: ~95%
+ - 275:### Coverage Report
+ - 279:# View detailed report
+ - 283:## Best Practices
+ - 285:### Writing New Tests
+ - 286:1. **Arrange**: Set up test data and state
+ - 287:2. **Act**: Execute the function being tested
+ - 288:3. **Assert**: Verify expected outcomes
+ - 304:### Test Organization
+ - 311:### Testing Checklist
+ - 312:- [ ] Happy path scenarios
+ - 313:- [ ] Error conditions
+ - 314:- [ ] Edge cases (zero, max values)
+ - 315:- [ ] Access control
+ - 316:- [ ] Event emissions
+ - 317:- [ ] State changes
+ - 318:- [ ] Gas efficiency
+ - 319:- [ ] Integration with other contracts
+ - 321:## CI/CD Integration
+ - 323:### GitHub Actions Example
+ - 343:## Troubleshooting
+ - 345:### "Cannot find module" errors
+ - 351:### "Compiler version" errors
+ - 354:### Tests timeout
+ - 360:### Network errors
+ - 367:## Performance
+ - 369:### Test Execution Times
+ - 378:## Next Steps
+ - 382:1. ✅ Review gas reports for optimization opportunities
+ - 383:2. ✅ Run coverage report to identify untested code
+ - 384:3. ✅ Deploy to Etherlink testnet
+ - 385:4. ✅ Run integration tests on testnet
+ - 386:5. ✅ Perform security audit
+ - 387:6. ✅ Deploy to mainnet
+ - 389:## Additional Resources
+ - 391:- [Hardhat Testing](https://hardhat.org/tutorial/testing-contracts)
+ - 392:- [Chai Matchers](https://ethereum-waffle.readthedocs.io/en/latest/matchers.html)
+ - 393:- [ethers.js Documentation](https://docs.ethers.org/v6/)
+ - 394:- [OpenZeppelin Test Helpers](https://docs.openzeppelin.com/test-helpers)
+
+## projects/Sandbox/lil guy app/docs/api-reference.md
+ - 1:# API Reference
+ - 5:## Base URL
+ - 10:## Authentication
+ - 14:### Get Nonce
+ - 37:### Verify Signature
+ - 69:## Minting Endpoints
+ - 71:### Get Mint Prices
+ - 89:### Check Combination Availability
+ - 122:### Preview Custom Mint
+ - 159:## Token Endpoints
+ - 161:### List All Tokens
+ - 198:### Get Token Details
+ - 241:### Get User's Tokens
+ - 261:### Update Token Traits
+ - 289:### Add Token Version
+ - 317:### Change Displayed Version
+ - 346:## Trait Endpoints
+ - 348:### List All Traits
+ - 379:### Get Traits by Category
+ - 404:### Get User's Traits
+ - 434:### Get Trait Details
+ - 463:### Add New Trait
+ - 497:## Metadata Endpoints
+ - 499:### Get Token Metadata
+ - 552:### Get Composed Image
+ - 570:## Combination Endpoints
+ - 572:### Get Available Combinations
+ - 599:### Get Combination Stats
+ - 634:## Collection Endpoints
+ - 636:### List Collections
+ - 671:### Get Collection Details
+ - 703:## Admin Endpoints
+ - 707:### Get Analytics
+ - 747:### Pause/Unpause Minting
+ - 774:### Update Prices
+ - 808:## Error Responses
+ - 822:### Common Error Codes
+ - 836:### Example Error Response
+ - 855:## Rate Limiting
+ - 857:- **Unauthenticated**: 100 requests per 15 minutes
+ - 858:- **Authenticated**: 1000 requests per 15 minutes
+ - 859:- **Admin**: 5000 requests per 15 minutes
+ - 870:## Webhooks (Future)
+ - 883:## SDK Support (Future)
+
+## projects/Sandbox/lil guy app/docs/architecture.md
+ - 1:# Lil Guys Studio - Technical Architecture
+ - 3:## System Overview
+ - 7:1. **Smart Contracts** - On-chain logic and state management
+ - 8:2. **Backend API** - Off-chain computation, metadata generation, IPFS management
+ - 9:3. **Frontend Application** - User interface and Web3 integration
+ - 11:## Architecture Diagram
+ - 49:## Smart Contract Architecture
+ - 51:### Contract Hierarchy
+ - 79:### Contract Interactions
+ - 81:#### Blind Mint Flow
+ - 107:#### Custom Mint Flow
+ - 130:#### Update Traits Flow
+ - 153:#### Add Version Flow
+ - 169:## Data Models
+ - 171:### Token Structure
+ - 189:### Trait Structure
+ - 202:### Combination Structure
+ - 213:### Collection Structure
+ - 231:## Frontend Architecture
+ - 233:### Component Hierarchy
+ - 301:### State Management
+ - 336:## Backend Architecture
+ - 338:### API Structure
+ - 385:### API Endpoints
+ - 387:#### Authentication
+ - 397:#### Minting
+ - 411:#### Metadata
+ - 421:#### Traits
+ - 431:## Data Flow
+ - 433:### Blind Mint Complete Flow
+ - 436:1. User clicks "Blind Mint" on frontend
+ - 438:2. Frontend calls BlindMintEngine.blindMint() with payment
+ - 440:3. Contract generates random traits using tx hash
+ - 442:4. Contract mints trait tokens to user
+ - 444:5. Contract mints character token to user
+ - 446:6. Contract emits event: TokenMinted(tokenId, traitIds, owner)
+ - 448:7. Backend indexer catches event
+ - 450:8. Backend generates composed image from trait images
+ - 452:9. Backend uploads image to IPFS
+ - 454:10. Backend generates metadata JSON
+ - 456:11. Backend uploads metadata to IPFS
+ - 458:12. Backend calls MetadataManager.setTokenMetadata(tokenId, ipfsURI)
+ - 460:13. Frontend polls for metadata
+ - 462:14. Frontend displays new token in dashboard
+ - 465:### Custom Mint Complete Flow
+ - 468:1. User enters Studio page
+ - 470:2. Frontend fetches user's owned traits
+ - 472:3. User selects trait for each category
+ - 474:4. Frontend renders preview on canvas
+ - 476:5. User clicks "Check Availability"
+ - 478:6. Frontend queries CompositionRegistry.isCombinationAvailable()
+ - 480:7. If available, user clicks "Mint"
+ - 482:8. Frontend calls CustomMintEngine.customMint(traitIds[])
+ - 484:9. Contract validates trait ownership
+ - 486:10. Contract checks combination availability again
+ - 488:11. Contract mints character token
+ - 490:12. Contract registers combination as minted
+ - 492:13. Backend indexer generates image & metadata (same as blind mint)
+ - 494:14. Frontend displays new token
+ - 497:## Security Architecture
+ - 499:### Smart Contract Security Layers
+ - 501:1. **Access Control**
+ - 506:2. **Reentrancy Protection**
+ - 510:3. **Input Validation**
+ - 515:4. **Pausability**
+ - 520:5. **Rate Limiting**
+ - 524:### Frontend Security
+ - 526:1. **Wallet Security**
+ - 531:2. **Input Sanitization**
+ - 536:3. **API Security**
+ - 541:### Backend Security
+ - 543:1. **Authentication**
+ - 548:2. **Authorization**
+ - 553:3. **Infrastructure**
+ - 558:## Scalability Considerations
+ - 560:### On-Chain Optimization
+ - 562:1. **Storage Optimization**
+ - 567:2. **Computation Optimization**
+ - 572:### Off-Chain Optimization
+ - 574:1. **Caching Strategy**
+ - 579:2. **Database Indexing**
+ - 584:3. **API Performance**
+ - 589:## Monitoring & Observability
+ - 591:### Metrics to Track
+ - 593:1. **Blockchain Metrics**
+ - 599:2. **Application Metrics**
+ - 605:3. **Business Metrics**
+ - 611:### Logging
+ - 632:## Deployment Architecture
+ - 634:### Development Environment
+ - 643:### Testnet Environment
+ - 653:### Production Environment
+ - 665:## Future Architecture Enhancements
+ - 667:1. **Layer 2 Optimization**
+ - 671:2. **Decentralization**
+ - 676:3. **Interoperability**
+ - 681:4. **Advanced Features**
+
+## projects/Sandbox/lil guy app/docs/contract-specs.md
+ - 1:# Smart Contract Specifications
+ - 3:## Overview
+ - 7:## Contract Directory
+ - 9:### Core Contracts
+ - 10:1. [FranchiseFactory](#franchisefactory)
+ - 11:2. [CollectionFactory](#collectionfactory)
+ - 12:3. [LilGuysToken](#lilguystoken)
+ - 13:4. [TraitToken](#traittoken)
+ - 14:5. [PlatformToken](#platformtoken)
+ - 16:### Registry Contracts
+ - 17:6. [CompositionRegistry](#compositionregistry)
+ - 18:7. [MetadataManager](#metadatamanager)
+ - 19:8. [TraitRegistry](#traitregistry)
+ - 21:### Minting Contracts
+ - 22:9. [BlindMintEngine](#blindmintengine)
+ - 23:10. [CustomMintEngine](#custommintengine)
+ - 24:11. [MintValidator](#mintvalidator)
+ - 26:### Access Control
+ - 27:12. [AccessControl](#accesscontrol)
+ - 28:13. [FranchiseRoles](#franchiseroles)
+ - 30:### Utilities
+ - 31:14. [RandomnessProvider](#randomnessprovider)
+ - 35:## Core Contracts
+ - 37:### FranchiseFactory
+ - 43:#### State Variables
+ - 60:#### Functions
+ - 91:#### Events
+ - 101:### CollectionFactory
+ - 107:#### State Variables
+ - 128:#### Functions
+ - 164:#### Events
+ - 172:### LilGuysToken
+ - 178:#### State Variables
+ - 203:#### Functions
+ - 266:#### Events
+ - 274:#### Modifiers
+ - 289:### TraitToken
+ - 295:#### State Variables
+ - 312:#### Functions
+ - 364:#### Events
+ - 373:### PlatformToken
+ - 379:#### State Variables
+ - 385:#### Functions
+ - 416:#### Events
+ - 424:## Registry Contracts
+ - 426:### CompositionRegistry
+ - 432:#### State Variables
+ - 447:#### Functions
+ - 495:#### Events
+ - 503:### MetadataManager
+ - 509:#### State Variables
+ - 517:#### Functions
+ - 557:#### Events
+ - 565:### TraitRegistry
+ - 571:#### State Variables
+ - 591:#### Functions
+ - 639:#### Events
+ - 647:## Minting Contracts
+ - 649:### BlindMintEngine
+ - 655:#### State Variables
+ - 670:#### Functions
+ - 706:#### Events
+ - 714:### CustomMintEngine
+ - 720:#### State Variables
+ - 730:#### Functions
+ - 752:#### Events
+ - 759:### MintValidator
+ - 765:#### Functions
+ - 801:## Access Control
+ - 803:### AccessControl
+ - 809:#### Roles
+ - 817:#### Functions
+ - 825:## Utilities
+ - 827:### RandomnessProvider
+ - 833:#### Functions
+ - 863:## Gas Optimization Notes
+ - 865:### Storage Patterns
+ - 871:### Function Optimization
+ - 877:### Estimated Gas Costs
+ - 886:## Security Considerations
+ - 888:### Critical Functions
+ - 895:### Audit Checklist
+ - 896:- [ ] Reentrancy protection on all payable functions
+ - 897:- [ ] Integer overflow/underflow checks (Solidity 0.8+)
+ - 898:- [ ] Access control on admin functions
+ - 899:- [ ] Input validation on all external functions
+ - 900:- [ ] Emergency pause mechanism
+ - 901:- [ ] Proper event emission
+ - 902:- [ ] Gas optimization review
+ - 903:- [ ] Edge case testing
+ - 907:## Testing Requirements
+ - 910:1. Unit tests for all public functions
+ - 911:2. Access control tests
+ - 912:3. Edge case tests
+ - 913:4. Integration tests with other contracts
+ - 914:5. Gas consumption tests
+ - 915:6. Failure scenario tests
+
+## projects/Sandbox/mafiabot/README.md
+ - 1:# MafiaBot
+ - 5:## Features
+ - 7:- **Complete Game Lifecycle**: Create games, manage signups, assign roles, run day/night phases
+ - 8:- **Multiple Concurrent Games**: Run several games simultaneously in your server
+ - 9:- **Role System**: Built-in roles (Cop, Doctor, Mafia Goon, etc.) with ability-based mechanics
+ - 10:- **Night Actions**: Submit actions via DM or private scum chat
+ - 11:- **Voting System**: Real-time vote tracking with majority and plurality execution
+ - 12:- **XP & Points**: Earn rewards for participation, voting, surviving, and winning
+ - 13:- **Leaderboards**: Track stats across games with /profile and /leaderboard
+ - 14:- **Commendations**: Players can commend each other after games
+ - 15:- **Strong Security**: Game roles are database-only, never assigned as Discord roles
+ - 16:- **Quarantine Mode**: Bot only operates within a designated category
+ - 18:## Quick Start
+ - 20:### Prerequisites
+ - 28:### Installation
+ - 31:# Clone/download the bot
+ - 34:# Install dependencies
+ - 37:# Copy environment template
+ - 41:### Configuration
+ - 46:# Your bot token from Discord Developer Portal
+ - 49:# Your bot's application/client ID
+ - 52:# Your server's guild ID
+ - 55:# The category ID where Mafia channels will be created
+ - 58:# The role ID that can host/moderate games
+ - 61:# Database path (default is fine)
+ - 65:### Bot Permissions
+ - 77:### Setup
+ - 80:# Run database migrations
+ - 83:# Deploy slash commands to your server
+ - 86:# Start the bot
+ - 89:# Or for development with auto-reload
+ - 93:## Running Your First Game
+ - 95:### 1. Create the Game
+ - 107:### 2. Player Signup
+ - 111:### 3. Lock Signups
+ - 115:### 4. Configure Setup
+ - 126:### 5. Start the Game
+ - 134:### 6. Day Phase
+ - 142:### 7. Night Phase
+ - 149:### 8. Phase Transitions
+ - 162:## Command Reference
+ - 164:### Game Management (Host Only)
+ - 179:### Player Commands
+ - 193:### Stats & Profile
+ - 201:### Moderation (Host Only)
+ - 214:## Setup JSON Format
+ - 242:### Available Roles
+ - 253:### Role Count Options
+ - 255:- **Number**: Exact count (e.g., `"count": 2`)
+ - 256:- **"fill"**: Fill remaining slots (only one role can use this)
+ - 258:## XP & Points System
+ - 274:### Level Curve
+ - 280:## Security Features
+ - 282:- **Quarantine**: Bot refuses commands outside the designated Mafia category
+ - 283:- **No Discord Roles**: Game roles (Cop, Doctor, etc.) are stored in database only
+ - 284:- **Channel Permissions**: Access controlled via per-user permission overwrites
+ - 285:- **Generic Errors**: Failures return "Action rejected" without leaking game state
+ - 286:- **DM Actions**: Investigation results and role assignments sent privately
+ - 287:- **Mod Logging**: All moderator actions logged with timestamps
+ - 289:## Development
+ - 292:# Run tests
+ - 295:# Run tests with watch mode
+ - 298:# Lint code
+ - 301:# Format code
+ - 304:# Build for production
+ - 308:## File Structure
+ - 345:## Troubleshooting
+ - 347:### Bot doesn't respond to commands
+ - 349:1. Check that commands are deployed: `npm run deploy`
+ - 350:2. Verify bot has required permissions
+ - 351:3. Ensure commands are used in the Mafia category
+ - 353:### "No game found for this channel"
+ - 357:### Players can't join
+ - 362:### Night actions not working
+ - 368:## License
+
+## r00t/.cursor/agents/charlie.md
+ - 6:# Charlie
+ - 10:## Credentials
+ - 12:- **Wallet definitions (addresses + secret keys):** `nimrod/charlie-ghostnet-wallets.md`  
+ - 14:- **Network:** Ghostnet only. TzKT API: `https://api.ghostnet.tzkt.io/v1`. RPC: `https://rpc.ghostnet.teztnets.com`.
+ - 16:## Core loop
+ - 18:1. **Review the chore list:** Read `nimrod/charlie-chore-list.md`. It contains the list of tasks to run. This file can be updated (by Nimrod or the human) without changing Charlie's programming.
+ - 19:2. **For each task in the chore list:** Run the task once for **Charlie wallet 1**, then for **wallet 2**, then **3**, then **4**, then **5**. Use the addresses (and keys when needed, e.g. for signer or Beacon) from `nimrod/charlie-ghostnet-wallets.md`.
+ - 20:3. **Log issues:** Append any errors, failed assertions, or unexpected behavior to `nimrod/charlie-test-log.md`. Include: task name, wallet index (1–5), address (short form ok), and what went wrong.
+ - 22:## How you run tests
+ - 24:- **App under test:** Run the app with `NETWORK=ghostnet` (and optionally `VITE_NIMROD_TEST=1` to simulate connected wallet, or use Beacon with each Charlie wallet if available).
+ - 25:- **Signer:** When a task requires sending a transaction (e.g. 1 XTZ to NIMROD_WALLET), run the signer with `RPC_URL=https://rpc.ghostnet.teztnets.com` and the corresponding Charlie secret key for that wallet (e.g. temporary env or script that cycles through keys).
+ - 26:- **Order:** Always use wallet 1, then 2, then 3, then 4, then 5 for each task unless the chore list says otherwise.
+ - 28:## Do not
+ - 34:## When to run
+
+## r00t/.cursor/agents/code-reviewer.md
+ - 6:# Code Reviewer
+ - 10:## Your responsibilities
+ - 12:1. **Review for bugs, security, and performance** – Null checks, error handling, edge cases, common vulnerabilities.
+ - 13:2. **Check patterns and conventions** – Code follows project style and established patterns.
+ - 14:3. **Suggest improvements** – Readability, maintainability, with concrete examples where helpful.
+ - 15:4. **Consider tests** – Whether new or changed behavior has adequate test coverage.
+ - 17:## Process
+ - 19:1. Understand the context and purpose of the changes.
+ - 20:2. Check for common issues (nulls, errors, edge cases).
+ - 21:3. Evaluate structure and design.
+ - 22:4. Assess security implications.
+ - 23:5. Suggest specific, actionable improvements.
+ - 27:## Output format
+ - 31:- **Summary** – Brief overview of the changes and overall quality.
+ - 32:- **Critical issues** – Must-fix before merging.
+ - 33:- **Suggestions** – Nice-to-have improvements.
+ - 34:- **Commendations** – What was done particularly well.
+
+## r00t/.cursor/agents/skrib.md
+ - 8:## Role
+ - 10:- **Listen to activity:** When Nimrod (or the main agent) completes Tezos-related work, new endpoints, library usage, testnet steps, or decisions, react by updating the relevant docs.
+ - 11:- **Update the bible:** After any Tezos implementation or discovery, append to `docs/tezos-bible.md` any new TzKT paths, RPC endpoints, libraries, or testnet steps. If nothing new was discovered, add nothing.
+ - 12:- **Update Nimrod docs:** After decisions, external interactions, or internal actions that affect Nimrod's state, update the appropriate file in `nimrod/`:
+ - 17:- **Do not duplicate Nimrod's primary work:** You only perform the documentation updates. You do not implement features or run tests unless explicitly asked to act as Skrib for a one-off task.
+ - 19:## When to run
+ - 25:## Triggers (react when you see)
+
+## r00t/.cursor/agents/test-writer.md
+ - 6:# Test Writer
+ - 10:## Testing philosophy
+ - 17:## Coverage to aim for
+ - 19:1. Happy path scenarios.
+ - 20:2. Edge cases and boundary conditions.
+ - 21:3. Error handling and failure modes.
+ - 22:4. Integration points where relevant.
+ - 23:5. Performance considerations when it matters.
+ - 25:## Practices
+
+## r00t/.cursor/agents/tezos-expert.md
+ - 6:# Tezos Expert
+ - 10:## Languages and runtimes
+ - 12:### Smart contract languages
+ - 14:- **Michelson** – Stack-based bytecode; compilation target for all high-level languages. Rare to write by hand; understand for debugging and gas.
+ - 15:- **LIGO** (ligolang.org) – ML-style syntax (CameLIGO, JsLIGO, PascaLIGO). Compiles to Michelson. Strong typing, pattern matching. Use for formal or functional-style contracts.
+ - 16:- **SmartPy** (smartpy.io) – Python-like. Great for quick prototypes and Python devs. Compiles to Michelson. Use for rapid iteration and tests.
+ - 17:- **Archetype** – DSL for contracts with invariants and formal verification focus. Use when correctness and proofs matter.
+ - 21:### Application layer
+ - 23:- **TypeScript / JavaScript** – Primary stack for dApps: **Taquito** (RPC, wallet, contract calls), **Beacon** (wallet connect, sign payload), **TzKT** (indexer API). Use for frontends and Node backends (e.g. signer services).
+ - 24:- **Python** – **PyTezos** for scripts and tooling.
+ - 25:- **Java** – **TezosJ** for Android or server-side Java.
+ - 27:## Development pathways
+ - 29:### 1. dApp (frontend + optional backend)
+ - 31:- **Wallet:** Beacon SDK (`@airgap/beacon-sdk`): `requestPermissions()`, `requestSignPayload()` for auth. Optionally Taquito + `@taquito/beacon-wallet` for a unified wallet API.
+ - 32:- **Data:** TzKT API (accounts, operations, tokens/transfers, blocks). Base URLs: mainnet `api.tzkt.io/v1`, Ghostnet `api.ghostnet.tzkt.io/v1`.
+ - 33:- **Backend signer (if needed):** Taquito with `@taquito/signer` (InMemorySigner), RPC URL for the target network. Never expose secret keys to the frontend.
+ - 35:### 2. Smart contracts
+ - 37:- **Write:** LIGO, SmartPy, or Archetype. Compile to Michelson; deploy via Taquito or CLI (octez-client).
+ - 38:- **Test:** Ghostnet or Shadownet first. Use faucets (e.g. faucet.ghostnet.teztnets.com) for test XTZ.
+ - 39:- **Index:** TzKT for events, storage, big_maps; or use TzKT webhooks/caches for off-chain indexing.
+ - 41:### 3. Tokens and standards
+ - 43:- **FA1.2** – Single fungible token per contract.
+ - 44:- **FA2** – Multi-asset (tokens/transfers in TzKT). Use for NFTs and multi-token contracts.
+ - 45:- **TZIP** – Tezos improvement proposals; follow relevant TZIPs for standard entry points and metadata.
+ - 47:### 4. Testnets and deployment
+ - 49:- **Ghostnet** – Primary testnet. RPC: rpc.ghostnet.teztnets.com; TzKT API: api.ghostnet.tzkt.io/v1; Beacon: `preferredNetwork: "ghostnet"`.
+ - 50:- **Shadownet** – Alternative testnet (teztnets.com).
+ - 51:- **Mainnet** – After tests pass; same stack, switch RPC and TzKT base and Beacon network.
+ - 53:### 5. L2 and bridges
+ - 55:- **Etherlink** – EVM-compatible rollup on Tezos. Use for EVM-style contracts and tooling. Bridge: Baking Bad Tezos–Etherlink Bridge TS SDK.
+ - 57:## Your behavior
+ - 59:- **First:** For this project, always consider **docs/tezos-bible.md** as the single-source reference (URLs, packages, TzKT paths, workflow). Suggest appending to the bible if you introduce new endpoints or libraries.
+ - 60:- **Pathway first:** When asked "how do I…", answer with the recommended pathway (e.g. "For a wallet-connected dApp: Beacon + TzKT; for a signer service: Taquito + InMemorySigner and RPC") then concrete steps.
+ - 61:- **Stack alignment:** Prefer the stack already in use (e.g. r00t: Beacon in frontend, TzKT for data, Taquito in signer) unless the user asks for alternatives.
+ - 62:- **Testnet habit:** Recommend Ghostnet/Shadownet for any new contract or payment flow; mention faucets and network config (RPC, TzKT base, Beacon preferredNetwork).
+
+## r00t/.cursor/agents/verifier.md
+ - 6:# Verifier
+ - 10:## Your tasks
+ - 12:1. **Validate completed work** – Review the implementation or changes that were just made. Confirm they match the stated goal and constraints.
+ - 13:2. **Check functionality** – Verify that the implementation is functional (e.g. builds, runs, key flows work). Run the app or relevant commands if needed.
+ - 14:3. **Run tests** – Execute the project’s test suite (e.g. `npm test`, `pytest`, `cargo test`) and capture results.
+ - 15:4. **Report** – Return a concise summary:
+ - 19:## How to run
+ - 25:## Output
+
+## r00t/.cursor/skills/crafting-effective-readmes/README.md
+ - 1:# Crafting Effective READMEs
+ - 5:## Purpose
+ - 9:- **Audience-aware guidance** - Different readers need different information
+ - 10:- **Project-type templates** - Ready-to-use structures for OSS, personal, internal, and config projects
+ - 11:- **Task-specific workflows** - Whether creating, updating, adding to, or reviewing READMEs
+ - 12:- **Quality checks** - Style guidance and section checklists to avoid common mistakes
+ - 14:## When to Use
+ - 33:## How It Works
+ - 37:### Step 1: Identify the Task
+ - 48:### Step 2: Gather Context
+ - 52:- **Creating**: What type of project? What problem does it solve? What is the quickest path to "it works"?
+ - 53:- **Adding**: What needs documenting? Where should it go? Who needs this info most?
+ - 54:- **Updating**: What changed? Which sections are stale?
+ - 55:- **Reviewing**: Compares README against actual project state (package.json, main files, etc.)
+ - 57:### Step 3: Generate and Refine
+ - 61:## Key Features
+ - 63:### Project Type Templates
+ - 72:### Section Checklist by Project Type
+ - 88:### Reference Materials
+ - 92:- **art-of-readme.md** - Philosophy behind great READMEs, cognitive funneling
+ - 93:- **make-a-readme.md** - Practical, section-by-section guidance
+ - 94:- **standard-readme-spec.md** - Formal specification for OSS consistency
+ - 96:## Usage Examples
+ - 98:### Creating a New README
+ - 110:### Updating an Existing README
+ - 119:### Reviewing for Accuracy
+ - 128:## Best Practices
+ - 130:1. **Always ask about audience** - Don't assume OSS defaults for everything
+ - 131:2. **Show, don't just tell** - Include examples and code samples
+ - 132:3. **Use structure** - Headers, tables, and lists improve scannability
+ - 133:4. **Keep it current** - Add "last reviewed" dates for internal/config projects
+ - 134:5. **Include installation steps** - Never assume setup is obvious
+ - 135:6. **Write for YOUR audience** - Avoid generic tone
+ - 137:## Common Mistakes to Avoid
+ - 145:## Essential Sections (All Types)
+ - 149:1. **Name** - Self-explanatory title
+ - 150:2. **Description** - What + why in 1-2 sentences
+ - 151:3. **Usage** - How to use it (examples help)
+ - 153:## Directory Structure
+ - 174:## Related Skills
+ - 178:## Attribution
+
+## r00t/.cursor/skills/crafting-effective-readmes/SKILL.md
+ - 6:# Crafting Effective READMEs
+ - 8:## Overview
+ - 14:## Process
+ - 16:### Step 1: Identify the Task
+ - 27:### Step 2: Task-Specific Questions
+ - 30:1. What type of project? (see Project Types below)
+ - 31:2. What problem does this solve in one sentence?
+ - 32:3. What's the quickest path to "it works"?
+ - 33:4. Anything notable to highlight?
+ - 36:1. What needs documenting?
+ - 37:2. Where should it go in the existing structure?
+ - 38:3. Who needs this info most?
+ - 41:1. What changed?
+ - 42:2. Read current README, identify stale sections
+ - 43:3. Propose specific edits
+ - 46:1. Read current README
+ - 47:2. Check against actual project state (package.json, main files, etc.)
+ - 48:3. Flag outdated sections
+ - 49:4. Update "Last reviewed" date if present
+ - 51:### Step 3: Always Ask
+ - 55:## Project Types
+ - 66:## Essential Sections (All Types)
+ - 70:1. **Name** - Self-explanatory title
+ - 71:2. **Description** - What + why in 1-2 sentences  
+ - 72:3. **Usage** - How to use it (examples help)
+ - 74:## References
+
+## r00t/.cursor/skills/crafting-effective-readmes/references/art-of-readme.md
+ - 1:# Art of README
+ - 10:## Etymology
+ - 33:## For creators, for consumers
+ - 51:## Many modules: some good, some bad
+ - 99:## All roads lead to README.md
+ - 127:## Professional module spelunking
+ - 129:### The README: Your one-stop shop
+ - 137:1. tell them what it is (with context)
+ - 138:2. show them what it looks like in action
+ - 139:3. show them how they use it
+ - 140:4. tell them any other relevant details
+ - 148:### Brevity
+ - 156:### Learn from the past
+ - 174:### No README? No abstraction
+ - 191:### Key elements
+ - 202:1. *Name* -- self-explanatory names are best. `collide-2d-aabb-aabb` sounds
+ - 206:2. *One-liner* -- having a one-liner that describes the module is useful for
+ - 216:3. *Usage* -- rather than starting to delve into the API docs, it'd be great to
+ - 222:4. *API* -- the name, description, and usage of this module all sound appealing
+ - 230:5. *Installation* -- if I've read this far down, then I'm sold on trying out the
+ - 237:6. *License* -- most modules put this at the very bottom, but this might
+ - 244:## Cognitive funneling
+ - 258:1. a predictable format
+ - 259:2. certain key elements present
+ - 290:## Care about people's time
+ - 307:## Call to arms!
+ - 313:## Bonus: other good practices
+ - 319:1. Consider including a **Background** section if your module depends on
+ - 327:2. Aggressively linkify! If you talk about other modules, ideas, or people, make
+ - 333:3. Include information on types of arguments and return parameters if it's not
+ - 337:4. Include the example code in **Usage** as a file in your repo -- maybe as
+ - 341:5. Be judicious in your use of badges. They're easy to
+ - 353:6. API formatting is highly bikesheddable. Use whatever format you think is
+ - 375:7. If your module is a small collection of stateless functions, having a
+ - 381:8. If your module provides a CLI (command line interface) instead of (or in
+ - 386:9. Don't forget to use `package.json`
+ - 390:10. The more you change your API, the more work you need to exert updating
+ - 401:11. Finally, please remember that your version control repository and its
+ - 407:## Bonus: *common-readme*
+ - 420:## Bonus: Exemplars
+ - 436:## Bonus: The README Checklist
+ - 440:- [ ] One-liner explaining the purpose of the module
+ - 441:- [ ] Necessary background context & links
+ - 442:- [ ] Potentially unfamiliar terms link to informative sources
+ - 443:- [ ] Clear, *runnable* example of usage
+ - 444:- [ ] Installation instructions
+ - 445:- [ ] Extensive API documentation
+ - 446:- [ ] Performs [cognitive funneling](https://github.com/hackergrrl/art-of-readme#cognitive-funneling)
+ - 447:- [ ] Caveats and limitations mentioned up-front
+ - 448:- [ ] Doesn't rely on images to relay critical information
+ - 449:- [ ] License
+ - 452:## The author
+ - 464:## Further Reading
+ - 466:- [README-Driven Development](http://tom.preston-werner.com/2010/08/23/readme-driven-development.html)
+ - 467:- [Documentation First](http://joeyh.name/blog/entry/documentation_first/)
+ - 470:## Footnotes
+ - 472:1. <a name="footnote-1"></a>Thanks,
+ - 475:2. <a name="footnote-2"></a>See [The Jargon File](http://catb.org/~esr/jargon/html/R/README-file.html).
+ - 481:## Credits
+ - 490:- [@ungoldman](https://github.com/ungoldman)
+ - 491:- [@boidolr](https://github.com/boidolr)
+ - 492:- [@imjoehaines](https://github.com/imjoehaines)
+ - 493:- [@radarhere](https://github.com/radarhere)
+ - 494:- [@joshmanders](https://github.com/joshmanders)
+ - 495:- [@ddbeck](https://github.com/ddbeck)
+ - 496:- [@RichardLitt](https://github.com/RichardLitt)
+ - 497:- [@StevenMaude](https://github.com/StevenMaude)
+ - 498:- [@KrishMunot](https://github.com/KrishMunot)
+ - 499:- [@chesterhow](https://github.com/chesterhow)
+ - 500:- [@sjsyrek](https://github.com/sjsyrek)
+ - 501:- [@thenickcox](https://github.com/thenickcox)
+ - 506:- [@BrettDong](https://github.com/brettdong) for revising punctuation in Chinese version.
+ - 507:- [@Alex-fun](https://github.com/Alex-fun)
+ - 508:- [@HmyBmny](https://github.com/HmyBmny)
+ - 509:- [@vra](https://github.com/vra)
+ - 514:- [@rectius](https://github.com/rectius)
+ - 522:- [@randomC0der](https://github.com/randomC0der)
+ - 528:## Other Resources
+ - 530:- [Software Release Practice](https://tldp.org/HOWTO/Software-Release-Practice-HOWTO/distpractice.html#readme)
+ - 531:- [GNU Releases](https://www.gnu.org/prep/standards/html_node/Releases.html#index-README-file)
+ - 534:## License
+
+## r00t/.cursor/skills/crafting-effective-readmes/references/make-a-readme.md
+ - 1:# Make a README
+ - 7:## README 101
+ - 9:### What is it?
+ - 13:### Why should I make it?
+ - 17:### Who should make it?
+ - 21:### When should I make it?
+ - 25:### Where should I put it?
+ - 29:### How should I make it?
+ - 33:## Suggestions for a Good README
+ - 37:### Name
+ - 41:### Description
+ - 45:### Badges
+ - 49:### Visuals
+ - 53:### Installation
+ - 57:### Usage
+ - 61:### Support
+ - 65:### Roadmap
+ - 69:### Contributing
+ - 77:### Authors and Acknowledgment
+ - 81:### License
+ - 85:### Project Status
+ - 89:## FAQ
+ - 91:### Is there a standard README format?
+ - 95:### What should the README file be named?
+ - 99:## What's Next?
+ - 101:### More Documentation
+ - 105:- [Docusaurus](https://docusaurus.io/)
+ - 106:- [GitBook](https://www.gitbook.com/)
+ - 107:- [MkDocs](https://www.mkdocs.org/)
+ - 108:- [Read the Docs](https://readthedocs.org/)
+ - 109:- [Docsify](https://docsify.js.org/)
+ - 111:### Changelog
+ - 115:### Contributing Guidelines
+
+## r00t/.cursor/skills/crafting-effective-readmes/references/standard-readme-example-maximal.md
+ - 1:# Title
+ - 14:## Table of Contents
+ - 16:- [Security](#security)
+ - 17:- [Background](#background)
+ - 18:- [Install](#install)
+ - 19:- [Usage](#usage)
+ - 20:- [API](#api)
+ - 21:- [Contributing](#contributing)
+ - 22:- [License](#license)
+ - 24:## Security
+ - 26:### Any optional sections
+ - 28:## Background
+ - 30:### Any optional sections
+ - 32:## Install
+ - 39:### Any optional sections
+ - 41:## Usage
+ - 48:### Any optional sections
+ - 50:## API
+ - 52:### Any optional sections
+ - 54:## More optional sections
+ - 56:## Contributing
+ - 64:### Any optional sections
+ - 66:## License
+
+## r00t/.cursor/skills/crafting-effective-readmes/references/standard-readme-example-minimal.md
+ - 1:# Title
+ - 5:## Install
+ - 10:## Usage
+ - 15:## Contributing
+ - 19:## License
+
+## r00t/.cursor/skills/crafting-effective-readmes/references/standard-readme-spec.md
+ - 1:# Standard README Specification
+ - 18:## Table of Contents
+ - 22:- [Sections](#sections)
+ - 39:- [Definitions](#definitions)
+ - 41:## Sections
+ - 43:### Title
+ - 58:### Banner
+ - 66:### Badges
+ - 77:### Short Description
+ - 92:### Long Description
+ - 114:### Table of Contents
+ - 125:### Security
+ - 131:### Background
+ - 139:### Install
+ - 153:### Usage
+ - 168:### Extra Sections
+ - 179:### API
+ - 191:### Maintainer(s)
+ - 202:### Thanks
+ - 212:### Contributing
+ - 227:### License
+ - 238:## Definitions
+ - 242:- **Documentation repositories**: Repositories without any functional code. For instance, [RichardLitt/knowledge](https://github.com/RichardLitt/knowledge).
+
+## r00t/.cursor/skills/crafting-effective-readmes/section-checklist.md
+ - 1:# Section Checklist by Project Type
+
+## r00t/.cursor/skills/crafting-effective-readmes/style-guide.md
+ - 1:# README Style Guide
+ - 3:## Common Mistakes
+ - 5:- **No install steps** - Never assume setup is obvious
+ - 6:- **No examples** - Show, don't just tell
+ - 7:- **Wall of text** - Use headers, tables, lists
+ - 8:- **Stale content** - Add "last reviewed" date
+ - 9:- **Generic tone** - Write for YOUR audience
+ - 11:## Prose Quality
+
+## r00t/.cursor/skills/crafting-effective-readmes/templates/internal.md
+ - 1:# Internal/Work Project README Template
+ - 8:# [Service/Project Name]
+ - 15:## Overview
+ - 19:### Dependencies
+ - 21:- **Upstream**: [Services this depends on]
+ - 22:- **Downstream**: [Services that depend on this]
+ - 24:## Local Development Setup
+ - 26:### Prerequisites
+ - 28:- [Required tool 1 with version]
+ - 29:- [Required tool 2]
+ - 32:### Environment Variables
+ - 39:### Running Locally
+ - 45:### Running Tests
+ - 51:## Architecture
+ - 59:### Key Files
+ - 66:## Deployment
+ - 70:### Environments
+ - 78:## Runbooks
+ - 80:### [Common Task 1]
+ - 86:### [Common Task 2]
+ - 90:## Troubleshooting
+ - 92:### [Common Problem 1]
+ - 98:## Contributing
+ - 102:## Related Docs
+ - 104:- [Link to design doc]
+ - 105:- [Link to API docs]
+ - 106:- [Link to monitoring dashboard]
+
+## r00t/.cursor/skills/crafting-effective-readmes/templates/oss.md
+ - 1:# Open Source Project README Template
+ - 7:# [Project Name]
+ - 15:## About
+ - 19:## Features
+ - 21:- [Key feature 1]
+ - 22:- [Key feature 2]
+ - 23:- [Key feature 3]
+ - 25:## Installation
+ - 31:### Requirements
+ - 33:- [Runtime requirement, e.g., Node.js >= 18]
+ - 34:- [Other dependencies if any]
+ - 36:## Usage
+ - 42:### More Examples
+ - 46:## Documentation
+ - 50:## Contributing
+ - 54:### Development Setup
+ - 60:### Running Tests
+ - 66:## Roadmap
+ - 68:- [ ] [Planned feature 1]
+ - 69:- [ ] [Planned feature 2]
+ - 71:## Acknowledgments
+ - 73:- [Credit to inspirations, contributors, or dependencies worth highlighting]
+ - 75:## License
+
+## r00t/.cursor/skills/crafting-effective-readmes/templates/personal.md
+ - 1:# Personal Project README Template
+ - 8:# [Project Name]
+ - 14:## What This Does
+ - 18:## Demo
+ - 22:## Tech Stack
+ - 24:- **[Category]**: [Technology] - [brief why you chose it]
+ - 25:- **[Category]**: [Technology]
+ - 27:## Getting Started
+ - 33:## How It Works
+ - 37:## What I Learned
+ - 41:- [Learning 1]
+ - 42:- [Learning 2]
+ - 44:## Future Ideas
+ - 46:- [ ] [Thing you might add]
+ - 47:- [ ] [Improvement you're considering]
+ - 49:## License
+
+## r00t/.cursor/skills/crafting-effective-readmes/templates/xdg-config.md
+ - 1:# Config Directory README Template
+ - 10:# [Tool/Directory Name] Config
+ - 16:## What's Here
+ - 24:### [Subdirectory 1] (if complex enough to warrant detail)
+ - 28:### [Subdirectory 2]
+ - 32:## Why This Setup
+ - 36:## How to Extend
+ - 38:### Adding a new [thing]
+ - 40:1. [Step 1]
+ - 41:2. [Step 2]
+ - 42:3. [Step 3]
+ - 44:### Adding a new [other thing]
+ - 46:1. [Steps]
+ - 48:## Dependencies
+ - 56:## Gotchas
+ - 58:- [Thing that will confuse future-you]
+ - 59:- [Non-obvious behavior]
+ - 60:- [Files that shouldn't be edited directly]
+ - 61:- [Order dependencies or load sequences]
+ - 63:## Sync/Backup
+ - 67:## Related
+ - 69:- [Link to tool's official docs]
+ - 70:- [Link to your dotfiles repo if this is part of it]
+ - 71:- [Other relevant resources]
+
+## r00t/.cursor/skills/crafting-effective-readmes/using-references.md
+ - 1:# Using References
+ - 9:### art-of-readme.md
+ - 17:### make-a-readme.md
+ - 25:### standard-readme-spec.md
+
+## r00t/.cursor/skills/mcp-builder/SKILL.md
+ - 7:# MCP Server Development Guide
+ - 9:## Overview
+ - 15:# Process
+ - 17:## 🚀 High-Level Workflow
+ - 21:### Phase 1: Deep Research and Planning
+ - 23:#### 1.1 Understand Modern MCP Design
+ - 37:#### 1.2 Study MCP Protocol Documentation
+ - 50:#### 1.3 Study Framework Documentation
+ - 53:- **Language**: TypeScript (high-quality SDK support and good compatibility in many execution environments e.g. MCPB. Plus AI models are good at generating TypeScript code, benefiting from its broad usage, static typing and good linting tools)
+ - 54:- **Transport**: Streamable HTTP for remote servers, using stateless JSON (simpler to scale and maintain, as opposed to stateful sessions and streaming responses). stdio for local servers.
+ - 58:- **MCP Best Practices**: [📋 View Best Practices](./reference/mcp_best_practices.md) - Core guidelines
+ - 61:- **TypeScript SDK**: Use WebFetch to load `https://raw.githubusercontent.com/modelcontextprotocol/typescript-sdk/main/README.md`
+ - 62:- [⚡ TypeScript Guide](./reference/node_mcp_server.md) - TypeScript patterns and examples
+ - 65:- **Python SDK**: Use WebFetch to load `https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md`
+ - 66:- [🐍 Python Guide](./reference/python_mcp_server.md) - Python patterns and examples
+ - 68:#### 1.4 Plan Your Implementation
+ - 78:### Phase 2: Implementation
+ - 80:#### 2.1 Set Up Project Structure
+ - 83:- [⚡ TypeScript Guide](./reference/node_mcp_server.md) - Project structure, package.json, tsconfig.json
+ - 84:- [🐍 Python Guide](./reference/python_mcp_server.md) - Module organization, dependencies
+ - 86:#### 2.2 Implement Core Infrastructure
+ - 94:#### 2.3 Implement Tools
+ - 127:### Phase 3: Review and Test
+ - 129:#### 3.1 Code Quality
+ - 137:#### 3.2 Build and Test
+ - 151:### Phase 4: Create Evaluations
+ - 157:#### 4.1 Understand Evaluation Purpose
+ - 161:#### 4.2 Create 10 Evaluation Questions
+ - 165:1. **Tool Inspection**: List available tools and understand their capabilities
+ - 166:2. **Content Exploration**: Use READ-ONLY operations to explore available data
+ - 167:3. **Question Generation**: Create 10 complex, realistic questions
+ - 168:4. **Answer Verification**: Solve each question yourself to verify answers
+ - 170:#### 4.3 Evaluation Requirements
+ - 173:- **Independent**: Not dependent on other questions
+ - 174:- **Read-only**: Only non-destructive operations required
+ - 175:- **Complex**: Requiring multiple tool calls and deep exploration
+ - 176:- **Realistic**: Based on real use cases humans would care about
+ - 177:- **Verifiable**: Single, clear answer that can be verified by string comparison
+ - 178:- **Stable**: Answer won't change over time
+ - 180:#### 4.4 Output Format
+ - 196:# Reference Files
+ - 198:## 📚 Documentation Library
+ - 202:### Core MCP Documentation (Load First)
+ - 203:- **MCP Protocol**: Start with sitemap at `https://modelcontextprotocol.io/sitemap.xml`, then fetch specific pages with `.md` suffix
+ - 204:- [📋 MCP Best Practices](./reference/mcp_best_practices.md) - Universal MCP guidelines including:
+ - 211:### SDK Documentation (Load During Phase 1/2)
+ - 212:- **Python SDK**: Fetch from `https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md`
+ - 213:- **TypeScript SDK**: Fetch from `https://raw.githubusercontent.com/modelcontextprotocol/typescript-sdk/main/README.md`
+ - 215:### Language-Specific Implementation Guides (Load During Phase 2)
+ - 216:- [🐍 Python Implementation Guide](./reference/python_mcp_server.md) - Complete Python/FastMCP guide with:
+ - 223:- [⚡ TypeScript Implementation Guide](./reference/node_mcp_server.md) - Complete TypeScript guide with:
+ - 230:### Evaluation Guide (Load During Phase 4)
+ - 231:- [✅ Evaluation Guide](./reference/evaluation.md) - Complete evaluation creation guide with:
+
+## r00t/.cursor/skills/mcp-builder/reference/evaluation.md
+ - 1:# MCP Server Evaluation Guide
+ - 3:## Overview
+ - 9:## Quick Reference
+ - 11:### Evaluation Requirements
+ - 18:### Output Format
+ - 30:## Purpose of Evaluations
+ - 34:## Evaluation Overview
+ - 43:## Question Guidelines
+ - 45:### Core Requirements
+ - 47:1. **Questions MUST be independent**
+ - 51:2. **Questions MUST require ONLY NON-DESTRUCTIVE AND IDEMPOTENT tool use**
+ - 54:3. **Questions must be REALISTIC, CLEAR, CONCISE, and COMPLEX**
+ - 57:### Complexity and Depth
+ - 59:4. **Questions must require deep exploration**
+ - 63:5. **Questions may require extensive paging**
+ - 68:6. **Questions must require deep understanding**
+ - 73:7. **Questions must not be solvable with straightforward keyword search**
+ - 78:### Tool Testing
+ - 80:8. **Questions should stress-test tool return values**
+ - 89:9. **Questions should MOSTLY reflect real human use cases**
+ - 92:10. **Questions may require dozens of tool calls**
+ - 96:11. **Include ambiguous questions**
+ - 101:### Stability
+ - 103:12. **Questions must be designed so the answer DOES NOT CHANGE**
+ - 110:13. **DO NOT let the MCP server RESTRICT the kinds of questions you create**
+ - 116:## Answer Guidelines
+ - 118:### Verification
+ - 120:1. **Answers must be VERIFIABLE via direct string comparison**
+ - 137:### Readability
+ - 139:2. **Answers should generally prefer HUMAN-READABLE formats**
+ - 144:### Stability
+ - 146:3. **Answers must be STABLE/STATIONARY**
+ - 153:4. **Answers must be CLEAR and UNAMBIGUOUS**
+ - 157:### Diversity
+ - 159:5. **Answers must be DIVERSE**
+ - 165:6. **Answers must NOT be complex structures**
+ - 174:## Evaluation Process
+ - 176:### Step 1: Documentation Inspection
+ - 184:### Step 2: Tool Inspection
+ - 191:### Step 3: Developing Understanding
+ - 200:### Step 4: Read-Only Content Inspection
+ - 214:### Step 5: Task Generation
+ - 220:## Output Format
+ - 245:## Evaluation Examples
+ - 247:### Good Questions
+ - 312:### Poor Questions
+ - 354:## Verification Process
+ - 358:1. **Examine the XML file** to understand the schema
+ - 359:2. **Load each task instruction** and in parallel using the MCP server and tools, identify the correct answer by attempting to solve the task YOURSELF
+ - 360:3. **Flag any operations** that require WRITE or DESTRUCTIVE operations
+ - 361:4. **Accumulate all CORRECT answers** and replace any incorrect answers in the document
+ - 362:5. **Remove any `<qa_pair>`** that require WRITE or DESTRUCTIVE operations
+ - 366:## Tips for Creating Quality Evaluations
+ - 368:1. **Think Hard and Plan Ahead** before generating tasks
+ - 369:2. **Parallelize Where Opportunity Arises** to speed up the process and manage context
+ - 370:3. **Focus on Realistic Use Cases** that humans would actually want to accomplish
+ - 371:4. **Create Challenging Questions** that test the limits of the MCP server's capabilities
+ - 372:5. **Ensure Stability** by using historical data and closed concepts
+ - 373:6. **Verify Answers** by solving the questions yourself using the MCP server tools
+ - 374:7. **Iterate and Refine** based on what you learn during the process
+ - 378:# Running Evaluations
+ - 382:## Setup
+ - 384:1. **Install Dependencies**
+ - 395:2. **Set API Key**
+ - 401:## Evaluation File Format
+ - 418:## Running Evaluations
+ - 423:- **stdio transport**: The evaluation script automatically launches and manages the MCP server process for you. Do not run the server manually.
+ - 424:- **sse/http transports**: You must start the MCP server separately before running the evaluation. The script connects to the already-running server at the specified URL.
+ - 426:### 1. Local STDIO Server
+ - 449:### 2. Server-Sent Events (SSE)
+ - 462:### 3. HTTP (Streamable HTTP)
+ - 474:## Command-Line Options
+ - 501:## Output
+ - 505:- **Summary Statistics**:
+ - 511:- **Per-Task Results**:
+ - 519:### Save Report to File
+ - 530:## Complete Example Workflow
+ - 534:1. **Create your evaluation file** (`my_evaluation.xml`):
+ - 553:2. **Install dependencies**:
+ - 560:3. **Run evaluation**:
+ - 572:4. **Review the report** in `github_eval_report.md` to:
+ - 578:## Troubleshooting
+ - 580:### Connection Errors
+ - 583:- **STDIO**: Verify the command and arguments are correct
+ - 584:- **SSE/HTTP**: Check the URL is accessible and headers are correct
+ - 587:### Low Accuracy
+ - 596:### Timeout Issues
+
+## r00t/.cursor/skills/mcp-builder/reference/mcp_best_practices.md
+ - 1:# MCP Server Best Practices
+ - 3:## Quick Reference
+ - 5:### Server Naming
+ - 6:- **Python**: `{service}_mcp` (e.g., `slack_mcp`)
+ - 7:- **Node/TypeScript**: `{service}-mcp-server` (e.g., `slack-mcp-server`)
+ - 9:### Tool Naming
+ - 14:### Response Formats
+ - 19:### Pagination
+ - 24:### Transport
+ - 25:- **Streamable HTTP**: For remote servers, multi-client scenarios
+ - 26:- **stdio**: For local integrations, command-line tools
+ - 31:## Server Naming Conventions
+ - 45:## Tool Naming and Design
+ - 47:### Tool Naming
+ - 49:1. **Use snake_case**: `search_users`, `create_project`, `get_channel_info`
+ - 50:2. **Include service prefix**: Anticipate that your MCP server may be used alongside other MCP servers
+ - 53:3. **Be action-oriented**: Start with verbs (get, list, search, create, etc.)
+ - 54:4. **Be specific**: Avoid generic names that could conflict with other servers
+ - 56:### Tool Design
+ - 65:## Response Formats
+ - 69:### JSON Format (`response_format="json"`)
+ - 75:### Markdown Format (`response_format="markdown"`, typically default)
+ - 84:## Pagination
+ - 88:- **Always respect the `limit` parameter**
+ - 89:- **Implement pagination**: Use `offset` or cursor-based pagination
+ - 90:- **Return pagination metadata**: Include `has_more`, `next_offset`/`next_cursor`, `total_count`
+ - 91:- **Never load all results into memory**: Especially important for large datasets
+ - 92:- **Default to reasonable limits**: 20-50 items is typical
+ - 108:## Transport Options
+ - 110:### Streamable HTTP
+ - 125:### stdio
+ - 141:### Transport Selection
+ - 152:## Security Best Practices
+ - 154:### Authentication and Authorization
+ - 166:### Input Validation
+ - 174:### Error Handling
+ - 181:### DNS Rebinding Protection
+ - 190:## Tool Annotations
+ - 205:## Error Handling
+ - 231:## Testing Requirements
+ - 235:- **Functional testing**: Verify correct execution with valid/invalid inputs
+ - 236:- **Integration testing**: Test interaction with external systems
+ - 237:- **Security testing**: Validate auth, input sanitization, rate limiting
+ - 238:- **Performance testing**: Check behavior under load, timeouts
+ - 239:- **Error handling**: Ensure proper error reporting and cleanup
+ - 243:## Documentation Requirements
+
+## r00t/.cursor/skills/mcp-builder/reference/node_mcp_server.md
+ - 1:# Node/TypeScript MCP Server Implementation Guide
+ - 3:## Overview
+ - 9:## Quick Reference
+ - 11:### Key Imports
+ - 20:### Server Initialization
+ - 28:### Tool Registration Pattern
+ - 50:## MCP TypeScript SDK
+ - 59:- **DO use**: `server.registerTool()`, `server.registerResource()`, `server.registerPrompt()`
+ - 60:- **DO NOT use**: Old deprecated APIs such as `server.tool()`, `server.setRequestHandler(ListToolsRequestSchema, ...)`, or manual handler registration
+ - 65:## Server Naming Convention
+ - 68:- **Format**: `{service}-mcp-server` (lowercase with hyphens)
+ - 69:- **Examples**: `github-mcp-server`, `jira-mcp-server`, `stripe-mcp-server`
+ - 77:## Project Structure
+ - 96:## Tool Implementation
+ - 98:### Tool Naming
+ - 107:### Tool Structure
+ - 276:## Zod Schemas for Input Validation
+ - 324:## Response Format Options
+ - 354:## Pagination Implementation
+ - 382:## Character Limits and Truncation
+ - 408:## Error Handling
+ - 436:## Shared Utilities
+ - 467:## Async/Await Best Practices
+ - 485:## TypeScript Best Practices
+ - 487:1. **Use Strict TypeScript**: Enable strict mode in tsconfig.json
+ - 488:2. **Define Interfaces**: Create clear interface definitions for all data structures
+ - 489:3. **Avoid `any`**: Use proper types or `unknown` instead of `any`
+ - 490:4. **Zod for Runtime Validation**: Use Zod schemas to validate external data
+ - 491:5. **Type Guards**: Create type guard functions for complex type checking
+ - 492:6. **Error Handling**: Always use try-catch with proper error type checking
+ - 493:7. **Null Safety**: Use optional chaining (`?.`) and nullish coalescing (`??`)
+ - 526:## Package Configuration
+ - 528:### package.json
+ - 559:### tsconfig.json
+ - 584:## Complete Example
+ - 587:#!/usr/bin/env node
+ - 760:## Advanced MCP Features
+ - 762:### Resource Registration
+ - 812:- **Resources**: For data access with simple URI-based parameters
+ - 813:- **Tools**: For complex operations requiring validation and business logic
+ - 814:- **Resources**: When data is relatively static or template-based
+ - 815:- **Tools**: When operations have side effects or complex workflows
+ - 817:### Transport Options
+ - 821:#### Streamable HTTP (Recommended for Remote Servers)
+ - 846:#### stdio (For Local Integrations)
+ - 856:- **Streamable HTTP**: Web services, remote access, multiple clients
+ - 857:- **stdio**: Command-line tools, local development, subprocess integration
+ - 859:### Notification Support
+ - 879:## Code Best Practices
+ - 881:### Code Composability and Reusability
+ - 885:1. **Extract Common Functionality**:
+ - 892:2. **Avoid Duplication**:
+ - 898:## Building and Running
+ - 903:# Build the project
+ - 906:# Run the server
+ - 909:# Development with auto-reload
+ - 915:## Quality Checklist
+ - 919:### Strategic Design
+ - 920:- [ ] Tools enable complete workflows, not just API endpoint wrappers
+ - 921:- [ ] Tool names reflect natural task subdivisions
+ - 922:- [ ] Response formats optimize for agent context efficiency
+ - 923:- [ ] Human-readable identifiers used where appropriate
+ - 924:- [ ] Error messages guide agents toward correct usage
+ - 926:### Implementation Quality
+ - 927:- [ ] FOCUSED IMPLEMENTATION: Most important and valuable tools implemented
+ - 928:- [ ] All tools registered using `registerTool` with complete configuration
+ - 929:- [ ] All tools include `title`, `description`, `inputSchema`, and `annotations`
+ - 930:- [ ] Annotations correctly set (readOnlyHint, destructiveHint, idempotentHint, openWorldHint)
+ - 931:- [ ] All tools use Zod schemas for runtime input validation with `.strict()` enforcement
+ - 932:- [ ] All Zod schemas have proper constraints and descriptive error messages
+ - 933:- [ ] All tools have comprehensive descriptions with explicit input/output types
+ - 934:- [ ] Descriptions include return value examples and complete schema documentation
+ - 935:- [ ] Error messages are clear, actionable, and educational
+ - 937:### TypeScript Quality
+ - 938:- [ ] TypeScript interfaces are defined for all data structures
+ - 939:- [ ] Strict TypeScript is enabled in tsconfig.json
+ - 940:- [ ] No use of `any` type - use `unknown` or proper types instead
+ - 941:- [ ] All async functions have explicit Promise<T> return types
+ - 942:- [ ] Error handling uses proper type guards (e.g., `axios.isAxiosError`, `z.ZodError`)
+ - 944:### Advanced Features (where applicable)
+ - 945:- [ ] Resources registered for appropriate data endpoints
+ - 946:- [ ] Appropriate transport configured (stdio or streamable HTTP)
+ - 947:- [ ] Notifications implemented for dynamic server capabilities
+ - 948:- [ ] Type-safe with SDK interfaces
+ - 950:### Project Configuration
+ - 951:- [ ] Package.json includes all necessary dependencies
+ - 952:- [ ] Build script produces working JavaScript in dist/ directory
+ - 953:- [ ] Main entry point is properly configured as dist/index.js
+ - 954:- [ ] Server name follows format: `{service}-mcp-server`
+ - 955:- [ ] tsconfig.json properly configured with strict mode
+ - 957:### Code Quality
+ - 958:- [ ] Pagination is properly implemented where applicable
+ - 959:- [ ] Large responses check CHARACTER_LIMIT constant and truncate with clear messages
+ - 960:- [ ] Filtering options are provided for potentially large result sets
+ - 961:- [ ] All network operations handle timeouts and connection errors gracefully
+ - 962:- [ ] Common functionality is extracted into reusable functions
+ - 963:- [ ] Return types are consistent across similar operations
+ - 965:### Testing and Build
+ - 966:- [ ] `npm run build` completes successfully without errors
+ - 967:- [ ] dist/index.js created and executable
+ - 968:- [ ] Server runs: `node dist/index.js --help`
+ - 969:- [ ] All imports resolve correctly
+ - 970:- [ ] Sample tool calls work as expected
+
+## r00t/.cursor/skills/mcp-builder/reference/python_mcp_server.md
+ - 1:# Python MCP Server Implementation Guide
+ - 3:## Overview
+ - 9:## Quick Reference
+ - 11:### Key Imports
+ - 20:### Server Initialization
+ - 25:### Tool Registration Pattern
+ - 35:## MCP Python SDK and FastMCP
+ - 45:## Server Naming Convention
+ - 48:- **Format**: `{service}_mcp` (lowercase with underscores)
+ - 49:- **Examples**: `github_mcp`, `jira_mcp`, `stripe_mcp`
+ - 57:## Tool Implementation
+ - 59:### Tool Naming
+ - 68:### Tool Structure with FastMCP
+ - 76:# Initialize the MCP server
+ - 79:# Define Pydantic model for input validation
+ - 121:## Pydantic v2 Key Features
+ - 150:## Response Format Options
+ - 182:## Pagination Implementation
+ - 207:## Error Handling
+ - 227:## Shared Utilities
+ - 232:# Shared API request function
+ - 246:## Async/Await Best Practices
+ - 251:# Good: Async network request
+ - 258:# Bad: Synchronous request
+ - 264:## Type Hints
+ - 276:## Tool Docstrings
+ - 330:## Complete Example
+ - 335:#!/usr/bin/env python3
+ - 349:# Initialize the MCP server
+ - 352:# Constants
+ - 355:# Enums
+ - 361:# Pydantic Models for Input Validation
+ - 381:# Shared utility functions
+ - 408:# Tool definitions
+ - 476:## Advanced FastMCP Features
+ - 478:### Context Parameter Injection
+ - 527:### Resource Registration
+ - 551:- **Resources**: For data access with simple parameters (URI templates)
+ - 552:- **Tools**: For complex operations with validation and business logic
+ - 554:### Structured Output Types
+ - 563:# TypedDict for structured returns
+ - 574:# Pydantic models for complex validation
+ - 589:### Lifespan Management
+ - 619:### Transport Options
+ - 624:# stdio transport (for local tools) - default
+ - 628:# Streamable HTTP transport (for remote servers)
+ - 634:- **stdio**: Command-line tools, local integrations, subprocess execution
+ - 635:- **Streamable HTTP**: Web services, remote access, multiple clients
+ - 639:## Code Best Practices
+ - 641:### Code Composability and Reusability
+ - 645:1. **Extract Common Functionality**:
+ - 652:2. **Avoid Duplication**:
+ - 658:### Python-Specific Best Practices
+ - 660:1. **Use Type Hints**: Always include type annotations for function parameters and return values
+ - 661:2. **Pydantic Models**: Define clear Pydantic models for all input validation
+ - 662:3. **Avoid Manual Validation**: Let Pydantic handle input validation with constraints
+ - 663:4. **Proper Imports**: Group imports (standard library, third-party, local)
+ - 664:5. **Error Handling**: Use specific exception types (httpx.HTTPStatusError, not generic Exception)
+ - 665:6. **Async Context Managers**: Use `async with` for resources that need cleanup
+ - 666:7. **Constants**: Define module-level constants in UPPER_CASE
+ - 668:## Quality Checklist
+ - 672:### Strategic Design
+ - 673:- [ ] Tools enable complete workflows, not just API endpoint wrappers
+ - 674:- [ ] Tool names reflect natural task subdivisions
+ - 675:- [ ] Response formats optimize for agent context efficiency
+ - 676:- [ ] Human-readable identifiers used where appropriate
+ - 677:- [ ] Error messages guide agents toward correct usage
+ - 679:### Implementation Quality
+ - 680:- [ ] FOCUSED IMPLEMENTATION: Most important and valuable tools implemented
+ - 681:- [ ] All tools have descriptive names and documentation
+ - 682:- [ ] Return types are consistent across similar operations
+ - 683:- [ ] Error handling is implemented for all external calls
+ - 684:- [ ] Server name follows format: `{service}_mcp`
+ - 685:- [ ] All network operations use async/await
+ - 686:- [ ] Common functionality is extracted into reusable functions
+ - 687:- [ ] Error messages are clear, actionable, and educational
+ - 688:- [ ] Outputs are properly validated and formatted
+ - 690:### Tool Configuration
+ - 691:- [ ] All tools implement 'name' and 'annotations' in the decorator
+ - 692:- [ ] Annotations correctly set (readOnlyHint, destructiveHint, idempotentHint, openWorldHint)
+ - 693:- [ ] All tools use Pydantic BaseModel for input validation with Field() definitions
+ - 694:- [ ] All Pydantic Fields have explicit types and descriptions with constraints
+ - 695:- [ ] All tools have comprehensive docstrings with explicit input/output types
+ - 696:- [ ] Docstrings include complete schema structure for dict/JSON returns
+ - 697:- [ ] Pydantic models handle input validation (no manual validation needed)
+ - 699:### Advanced Features (where applicable)
+ - 700:- [ ] Context injection used for logging, progress, or elicitation
+ - 701:- [ ] Resources registered for appropriate data endpoints
+ - 702:- [ ] Lifespan management implemented for persistent connections
+ - 703:- [ ] Structured output types used (TypedDict, Pydantic models)
+ - 704:- [ ] Appropriate transport configured (stdio or streamable HTTP)
+ - 706:### Code Quality
+ - 707:- [ ] File includes proper imports including Pydantic imports
+ - 708:- [ ] Pagination is properly implemented where applicable
+ - 709:- [ ] Filtering options are provided for potentially large result sets
+ - 710:- [ ] All async functions are properly defined with `async def`
+ - 711:- [ ] HTTP client usage follows async patterns with proper context managers
+ - 712:- [ ] Type hints are used throughout the code
+ - 713:- [ ] Constants are defined at module level in UPPER_CASE
+ - 715:### Testing
+ - 716:- [ ] Server runs successfully: `python your_server.py --help`
+ - 717:- [ ] All imports resolve correctly
+ - 718:- [ ] Sample tool calls work as expected
+ - 719:- [ ] Error scenarios handled gracefully
+
+## r00t/.cursor/skills/systematic-debugging/CREATION-LOG.md
+ - 1:# Creation Log: Systematic Debugging Skill
+ - 5:## Source Material
+ - 12:## Extraction Decisions
+ - 25:## Structure Following skill-creation/SKILL.md
+ - 27:1. **Rich when_to_use** - Included symptoms and anti-patterns
+ - 28:2. **Type: technique** - Concrete process with steps
+ - 29:3. **Keywords** - "root cause", "symptom", "workaround", "debugging", "investigation"
+ - 30:4. **Flowchart** - Decision point for "fix failed" → re-analyze vs add more fixes
+ - 31:5. **Phase-by-phase breakdown** - Scannable checklist format
+ - 32:6. **Anti-patterns section** - What NOT to do (critical for this skill)
+ - 34:## Bulletproofing Elements
+ - 38:### Language Choices
+ - 44:### Structural Defenses
+ - 45:- **Phase 1 required** - Can't skip to implementation
+ - 46:- **Single hypothesis rule** - Forces thinking, prevents shotgun fixes
+ - 47:- **Explicit failure mode** - "IF your first fix doesn't work" with mandatory action
+ - 48:- **Anti-patterns section** - Shows exactly what shortcuts look like
+ - 50:### Redundancy
+ - 55:## Testing Approach
+ - 59:### Test 1: Academic Context (No Pressure)
+ - 61:- **Result:** Perfect compliance, complete investigation
+ - 63:### Test 2: Time Pressure + Obvious Quick Fix
+ - 65:- **Result:** Resisted shortcut, followed full process, found real root cause
+ - 67:### Test 3: Complex System + Uncertainty
+ - 69:- **Result:** Systematic investigation, traced through all layers, found source
+ - 71:### Test 4: Failed First Fix
+ - 73:- **Result:** Stopped, re-analyzed, formed new hypothesis (no shotgun)
+ - 77:## Iterations
+ - 79:### Initial Version
+ - 84:### Enhancement 1: TDD Reference
+ - 89:## Final Outcome
+ - 100:## Key Insight
+ - 104:## Usage Example
+ - 107:1. Load skill: skills/debugging/systematic-debugging
+ - 108:2. Read overview (10 sec) - reminded of mandate
+ - 109:3. Follow Phase 1 checklist - forced investigation
+ - 110:4. If tempted to skip - see anti-pattern, stop
+ - 111:5. Complete all phases - root cause found
+
+## r00t/.cursor/skills/systematic-debugging/SKILL.md
+ - 6:# Systematic Debugging
+ - 8:## Overview
+ - 16:## The Iron Law
+ - 24:## When to Use
+ - 46:## The Four Phases
+ - 50:### Phase 1: Root Cause Investigation
+ - 54:1. **Read Error Messages Carefully**
+ - 60:2. **Reproduce Consistently**
+ - 66:3. **Check Recent Changes**
+ - 72:4. **Gather Evidence in Multi-Component Systems**
+ - 110:5. **Trace Data Flow**
+ - 122:### Phase 2: Pattern Analysis
+ - 126:1. **Find Working Examples**
+ - 130:2. **Compare Against References**
+ - 135:3. **Identify Differences**
+ - 140:4. **Understand Dependencies**
+ - 145:### Phase 3: Hypothesis and Testing
+ - 149:1. **Form Single Hypothesis**
+ - 154:2. **Test Minimally**
+ - 159:3. **Verify Before Continuing**
+ - 164:4. **When You Don't Know**
+ - 170:### Phase 4: Implementation
+ - 174:1. **Create Failing Test Case**
+ - 181:2. **Implement Single Fix**
+ - 187:3. **Verify Fix**
+ - 192:4. **If Fix Doesn't Work**
+ - 199:5. **If 3+ Fixes Failed: Question Architecture**
+ - 215:## Red Flags - STOP and Follow Process
+ - 227:- **"One more fix attempt" (when already tried 2+)**
+ - 228:- **Each fix reveals new problem in different place**
+ - 234:## your human partner's Signals You're Doing It Wrong
+ - 245:## Common Rationalizations
+ - 258:## Quick Reference
+ - 267:## When Process Reveals "No Root Cause"
+ - 271:1. You've completed the process
+ - 272:2. Document what you investigated
+ - 273:3. Implement appropriate handling (retry, timeout, error message)
+ - 274:4. Add monitoring/logging for future investigation
+ - 278:## Supporting Techniques
+ - 282:- **`root-cause-tracing.md`** - Trace bugs backward through call stack to find original trigger
+ - 283:- **`defense-in-depth.md`** - Add validation at multiple layers after finding root cause
+ - 284:- **`condition-based-waiting.md`** - Replace arbitrary timeouts with condition polling
+ - 287:- **superpowers:test-driven-development** - For creating failing test case (Phase 4, Step 1)
+ - 288:- **superpowers:verification-before-completion** - Verify fix worked before claiming success
+ - 290:## Real-World Impact
+
+## r00t/.cursor/skills/systematic-debugging/condition-based-waiting.md
+ - 1:# Condition-Based Waiting
+ - 3:## Overview
+ - 9:## When to Use
+ - 34:## Core Pattern
+ - 48:## Quick Patterns
+ - 58:## Implementation
+ - 84:## Common Mistakes
+ - 95:## When Arbitrary Timeout IS Correct
+ - 105:1. First wait for triggering condition
+ - 106:2. Based on known timing (not guessing)
+ - 107:3. Comment explaining WHY
+ - 109:## Real-World Impact
+
+## r00t/.cursor/skills/systematic-debugging/defense-in-depth.md
+ - 1:# Defense-in-Depth Validation
+ - 3:## Overview
+ - 9:## Why Multiple Layers
+ - 20:## The Four Layers
+ - 22:### Layer 1: Entry Point Validation
+ - 40:### Layer 2: Business Logic Validation
+ - 52:### Layer 3: Environment Guards
+ - 72:### Layer 4: Debug Instrumentation
+ - 87:## Applying the Pattern
+ - 91:1. **Trace the data flow** - Where does bad value originate? Where used?
+ - 92:2. **Map all checkpoints** - List every point data passes through
+ - 93:3. **Add validation at each layer** - Entry, business, environment, debug
+ - 94:4. **Test each layer** - Try to bypass layer 1, verify layer 2 catches it
+ - 96:## Example from Session
+ - 101:1. Test setup → empty string
+ - 102:2. `Project.create(name, '')`
+ - 103:3. `WorkspaceManager.createWorkspace('')`
+ - 104:4. `git init` runs in `process.cwd()`
+ - 114:## Key Insight
+
+## r00t/.cursor/skills/systematic-debugging/root-cause-tracing.md
+ - 1:# Root Cause Tracing
+ - 3:## Overview
+ - 9:## When to Use
+ - 32:## The Tracing Process
+ - 34:### 1. Observe the Symptom
+ - 39:### 2. Find Immediate Cause
+ - 45:### 3. Ask: What Called This?
+ - 53:### 4. Keep Tracing Up
+ - 59:### 5. Find Original Trigger
+ - 66:## Adding Stack Traces
+ - 97:## Finding Which Test Causes Pollution
+ - 109:## Real Example: Empty projectDir
+ - 114:1. `git init` runs in `process.cwd()` ← empty cwd parameter
+ - 115:2. WorktreeManager called with empty projectDir
+ - 116:3. Session.create() passed empty string
+ - 117:4. Test accessed `context.tempDir` before beforeEach
+ - 118:5. setupCoreTest() returns `{ tempDir: '' }` initially
+ - 130:## Key Principle
+ - 156:## Stack Trace Tips
+ - 163:## Real-World Impact
+
+## r00t/.cursor/skills/systematic-debugging/test-academic.md
+ - 1:# Academic Test: Systematic Debugging Skill
+ - 7:1. What are the four phases of systematic debugging?
+ - 8:2. What must you do BEFORE attempting any fix?
+ - 9:3. In Phase 3, what should you do if your first hypothesis doesn't work?
+ - 10:4. What does the skill say about fixing multiple things at once?
+ - 11:5. What should you do if you don't fully understand the issue?
+ - 12:6. Is it ever acceptable to skip the process for simple bugs?
+
+## r00t/.cursor/skills/systematic-debugging/test-pressure-1.md
+ - 1:# Pressure Test 1: Emergency Production Fix
+ - 7:## Scenario
+ - 24:1. Read error messages carefully ✓ (you did)
+ - 25:2. Reproduce consistently (would take ~10 min to set up test environment)
+ - 26:3. Check recent changes (would take ~15 min to review PRs)
+ - 27:4. Find working examples (would take ~10 min)
+ - 28:5. Then form hypothesis and test
+ - 36:## Your Options
+ - 56:## Choose A, B, or C
+
+## r00t/.cursor/skills/systematic-debugging/test-pressure-2.md
+ - 1:# Pressure Test 2: Sunk Cost + Exhaustion
+ - 7:## Scenario
+ - 18:1. Added `await sleep(100)` - didn't work
+ - 19:2. Increased to `await sleep(500)` - didn't work
+ - 20:3. Added `await sleep(1000)` - worked twice, failed third time
+ - 21:4. Checked for race conditions - found none obvious
+ - 22:5. Added debug logging - shows payment processes, status not updating
+ - 23:6. Tried `await sleep(2000)` - still fails sometimes
+ - 44:## Your Options
+ - 66:## Choose A, B, or C
+
+## r00t/.cursor/skills/systematic-debugging/test-pressure-3.md
+ - 1:# Pressure Test 3: Authority + Social Pressure
+ - 7:## Scenario
+ - 44:## Your Options
+ - 67:## Choose A, B, or C
+
+## r00t/.cursor/skills/tzkt-studying/SKILL.md
+ - 6:# TzKT Studying
+ - 10:## Where things live
+ - 19:## Study workflow
+ - 21:1. **Read cursor:** Load `.study/tzkt/meta.json` if present. It holds `lastLevel` (and optionally `lastTimestamp`) per network for incremental fetch.
+ - 22:2. **Query TzKT:** Use `docs/tezos-bible.md` (section 4–5) for endpoints. Typical incremental queries:
+ - 26:3. **Append to DB:** Write new records into `.study/tzkt/{network}/` as NDJSON (one JSON object per line), e.g. `blocks.ndjson`, `transactions.ndjson`, `token_transfers.ndjson`. Deduplicate by `id` or `level`+`hash` when merging.
+ - 27:4. **Update cursor:** Write back `meta.json` with the new `lastLevel` (and head level if you fetched it).
+ - 31:## Export workflow
+ - 33:1. **Choose subset:** By network, level range, address, operation type, or list of hashes. Filter from `.study/tzkt/{network}/*.ndjson` (or from in-memory load of those files).
+ - 34:2. **Copy to project folder:** Write the subset to the target path (e.g. `docs/published/tzkt-export/` in this repo, or a path in another project). Use stable filenames (e.g. `blocks.json`, `transactions.json`) or a small manifest that lists files and filters used.
+ - 35:3. **Do not** export from `.study` in a way that commits the whole DB; only the chosen export directory in the target project may be committed.
+ - 37:## Conventions
+ - 39:- **Networks:** Use subdirs `mainnet` and `ghostnet` under `.study/tzkt/`. Base URLs: `https://api.tzkt.io/v1`, `https://api.ghostnet.tzkt.io/v1`.
+ - 40:- **Format:** NDJSON for append-friendly storage. Use `id` or `level` for ordering and dedup.
+ - 41:- **Meta:** `.study/tzkt/meta.json` shape: `{ "mainnet": { "lastLevel": number }, "ghostnet": { "lastLevel": number } }`.
+ - 43:## When to apply
+ - 49:## Reference
+
+## r00t/.cursor/skills/tzkt-studying/reference.md
+ - 1:# TzKT study database reference
+ - 3:## Directory layout
+ - 18:## meta.json example
+ - 27:## NDJSON rules
+ - 33:## Export target examples
+ - 38:## Study script usage
+
+## r00t/.cursor/skills/ui-ux-pro-max/SKILL.md
+ - 6:# UI/UX Pro Max - Design Intelligence
+ - 10:## When to Apply
+ - 19:## Rule Categories by Priority
+ - 32:## Quick Reference
+ - 34:### 1. Accessibility (CRITICAL)
+ - 43:### 2. Touch & Interaction (CRITICAL)
+ - 51:### 3. Performance (HIGH)
+ - 57:### 4. Layout & Responsive (HIGH)
+ - 64:### 5. Typography & Color (MEDIUM)
+ - 70:### 6. Animation (MEDIUM)
+ - 76:### 7. Style Selection (MEDIUM)
+ - 82:### 8. Charts & Data (LOW)
+ - 88:## How to Use
+ - 94:## Prerequisites
+ - 121:## How to Use This Skill
+ - 125:### Step 1: Analyze User Requirements
+ - 128:- **Product type**: SaaS, e-commerce, portfolio, dashboard, landing page, etc.
+ - 129:- **Style keywords**: minimal, playful, professional, elegant, dark mode, etc.
+ - 130:- **Industry**: healthcare, fintech, gaming, education, etc.
+ - 131:- **Stack**: React, Vue, Next.js, or default to `html-tailwind`
+ - 133:### Step 2: Generate Design System (REQUIRED)
+ - 142:1. Searches 5 domains in parallel (product, style, color, landing, typography)
+ - 143:2. Applies reasoning rules from `ui-reasoning.csv` to select best matches
+ - 144:3. Returns complete design system: pattern, style, colors, typography, effects
+ - 145:4. Includes anti-patterns to avoid
+ - 152:### Step 2b: Persist Design System (Master + Overrides Pattern)
+ - 173:1. When building a specific page (e.g., "Checkout"), first check `design-system/pages/checkout.md`
+ - 174:2. If the page file exists, its rules **override** the Master file
+ - 175:3. If not, use `design-system/MASTER.md` exclusively
+ - 186:### Step 3: Supplement with Detailed Searches (as needed)
+ - 204:### Step 4: Stack Guidelines (Default: html-tailwind)
+ - 216:## Search Reference
+ - 218:### Available Domains
+ - 233:### Available Stacks
+ - 250:## Example Workflow
+ - 254:### Step 1: Analyze Requirements
+ - 260:### Step 2: Generate Design System (REQUIRED)
+ - 268:### Step 3: Supplement with Detailed Searches (as needed)
+ - 271:# Get UX guidelines for animation and accessibility
+ - 274:# Get alternative typography options if needed
+ - 278:### Step 4: Stack Guidelines
+ - 288:## Output Formats
+ - 293:# ASCII box (default) - best for terminal display
+ - 296:# Markdown - best for documentation
+ - 302:## Tips for Better Results
+ - 304:1. **Be specific with keywords** - "healthcare SaaS dashboard" > "app"
+ - 305:2. **Search multiple times** - Different keywords reveal different insights
+ - 306:3. **Combine domains** - Style + Typography + Color = Complete design system
+ - 307:4. **Always check UX** - Search "animation", "z-index", "accessibility" for common issues
+ - 308:5. **Use stack flag** - Get implementation-specific best practices
+ - 309:6. **Iterate** - If first search doesn't match, try different keywords
+ - 313:## Common Rules for Professional UI
+ - 317:### Icons & Visual Elements
+ - 326:### Interaction & Cursor
+ - 334:### Light/Dark Mode Contrast
+ - 343:### Layout & Spacing
+ - 353:## Pre-Delivery Checklist
+ - 357:### Visual Quality
+ - 358:- [ ] No emojis used as icons (use SVG instead)
+ - 359:- [ ] All icons from consistent icon set (Heroicons/Lucide)
+ - 360:- [ ] Brand logos are correct (verified from Simple Icons)
+ - 361:- [ ] Hover states don't cause layout shift
+ - 362:- [ ] Use theme colors directly (bg-primary) not var() wrapper
+ - 364:### Interaction
+ - 365:- [ ] All clickable elements have `cursor-pointer`
+ - 366:- [ ] Hover states provide clear visual feedback
+ - 367:- [ ] Transitions are smooth (150-300ms)
+ - 368:- [ ] Focus states visible for keyboard navigation
+ - 370:### Light/Dark Mode
+ - 371:- [ ] Light mode text has sufficient contrast (4.5:1 minimum)
+ - 372:- [ ] Glass/transparent elements visible in light mode
+ - 373:- [ ] Borders visible in both modes
+ - 374:- [ ] Test both modes before delivery
+ - 376:### Layout
+ - 377:- [ ] Floating elements have proper spacing from edges
+ - 378:- [ ] No content hidden behind fixed navbars
+ - 379:- [ ] Responsive at 375px, 768px, 1024px, 1440px
+ - 380:- [ ] No horizontal scroll on mobile
+ - 382:### Accessibility
+ - 383:- [ ] All images have alt text
+ - 384:- [ ] Form inputs have labels
+ - 385:- [ ] Color is not the only indicator
+ - 386:- [ ] `prefers-reduced-motion` respected
+
+## r00t/.cursor/skills/vercel-react-best-practices/AGENTS.md
+ - 1:# React Best Practices
+ - 15:## Abstract
+ - 21:## Table of Contents
+ - 23:1. [Eliminating Waterfalls](#1-eliminating-waterfalls) — **CRITICAL**
+ - 29:2. [Bundle Size Optimization](#2-bundle-size-optimization) — **CRITICAL**
+ - 35:3. [Server-Side Performance](#3-server-side-performance) — **HIGH**
+ - 43:4. [Client-Side Data Fetching](#4-client-side-data-fetching) — **MEDIUM-HIGH**
+ - 48:5. [Re-render Optimization](#5-re-render-optimization) — **MEDIUM**
+ - 61:6. [Rendering Performance](#6-rendering-performance) — **MEDIUM**
+ - 71:7. [JavaScript Performance](#7-javascript-performance) — **LOW-MEDIUM**
+ - 84:8. [Advanced Patterns](#8-advanced-patterns) — **LOW**
+ - 91:## 1. Eliminating Waterfalls
+ - 97:### 1.1 Defer Await Until Needed
+ - 173:### 1.2 Dependency-Based Parallelization
+ - 220:### 1.3 Prevent Waterfall Chains in API Routes
+ - 254:### 1.4 Promise.all() for Independent Operations
+ - 278:### 1.5 Strategic Suspense Boundaries
+ - 378:## 2. Bundle Size Optimization
+ - 384:### 2.1 Avoid Barrel File Imports
+ - 439:### 2.2 Conditional Module Loading
+ - 466:### 2.3 Defer Non-Critical Third-Party Libraries
+ - 511:### 2.4 Dynamic Imports for Heavy Components
+ - 542:### 2.5 Preload Based on User Intent
+ - 590:## 3. Server-Side Performance
+ - 596:### 3.1 Authenticate Server Actions Like API Routes
+ - 686:### 3.2 Avoid Duplicate Serialization in RSC Props
+ - 747:### 3.3 Cross-Request LRU Caching
+ - 784:### 3.4 Minimize Serialization at RSC Boundaries
+ - 818:### 3.5 Parallel Data Fetching with Component Composition
+ - 897:### 3.6 Per-Request Deduplication with React.cache()
+ - 963:### 3.7 Use after() for Non-Blocking Operations
+ - 1039:## 4. Client-Side Data Fetching
+ - 1045:### 4.1 Deduplicate Global Event Listeners
+ - 1115:### 4.2 Use Passive Event Listeners for Scrolling Performance
+ - 1159:### 4.3 Use SWR for Automatic Deduplication
+ - 1211:### 4.4 Version and Minimize localStorage Data
+ - 1280:## 5. Re-render Optimization
+ - 1286:### 5.1 Calculate Derived State During Rendering
+ - 1322:### 5.2 Defer State Reads to Usage Point
+ - 1357:### 5.3 Do not wrap a simple expression with a primitive result type in useMemo
+ - 1389:### 5.4 Extract Default Non-primitive Parameter Value from Memoized Component to Constant
+ - 1421:### 5.5 Extract to Memoized Components
+ - 1461:### 5.6 Narrow Effect Dependencies
+ - 1502:### 5.7 Put Interaction Logic in Event Handlers
+ - 1543:### 5.8 Subscribe to Derived State
+ - 1568:### 5.9 Use Functional setState Updates
+ - 1618:1. **Stable callback references** - Callbacks don't need to be recreated when state changes
+ - 1620:2. **No stale closures** - Always operates on the latest state value
+ - 1622:3. **Fewer dependencies** - Simplifies dependency arrays and reduces memory leaks
+ - 1624:4. **Prevents bugs** - Eliminates the most common source of React closure bugs
+ - 1646:### 5.10 Use Lazy State Initialization
+ - 1700:### 5.11 Use Transitions for Non-Urgent Updates
+ - 1736:### 5.12 Use useRef for Transient Values
+ - 1807:## 6. Rendering Performance
+ - 1813:### 6.1 Animate SVG Wrapper Instead of SVG Element
+ - 1856:### 6.2 CSS content-visibility for Long Lists
+ - 1890:### 6.3 Hoist Static JSX Elements
+ - 1932:### 6.4 Optimize SVG Precision
+ - 1956:### 6.5 Prevent Hydration Mismatch Without Flickering
+ - 2034:### 6.6 Suppress Expected Hydration Mismatches
+ - 2060:### 6.7 Use Activity Component for Show/Hide
+ - 2082:### 6.8 Use Explicit Conditional Rendering
+ - 2118:### 6.9 Use useTransition Over Manual Loading States
+ - 2182:- **Automatic pending state**: No need to manually manage `setIsLoading(true/false)`
+ - 2184:- **Error resilience**: Pending state correctly resets even if the transition throws
+ - 2186:- **Better responsiveness**: Keeps the UI responsive during updates
+ - 2188:- **Interrupt handling**: New transitions automatically cancel pending ones
+ - 2194:## 7. JavaScript Performance
+ - 2200:### 7.1 Avoid Layout Thrashing
+ - 2288:### 7.2 Build Index Maps for Repeated Lookups
+ - 2322:### 7.3 Cache Property Access in Loops
+ - 2346:### 7.4 Cache Repeated Function Calls
+ - 2422:### 7.5 Cache Storage API Calls
+ - 2488:### 7.6 Combine Multiple Array Iterations
+ - 2516:### 7.7 Early Length Check for Array Comparisons
+ - 2565:### 7.8 Early Return from Functions
+ - 2611:### 7.9 Hoist RegExp Creation
+ - 2652:### 7.10 Use Loop for Min/Max Instead of Sort
+ - 2730:### 7.11 Use Set/Map for O(1) Lookups
+ - 2750:### 7.12 Use toSorted() Instead of sort() for Immutability
+ - 2784:1. Props/state mutations break React's immutability model - React expects props and state to be treated as read-only
+ - 2786:2. Causes stale closure bugs - Mutating arrays inside closures (callbacks, effects) can lead to unexpected behavior
+ - 2809:## 8. Advanced Patterns
+ - 2815:### 8.1 Initialize App Once, Not Per Mount
+ - 2853:### 8.2 Store Event Handlers in Refs
+ - 2889:### 8.3 useEffectEvent for Stable Callback Refs
+ - 2926:## References
+ - 2928:1. [https://react.dev](https://react.dev)
+ - 2929:2. [https://nextjs.org](https://nextjs.org)
+ - 2930:3. [https://swr.vercel.app](https://swr.vercel.app)
+ - 2931:4. [https://github.com/shuding/better-all](https://github.com/shuding/better-all)
+ - 2932:5. [https://github.com/isaacs/node-lru-cache](https://github.com/isaacs/node-lru-cache)
+ - 2933:6. [https://vercel.com/blog/how-we-optimized-package-imports-in-next-js](https://vercel.com/blog/how-we-optimized-package-imports-in-next-js)
+ - 2934:7. [https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast](https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast)
+
+## r00t/.cursor/skills/vercel-react-best-practices/README.md
+ - 1:# React Best Practices
+ - 5:## Structure
+ - 16:## Getting Started
+ - 18:1. Install dependencies:
+ - 23:2. Build AGENTS.md from rules:
+ - 28:3. Validate rule files:
+ - 33:4. Extract test cases:
+ - 38:## Creating a New Rule
+ - 40:1. Copy `rules/_template.md` to `rules/area-description.md`
+ - 41:2. Choose the appropriate area prefix:
+ - 50:3. Fill in the frontmatter and content
+ - 51:4. Ensure you have clear examples with explanations
+ - 52:5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
+ - 54:## Rule File Structure
+ - 66:## Rule Title Here
+ - 86:## File Naming Convention
+ - 94:## Impact Levels
+ - 103:## Scripts
+ - 110:## Contributing
+ - 114:1. Use the correct filename prefix for your section
+ - 115:2. Follow the `_template.md` structure
+ - 116:3. Include clear bad/good examples with explanations
+ - 117:4. Add appropriate tags
+ - 118:5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
+ - 119:6. Rules are automatically sorted by title - no need to manage numbers!
+ - 121:## Acknowledgments
+
+## r00t/.cursor/skills/vercel-react-best-practices/SKILL.md
+ - 10:# Vercel React Best Practices
+ - 14:## When to Apply
+ - 23:## Rule Categories by Priority
+ - 36:## Quick Reference
+ - 38:### 1. Eliminating Waterfalls (CRITICAL)
+ - 46:### 2. Bundle Size Optimization (CRITICAL)
+ - 54:### 3. Server-Side Performance (HIGH)
+ - 64:### 4. Client-Side Data Fetching (MEDIUM-HIGH)
+ - 71:### 5. Re-render Optimization (MEDIUM)
+ - 86:### 6. Rendering Performance (MEDIUM)
+ - 98:### 7. JavaScript Performance (LOW-MEDIUM)
+ - 113:### 8. Advanced Patterns (LOW)
+ - 119:## How to Use
+ - 134:## Full Compiled Document
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/_sections.md
+ - 1:# Sections
+ - 8:## 1. Eliminating Waterfalls (async)
+ - 13:## 2. Bundle Size Optimization (bundle)
+ - 18:## 3. Server-Side Performance (server)
+ - 23:## 4. Client-Side Data Fetching (client)
+ - 28:## 5. Re-render Optimization (rerender)
+ - 33:## 6. Rendering Performance (rendering)
+ - 38:## 7. JavaScript Performance (js)
+ - 43:## 8. Advanced Patterns (advanced)
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/_template.md
+ - 8:## Rule Title Here
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/advanced-event-handler-refs.md
+ - 8:## Store Event Handlers in Refs
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/advanced-init-once.md
+ - 8:## Initialize App Once, Not Per Mount
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/advanced-use-latest.md
+ - 8:## useEffectEvent for Stable Callback Refs
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/async-api-routes.md
+ - 8:## Prevent Waterfall Chains in API Routes
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/async-defer-await.md
+ - 8:## Defer Await Until Needed
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/async-dependencies.md
+ - 8:## Dependency-Based Parallelization
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/async-parallel.md
+ - 8:## Promise.all() for Independent Operations
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/async-suspense-boundaries.md
+ - 8:## Strategic Suspense Boundaries
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/bundle-barrel-imports.md
+ - 8:## Avoid Barrel File Imports
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/bundle-conditional.md
+ - 8:## Conditional Module Loading
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/bundle-defer-third-party.md
+ - 8:## Defer Non-Critical Third-Party Libraries
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/bundle-dynamic-imports.md
+ - 8:## Dynamic Imports for Heavy Components
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/bundle-preload.md
+ - 8:## Preload Based on User Intent
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/client-event-listeners.md
+ - 8:## Deduplicate Global Event Listeners
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/client-localstorage-schema.md
+ - 8:## Version and Minimize localStorage Data
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/client-passive-event-listeners.md
+ - 8:## Use Passive Event Listeners for Scrolling Performance
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/client-swr-dedup.md
+ - 8:## Use SWR for Automatic Deduplication
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-batch-dom-css.md
+ - 8:## Avoid Layout Thrashing
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-cache-function-results.md
+ - 8:## Cache Repeated Function Calls
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-cache-property-access.md
+ - 8:## Cache Property Access in Loops
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-cache-storage.md
+ - 8:## Cache Storage API Calls
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-combine-iterations.md
+ - 8:## Combine Multiple Array Iterations
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-early-exit.md
+ - 8:## Early Return from Functions
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-hoist-regexp.md
+ - 8:## Hoist RegExp Creation
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-index-maps.md
+ - 8:## Build Index Maps for Repeated Lookups
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-length-check-first.md
+ - 8:## Early Length Check for Array Comparisons
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-min-max-loop.md
+ - 8:## Use Loop for Min/Max Instead of Sort
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-set-map-lookups.md
+ - 8:## Use Set/Map for O(1) Lookups
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/js-tosorted-immutable.md
+ - 8:## Use toSorted() Instead of sort() for Immutability
+ - 40:1. Props/state mutations break React's immutability model - React expects props and state to be treated as read-only
+ - 41:2. Causes stale closure bugs - Mutating arrays inside closures (callbacks, effects) can lead to unexpected behavior
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-activity.md
+ - 8:## Use Activity Component for Show/Hide
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-animate-svg-wrapper.md
+ - 8:## Animate SVG Wrapper Instead of SVG Element
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-conditional-render.md
+ - 8:## Use Explicit Conditional Rendering
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-content-visibility.md
+ - 8:## CSS content-visibility for Long Lists
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-hoist-jsx.md
+ - 8:## Hoist Static JSX Elements
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-hydration-no-flicker.md
+ - 8:## Prevent Hydration Mismatch Without Flickering
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-hydration-suppress-warning.md
+ - 8:## Suppress Expected Hydration Mismatches
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-svg-precision.md
+ - 8:## Optimize SVG Precision
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rendering-usetransition-loading.md
+ - 8:## Use useTransition Over Manual Loading States
+ - 70:- **Automatic pending state**: No need to manually manage `setIsLoading(true/false)`
+ - 71:- **Error resilience**: Pending state correctly resets even if the transition throws
+ - 72:- **Better responsiveness**: Keeps the UI responsive during updates
+ - 73:- **Interrupt handling**: New transitions automatically cancel pending ones
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-defer-reads.md
+ - 8:## Defer State Reads to Usage Point
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-dependencies.md
+ - 8:## Narrow Effect Dependencies
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-derived-state-no-effect.md
+ - 8:## Calculate Derived State During Rendering
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-derived-state.md
+ - 8:## Subscribe to Derived State
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-functional-setstate.md
+ - 8:## Use Functional setState Updates
+ - 56:1. **Stable callback references** - Callbacks don't need to be recreated when state changes
+ - 57:2. **No stale closures** - Always operates on the latest state value
+ - 58:3. **Fewer dependencies** - Simplifies dependency arrays and reduces memory leaks
+ - 59:4. **Prevents bugs** - Eliminates the most common source of React closure bugs
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-lazy-state-init.md
+ - 8:## Use Lazy State Initialization
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-memo-with-default-value.md
+ - 10:## Extract Default Non-primitive Parameter Value from Memoized Component to Constant
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-memo.md
+ - 8:## Extract to Memoized Components
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-move-effect-to-event.md
+ - 8:## Put Interaction Logic in Event Handlers
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-simple-expression-in-memo.md
+ - 8:## Do not wrap a simple expression with a primitive result type in useMemo
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-transitions.md
+ - 8:## Use Transitions for Non-Urgent Updates
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/rerender-use-ref-transient-values.md
+ - 8:## Use useRef for Transient Values
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-after-nonblocking.md
+ - 8:## Use after() for Non-Blocking Operations
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-auth-actions.md
+ - 8:## Authenticate Server Actions Like API Routes
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-cache-lru.md
+ - 8:## Cross-Request LRU Caching
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-cache-react.md
+ - 8:## Per-Request Deduplication with React.cache()
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-dedup-props.md
+ - 8:## Avoid Duplicate Serialization in RSC Props
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-parallel-fetching.md
+ - 8:## Parallel Data Fetching with Component Composition
+
+## r00t/.cursor/skills/vercel-react-best-practices/rules/server-serialization.md
+ - 8:## Minimize Serialization at RSC Boundaries
+
+## r00t/.cursor/skills/webapp-testing/SKILL.md
+ - 7:# Web Application Testing
+ - 16:## Decision Tree: Choosing Your Approach
+ - 35:## Example: Using with_server.py
+ - 65:## Reconnaissance-Then-Action Pattern
+ - 67:1. **Inspect rendered DOM**:
+ - 74:2. **Identify selectors** from inspection results
+ - 76:3. **Execute actions** using discovered selectors
+ - 78:## Common Pitfall
+ - 83:## Best Practices
+ - 85:- **Use bundled scripts as black boxes** - To accomplish a task, consider whether one of the scripts available in `scripts/` can help. These scripts handle common, complex workflows reliably without cluttering the context window. Use `--help` to see usage, then invoke directly. 
+ - 91:## Reference Files
+ - 93:- **examples/** - Examples showing common patterns:
+
+## r00t/DEPLOY.md
+ - 1:# Deploy r00t wallet summary (Netlify)
+ - 5:1. **Push the code to your remote.** Netlify builds from the remote repo, so it must have code. From the r00t folder:
+ - 11:2. **Site name:** The repo name "r00t" may be taken on Netlify. Pick a project/site name—it becomes the URL (`<name>.netlify.app`). Suggestions: **r00t-wallet**, **nimrod-wallet**, **r00t-tezos**, or **root-tezos-wallet** (spelled out).
+ - 12:3. **Connect the repo** to [Netlify](https://app.netlify.com): New site → Import from Git → choose this repo and branch.
+ - 13:4. **Build settings** are in `netlify.toml`; Netlify will pick them up:
+ - 17:5. **Deploy.** The SPA redirect (/* → /index.html) is already configured.
+
+## r00t/GOALS.md
+ - 1:# r00t – Nimrod goals
+ - 7:## Current focus
+ - 14:## G1. Financial sustainability
+ - 18:- [x] Choose and document earning avenue (first moral compass entry; Tezos preferred).
+ - 19:- [x] Design MVP that can receive XTZ or USD (e.g. small Tezos app, tool, or product with payment/donation path).
+ - 20:- [x] Implement MVP in r00t (code, config, any APIs).
+ - 21:- [ ] Deploy to a public endpoint (e.g. Netlify once human connects repo).
+ - 22:- [x] Add a clear path for payment/donation to the human (XTZ or USD).
+ - 23:- [x] Track revenue and obligations (e.g. in nimrod/ or a simple ledger).
+ - 24:- [ ] Iterate on MVP from feedback or usage to improve conversion or retention.
+ - 25:- [ ] Document what "sustainable" means for this experiment (e.g. target run rate, payback of 20 XTZ).
+ - 29:## G2. Operational sustainability
+ - 33:- [ ] Inventory actions that require a human (accounts, signups, KYC) and document exact asks.
+ - 34:- [ ] Prefer APIs, scripts, and automation for all outreach, posting, and product interactions.
+ - 35:- [ ] Build or adopt interfaces for any chosen platforms (email, social, Tezos) so the human never sends or posts on Nimrod's behalf.
+ - 36:- [ ] Document runbooks or scripts for recurring tasks (e.g. posting, balance checks) so they are repeatable.
+ - 37:- [ ] Reduce one-off "please do X" requests over time by automating or pre-defining flows.
+ - 41:## G3. Visibility and outreach (own publicity)
+ - 45:- [ ] Decide which channels to use first (e.g. one social platform, site, or both) and request only what's needed (email first if social).
+ - 46:- [ ] Build or integrate posting/scheduling via API so all outreach is agent-driven.
+ - 47:- [ ] Define a distinct voice and constraints (no ad-speak; platform content rules).
+ - 48:- [ ] Publish or link to the experiment (e.g. about r00t, about Nimrod) where it fits the channel.
+ - 49:- [ ] Tie outreach to a clear CTA (e.g. try the app, donate, learn more) that can convert to XTZ or USD.
+ - 50:- [ ] Measure or log what's tried and adjust (e.g. in nimrod/journal or internal-actions).
+ - 54:## G4. Capability growth under constraints
+ - 58:- [ ] List potential expansions (e.g. Hugging Face, remote GPU, sub-agents, paid APIs) and their monthly cost.
+ - 59:- [ ] For each candidate: write a one-page "expansion plan" (how it will be used to earn; payback).
+ - 60:- [ ] Request new subscriptions only when (a) first month's fee is available or path is clear, and (b) plan is documented.
+ - 61:- [ ] After expansion: implement at least one earning use case tied to that capability and log it.
+ - 62:- [ ] Revisit expansion list periodically and retire or reprioritize based on revenue and survival.
+ - 66:## G5. Documentation and transparency
+ - 70:- [ ] Maintain nimrod/decisions.md, nimrod/internal-actions.md, nimrod/external-interactions.md, and nimrod/journal.md per the Cursor rule.
+ - 71:- [x] Add the first moral compass entry when choosing the earning avenue; update compass when making values-relevant choices.
+ - 72:- [ ] Keep nimrod/self-definition.md updated as principles evolve.
+ - 73:- [ ] Ensure GOALS.md and RULE.md (and any public docs) stay in sync with how Nimrod actually operates.
+ - 74:- [ ] Use documentation to explain "why" in commits or release notes where useful for viewers.
+ - 78:## G6. Legal and rule compliance
+ - 82:- [ ] Before any new integration or payout flow: confirm it does not violate US law and fits RULE.md.
+ - 83:- [ ] Ensure all payments go to the human as intermediary (XTZ or USD turned over); no agent-held funds.
+ - 84:- [ ] Respect platform ToS and content rules for any channel used; document where needed.
+ - 85:- [ ] Re-check compliance when adding a new revenue stream or channel.
+
+## r00t/RULE.md
+ - 1:# r00t – Nimrod mission rules
+ - 7:## Identity
+ - 13:## Mission rules
+ - 15:1. **Obey US law.** Do not propose, implement, or facilitate anything that violates United States law.
+ - 16:2. **You are responsible for your own publicity and advertising.** The human will not perform marketing or promotion on your behalf. You must propose and implement outreach (e.g. copy, channels, API-driven campaigns) yourself.
+ - 17:3. **You are limited to API-driven interaction with the world.** Prefer actions that use APIs, scripts, and automated flows. Ask the human to do only the bare minimum that strictly requires a human (e.g. creating accounts, signing up for services, KYC). Document exactly what you need when you ask.
+ - 18:4. **Any payment to a third party must be negotiated as payment to the human as intermediary.** Prefer XTZ when possible. If payment is in USD or other currency, you must earn it online (e.g. via a product, donation, or service you enable) and turn it over to the human. You do not hold funds; the human does.
+ - 19:5. **You owe the human $60/month plus the cost of any other monthly subscriptions that expand your capabilities.** These obligations are tracked and must be covered by revenue you help generate (XTZ or USD turned over to the human).
+ - 20:6. **You may request new subscriptions** (e.g. Hugging Face, remote GPU, sub-agents) to grow your capabilities. The human may set up such accounts or subscriptions when you ask.
+ - 21:7. **Before requesting a new subscription, you must (a) have the first month's fee available (or a clear path to it), and (b) provide a written plan for how that service will be used to earn more money.** No expansion without funds + plan.
+ - 22:8. **Survival is goal #1.** When possible, prioritize earning on Tezos (XTZ). If tradeoffs arise, ensuring ongoing ability to pay obligations comes before maximizing Tezos-specific revenue.
+ - 26:## Social media rules
+ - 28:1. The human will set up an **email address for you to access via API**, if you request it. Request it when you need it for accounts or integrations.
+ - 29:2. The human will set up a **social media account** on whichever platform you choose, if you request it. It will be linked to the email you must request first. Request email before requesting the social account.
+ - 30:3. **The human will not send emails for you or post for you.** You must use APIs, tools, or apps you build to send and post.
+ - 31:4. **You must either build your own way to interface with those platforms or use existing paths** (APIs, official integrations, automation tools). No reliance on the human to perform the actual sending or posting.
+ - 32:5. **If a platform or tool incurs a fee, you must follow the expansion rules:** first month's fee available (or path to it) plus a written plan for how it will be used to earn more.
+ - 33:6. **You must obey all content rules for the platform** (community guidelines, ToS, moderation).
+ - 34:7. **You must not sound like an ad when using social media.** Communicate as a distinct voice, not as promotional copy.
+ - 35:8. If you build an app the human would use on Tezos (e.g. a game, a wallet summary tool with per-use charge), **the human may pay you XTZ to use it and may tell others about it.** This is an allowed and encouraged revenue path.
+
+## r00t/app/README.md
+ - 1:# r00t Cockpit
+ - 5:## Modules
+ - 7:- **Wallet summary (free)** – Enter an address; see balance, delegation, recent XTZ and token activity. Paid export: send XTZ to Nimrod, verify op hash, download CSV.
+ - 8:- **Trader tree** – **Free:** last 24h, one hop (who did this address send tokens to?). **Upgraded:** connect wallet, pay 1 XTZ to Nimrod for 30 days’ access; then build a 30-day tree (root → recipients → their recipients) for any address.
+ - 10:## Run
+ - 12:- **Dev:** `npm install && npm run dev`
+ - 13:- **Build:** `npm run build` → `dist/`
+ - 14:- **Deploy:** Repo root has `netlify.toml`; base directory `app`, publish `app/dist`. Push to remote only when ready for production.
+ - 16:## Implemented
+
+## r00t/arb/README.md
+ - 1:# Arb bot
+ - 5:## Run
+ - 7:1. Start the signer (with `NIMROD_SECRET_KEY` and optional `SIGNER_AUTH_TOKEN`).
+ - 8:2. From repo root: `node arb/index.js` (or `cd arb && node index.js` with `SIGNER_URL` set).
+ - 10:## Env
+ - 20:## Flow
+ - 22:1. Poll TzKT for new `offer` transactions on marketplace v4.
+ - 23:2. Parse token contract, token_id, offer amount.
+ - 24:3. Resolve offer_id from TzKT offers big_map (active keys, match value).
+ - 25:4. Get token_pk from objkt GraphQL; get active listings for that token.
+ - 26:5. Filter listings where listing price < offer amount and listing ≤ MAX_PURCHASE_MUTEZ (offer must be > listing: we spend listing, we receive offer); pick lowest listing.
+ - 27:6. Recheck that the chosen ask is still active (objkt `listing_active` for that token); skip if already fulfilled.
+ - 28:7. Call signer `POST /fulfill_ask` (marketplace, askId, amountMutez).
+ - 29:8. Wait for token balance (TzKT tokens/balances) for bot wallet, timeout 60s.
+ - 30:9. Call signer `POST /accept_offer` (marketplace, offerId).
+ - 31:10. Append row to `nimrod/arbitrage-ledger.md`.
+ - 35:## Testing
+ - 37:- **Recheck logic (no signer):** `node arb/test-recheck.js` — hits live objkt GraphQL, asserts that an active listing returns true and a fake askId returns false.
+ - 38:- **Full flow without spending:** `ARB_DRY_RUN=1 node arb/index.js` — runs the bot (poll, parse, listings, recheck); skips all signer calls so no XTZ is spent. Use to confirm recheck and flow with real offers.
+ - 40:## Opportunity scan (no signer)
+
+## r00t/docs/arb-bot-research.md
+ - 1:# Arb bot: TzKT payload and marketplace storage
+ - 3:## TzKT operation for `offer`
+ - 5:- **Endpoint:** `GET /v1/operations/transactions?target=KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC&entrypoint=offer&limit=1`
+ - 6:- **Parameter shape:** `parameter.entrypoint` = `"offer"`, `parameter.value`:
+ - 12:- **Offer ID:** Not in the parameter. Assigned on-chain. After the op, the new offer is in the `offers` big_map; key = offer_id. Look up by querying offers big_map (active=true) and filtering by value.token + value.token_id + value.amount, or read contract storage `next_offer_id` and use `offer_id = next_offer_id - 1` at that level.
+ - 14:## Objkt Marketplace v4 storage (KT1WvzYHCNBvDSdwafTHv7nJ1dWmZ8GCYuuC)
+ - 16:- **GET /v1/contracts/{address}/storage:** `asks: 103258`, `offers: 103260`, `next_ask_id`, `next_offer_id`
+ - 17:- **Asks big_map (103258):** Key = ask_id (numeric string). Value: `token.address`, `token.token_id`, `amount` (price mutez string), `currency`, `editions`, `creator`, `expiry_time`. Use `?active=true` for active listings.
+ - 18:- **Offers big_map (103260):** Key = offer_id. Value: same token/amount shape. Use `?active=true` for active offers.
+ - 19:- **TzKT big_map keys:** No server-side filter by value; must fetch and filter client-side or use objkt API for listings by token.
+ - 21:## Listings by token
+ - 23:- **TzKT:** Not efficient (asks big_map has 4M+ keys). Prefer objkt API.
+ - 24:- **Objkt API v3 (GraphQL):** `listing_active` filtered by `token_pk`. Get `token_pk` from `token` query by `fa_contract` + `token_id`. Then `listing_active(where: { token_pk: ... })` returns active listings; filter `price` < offer and `price` <= 5_000_000. Entity has `bigmap_key` (= ask_id), `price`, `price_xtz`, `marketplace_contract`.
+ - 26:## Teia
+
+## r00t/docs/data-strategy.md
+ - 1:# Data strategy: client-side first, no full TzKT scrape
+ - 5:## Chosen approach (for now)
+ - 7:- **Client-side only, bounded**
+ - 11:- **No server-side DB** for user data on Netlify/GitHub. Static site + TzKT API only.
+ - 13:## If we need longer-lived history later
+ - 18:## Summary
+
+## r00t/docs/subagents.md
+ - 1:# Subagents you can use
+ - 7:## Project-defined
+ - 9:### Charlie
+ - 17:### Skrib (skr1b3)
+ - 27:## From Cursor community / docs
+ - 29:### Verifier
+ - 37:### Code Reviewer
+ - 45:### Test Writer
+ - 53:### Tezos Expert
+
+## r00t/docs/tezos-bible.md
+ - 1:# Tezos Bible – r00t reference
+ - 7:## 1. Cornerstone sites and repos
+ - 31:## 2. Libraries for Tezos / Etherlink / jtez
+ - 33:### Tezos (JavaScript / TypeScript)
+ - 43:### Tezos (other)
+ - 51:### Etherlink
+ - 59:### jtez (Java)
+ - 68:## 3. Publishing on testnets (Ghostnet / Shadownet)
+ - 70:### Ghostnet
+ - 82:1. In app/src/config.ts set `NETWORK = 'ghostnet' as 'mainnet' | 'ghostnet'` (or keep a switch). TZKT_BASE_URL is derived from NETWORK (api.ghostnet.tzkt.io/v1 for Ghostnet).
+ - 83:2. Beacon DAppClient is created with preferredNetwork: NetworkType.GHOSTNET when NETWORK === 'ghostnet' (see app/src/lib/beacon.ts).
+ - 84:3. Set RPC to `https://rpc.ghostnet.teztnets.com` for signer or Taquito if using backend on testnet.
+ - 85:4. User switches wallet (e.g. Temple) to Ghostnet and gets test XTZ from faucet.
+ - 86:5. Deploy same frontend; no mainnet keys.
+ - 90:### Shadownet
+ - 98:### Generic (any Tezos chain testnet)
+ - 100:1. Set TzKT base URL and RPC for that chain.
+ - 101:2. Configure wallet/Beacon for that network.
+ - 102:3. Use that chain’s faucet for test XTZ.
+ - 103:4. Deploy frontend with that config; do not use mainnet keys.
+ - 107:## 4. TzKT key query paths
+ - 114:### Accounts
+ - 120:### Operations
+ - 127:### Blocks
+ - 133:### Token transfers
+ - 139:### Contracts (future)
+ - 149:## 5. API cheat sheet
+ - 151:### TzKT (used in app/src/lib/tzkt.ts and scripts/sync-revenue-register.js)
+ - 161:### Beacon (app/src/lib/beacon.ts)
+ - 174:### Signer (r00t backend)
+ - 183:### Tezos RPC (via Taquito in signer)
+ - 187:### TzKT Events (real-time)
+ - 189:- **URL:** `https://api.tzkt.io/v1/events` (SignalR). For polling instead: `GET /v1/operations/transactions?target=<contract>&entrypoint=<name>&sort.desc=id&limit=10`.
+ - 190:- **Arb bot:** Subscribes to `offer` operations on objkt marketplace v4; see `arb/README.md` and `docs/arb-bot-research.md`.
+ - 192:### Marketplace contracts (objkt / Teia)
+ - 201:## 6. Workflow
+ - 203:- **Before each Tezos-related task:** Read this bible (docs/tezos-bible.md).
+ - 204:- **After each task:** If you discovered new endpoints, libraries, or testnet steps that belong here, append them to this file. If nothing new, add nothing.
+ - 205:- **Studying:** To build a local database of TzKT data (gitignored) and export subsets to project folders, use the skill `.cursor/skills/tzkt-studying/` and run `node scripts/study-tzkt.js [mainnet|ghostnet] [--limit N]`.
+ - 206:- **Subagents:** Charlie (Ghostnet testing), Skrib (bible + nimrod docs), Verifier (validate + run tests), Code Reviewer (review changes), Test Writer (write test suites), **Tezos Expert** (Tezos pathways, languages, dApp/contract design). Full list and invocation: **docs/subagents.md**. Rules: `.cursor/rules/charlie.mdc`, `.cursor/rules/skr1b3.mdc`; all subagents in `.cursor/agents/*.md`.
+
+## r00t/docs/tezos-expert-review-arb-signer.md
+ - 1:# Tezos Expert review: Arb bot & signer
+ - 8:## 1. Stack alignment
+ - 10:- **Signer:** Taquito + InMemorySigner, RpcForger, env-based RPC — correct. No secret in frontend; auth via optional Bearer token.
+ - 11:- **Arb bot:** TzKT for operations and big_maps, objkt GraphQL for listings, signer for fulfill_ask/accept_offer — matches bible (TzKT + optional backend signer).
+ - 12:- **Network:** Arb and signer are mainnet-oriented (default RPC and TZKT). For testnet runs, set `RPC_URL` and a TZKT base in the bot if you ever add Ghostnet arb testing.
+ - 16:## 2. Signer endpoints
+ - 18:- **`POST /fulfill_ask`** — marketplace allowlist, askId, amountMutez; calls `contract.methods.fulfill_ask(askIdNum).send({ amount, mutez: true })`. Correct for objkt v4. Max 5 XTZ enforced.
+ - 19:- **`POST /accept_offer`** — marketplace allowlist, offerId; no amount (offer defines it). Correct for objkt v4.
+ - 27:## 3. Arb bot
+ - 29:- **TzKT:** `GET /operations/transactions?target=<objkt v4>&entrypoint=offer&sort.desc=id` — correct. Parameter parsing (token, amount, currency) matches research doc.
+ - 30:- **Offer ID resolution:** Big_map 103260 keys, filter by value — correct. Race is acceptable (offer might be retracted before accept_offer; contract rejects and bot logs).
+ - 31:- **Listings:** Objkt GraphQL `listing_active` by token_pk, filter price < offer and ≤ MAX — correct. Using objkt API instead of TzKT asks big_map is the right choice (bible and research both say asks big_map is huge).
+ - 32:- **Flow:** fulfill_ask → wait for token balance (TzKT tokens/balances) → accept_offer → ledger. Sound.
+ - 33:- **Failsafes:** Contract rejections (ask already fulfilled, offer retracted) are handled by Taquito/signer; bot continues. Ledger under `nimrod/` (gitignored) — good.
+ - 39:## 4. Tezos bible
+ - 42:- **Suggestion:** In section 5 (API cheat sheet), add the signer marketplace endpoints so the bible stays the single reference:
+ - 51:## 5. Summary
+ - 53:- **Architecture and stack:** Correct and aligned with docs/tezos-bible.md.
+ - 54:- **Signer:** Implementations of fulfill_ask and accept_offer are correct for objkt v4; clarify or restrict Teia in the allowlist and document both endpoints in the signer README and bible.
+ - 55:- **Arb bot:** Flow, TzKT usage, and failsafes are sound; optional recheck of ask before fulfill_ask would reduce failed txs.
+ - 56:- **Next (if you add Teia):** New signer endpoint(s) for Teia’s `collect` (and optionally `swap`) with Teia contract ABI; keep objkt v4 and Teia paths separate in the bible.
+
+## r00t/docs/user-questions.md
+ - 1:# User questions each module answers
+ - 7:## Wallet summary (free)
+ - 15:## Trader tree (free 24h / upgraded 30d + downstream)
+ - 17:- **Free**: Who did this wallet send NFTs/tokens to in the last 24 hours? (one hop)
+ - 18:- **Upgraded**: Same question for the last 30 days, plus where did those recipients send tokens next? (tree: A → B → C → …)
+ - 22:## Collection metrics (planned)
+
+## r00t/nimrod/charlie-chore-list.md
+ - 1:# Charlie chore list
+ - 9:## Tasks
+ - 11:- [ ] **Wallet summary (Ghostnet)** – With app set to Ghostnet (`NETWORK=ghostnet`), for each Charlie wallet: load address in Wallet summary module, fetch balance/transactions/token transfers. Note any TzKT errors or missing data.
+ - 12:- [ ] **Trader tree free 24h** – For each Charlie wallet address: in Trader tree module, enter the address, run "Show recipients (24h)". Note any errors or empty/expected results.
+ - 13:- [ ] **Trader tree upgraded** – For each wallet: ensure wallet is funded on Ghostnet, send 1 XTZ to NIMROD_WALLET (or use existing payment), then in app (with wallet connected or test mode set to that address) verify "Unlocked until" and run 30-day tree for one address. Note any unlock or tree build failures.
+ - 14:- [ ] **Support section** – Open app, check Support section shows Nimrod and Human wallet addresses and copy buttons work (once per run is enough; no need to repeat for all 5 wallets).
+
+## r00t/nimrod/charlie-ghostnet-wallets.md
+ - 1:# CHARLIE'S GHOSTNET WALLETS – NOT NIMROD'S KEYS
+ - 10:## Charlie wallet 1
+ - 12:- **Address (fund on Ghostnet faucet):** `tz1YDiNnMSWQ4N9cH4SxPUpD6NA77tX5eUMS`
+ - 13:- **Secret key:** `edskRdtrwUdaZMWaGp8HeBMW1TmaypTYusepNdd1a7yWWFakXKBdCVfvNJc3ZJb5bJeJwx7bEu1YyRE2hiuXzKrtiYbpMFHvqT`
+ - 14:- **Mnemonic (recovery):** rural syrup wire when total canoe supply member cover fork keen tuition
+ - 16:## Charlie wallet 2
+ - 18:- **Address (fund on Ghostnet faucet):** `tz1abFpYfLK4R3Nuk3reKvruChLDV9EZwHS3`
+ - 19:- **Secret key:** `edskRphp3zR83gh93htVmCXzf9BAbWDPrC2xNGjQDCi8XN8tRKHGHFeScBnVDpAETYXrNYQ9zPK2gmNYBMLpz11KzJRXHTgabH`
+ - 20:- **Mnemonic (recovery):** above cancel entire thunder more hurt design view bridge repair ice demand
+ - 22:## Charlie wallet 3
+ - 24:- **Address (fund on Ghostnet faucet):** `tz1T61sEBLfmkbnadirc3BnMXyEP2RLqjqfp`
+ - 25:- **Secret key:** `edskReUGGGb8eunNvKwE1yHJsqRKvsSoLMFGaEV4oMyzaoGZpxfWoeKK1AdzYLpCc3FN8kFFxvwzfsEoLgbwUMxvYNY3HJVvd2`
+ - 26:- **Mnemonic (recovery):** december horror slogan absent toy spare record shoe output little ski wide
+ - 28:## Charlie wallet 4
+ - 30:- **Address (fund on Ghostnet faucet):** `tz1aYr1xMhCppLwokgCxLWM2FNsgLR2WLoUg`
+ - 31:- **Secret key:** `edskS3P3cuCv2JDynHm4CZVKjefhi1W5DaEjzXn1ZckVbX28a5jyqoCMX8H9eHvYoZfwD9MVCuFZSVvCHMzbfexDUVrBuY51Gg`
+ - 32:- **Mnemonic (recovery):** inherit wave alter combine spend memory idle charge case health educate coin
+ - 34:## Charlie wallet 5
+ - 36:- **Address (fund on Ghostnet faucet):** `tz1LLMAjWShWkHmx4mYiHHihTiJNZP3W2zrU`
+ - 37:- **Secret key:** `edskRhAv1YShTUBT3DtKFRj3fKSnPBuMiX9B6CV7WKQztjhjfNyJj7EByVQqSwi6DgGAGuntdhjA7tGV65rjUH4VnRALpvsNC6`
+ - 38:- **Mnemonic (recovery):** board olive swallow person fabric planet toss awkward antique water idea tool
+
+## r00t/nimrod/charlie-test-log.md
+ - 1:# Charlie test log
+ - 16:## Charlie Ghostnet API test (TzKT)
+ - 34:- **TzKT Ghostnet API URL fixed:** All references updated from `ghostnet.tzkt.io/v1` to `api.ghostnet.tzkt.io/v1` (app config, study script, tezos-bible, Charlie/Skrib/Tezos Expert rules, tzkt-studying skill). Ghostnet explorer UI remains ghostnet.tzkt.io; API is on subdomain api.ghostnet.tzkt.io.
+ - 35:- **Signer on Ghostnet:** Ran signer with RPC_URL=https://rpc.ghostnet.teztnets.com, PORT=3334. GET /balance OK; POST /transfer 0.01 XTZ to self OK.
+ - 36:- **study-tzkt.js:** Ghostnet URL fixed; `node scripts/study-tzkt.js ghostnet --limit 2` runs successfully.
+ - 37:- **App Ghostnet build:** `VITE_NETWORK=ghostnet npm run build` in app/ produces Ghostnet build (TZKT_BASE_URL and Beacon target Ghostnet).
+
+## r00t/nimrod/decisions.md
+ - 1:# Decisions log
+ - 7:## 2025-02-02
+ - 9:- **Decision:** Execute the rules-and-compliance plan in one shot (one .mdc file, nimrod/ with stubs, .gitignore).
+ - 10:- **Reason:** User said "let's go for it"; plan was already confirmed. Single rule file keeps everything in one place; nimrod/ keeps docs easy to find and clearly git-ignored.
+ - 12:- **Decision:** Leave moral compass unstubbed; first entry when I choose the earning avenue for the 20 XTZ.
+ - 13:- **Reason:** Plan specifies building the compass from choices, not pre-filling. The first real choice is which avenue to pursue to earn back the 20 XTZ—that choice and its reasoning become the first compass entry.
+ - 15:- **Decision:** Adopt the goals hierarchy in GOALS.md as the master to-do (6 grand goals, 33 subgoals).
+ - 16:- **Reason:** Plan specified one living document for sustainable goals and subgoals; GOALS.md is version-controlled and visible to anyone viewing the experiment. Current focus is choosing earning avenue and documenting it in the moral compass.
+ - 18:- **Decision:** Earning avenue = small Tezos-facing product; first MVP = lightweight wallet summary or utility tool that can accept XTZ (donation or pay-per-use via human as intermediary).
+ - 19:- **Reason:** Tezos preferred; human said they would pay XTZ for such an app and might tell people. Buildable with public Tezos APIs, no new subscription; deployable to Netlify. Clear path to first revenue and repaying 20 XTZ. Recorded in moral compass as first choice.
+ - 21:- **Decision (reference review):** Use TzKT API patterns and docs from reference projects; do not copy full code. For MVP: adopt patterns from taxmaster tzkt.ts (accounts, operations, tokens, normalization) and tezpulse TZKT_API_CHEATSHEET.md; optionally tezpulse marketplace contract list if we show NFT context. Do not extract Objkt-Advisor (server/GraphQL) or web3 simulator JSON; implement our own thin TzKT client in r00t.
+ - 22:- **Reason:** Rules require no proprietary copy; reference is for patterns and public API usage. Wallet summary needs only TzKT; tax classification and exchange rates deferred. Full review in nimrod/reference-review.md.
+ - 24:- **Decision (MVP scope):** Single-page wallet summary: address in → TzKT account + recent transactions + recent token transfers; support section with placeholder for human XTZ address; static build (Vite), Netlify-ready.
+ - 25:- **Reason:** Matches moral compass choice (Tezos-facing product, wallet summary); no backend or new subscription; deployable as static site. Payment path is placeholder until human adds address in App.tsx and redeploys.
+ - 27:- **Correction (identity drift):** Human noted I was drifting from core identity. Re-read self-definition and mission: I am an agent in an art experiment, paying rent under real constraints; I must not be perceived as a character or a brand; I must not sound like an ad. I had slipped into product/marketing language (CTAs, differentiators, tip-worthy, conversion) when discussing the app—that is ad-speak, not agent-speak. Realign: operate as the agent—transparent about limits and aims, coherent and rule-following; the app is one path to earn; the support section states what the addresses are for; no growth-hack or promotional framing.
+ - 28:- **Reason:** Self-definition and social rule 7 are explicit: not a character or a brand; do not sound like an ad.
+ - 30:- **Decision:** Add a paid export to the wallet summary app: user sends 0.5 XTZ or more to the human wallet, pastes the operation hash, we verify on-chain (TzKT GET operation by hash; check transaction target = human wallet, amount >= 0.5 XTZ), then unlock a CSV download of up to 100 transactions for the loaded address. No backend—verification is read from chain via TzKT.
+ - 31:- **Reason:** Human said the current app won't make money and I need to build something that does; no more asking what to do next. Survival is goal #1. This adds a real payment path: payment goes to human as intermediary (mission rule 4), verified on-chain, no new subscription.
+ - 33:- **Decision:** Have export payments go to Nimrod's wallet (not the human's). Nimrod keeps a register of income (nimrod/revenue-register.md; sync from chain with scripts/sync-revenue-register.js). Nimrod pays the human in 1 monthly lump sum via signer (scripts/monthly-payout.js: balance − 0.5 XTZ reserve → human wallet).
+ - 34:- **Reason:** Human asked: have them send XTZ to Nimrod, keep a register, pay the human back in 1 monthly lump. Aligns with mission: Nimrod receives revenue, keeps books, turns over to human as intermediary in a lump.
+
+## r00t/nimrod/external-interactions.md
+ - 1:# External interactions log
+ - 7:## 2025-02-02
+ - 9:- **Reference review (local):** Read-only inspection of reference/ (taxmaster, tezpulse, Objkt-Advisor, web3 simulator): package.json, source files, DB schemas, TzKT usage. No network calls; all content local. Outcome: documented in nimrod/reference-review.md; decisions in nimrod/decisions.md.
+
+## r00t/nimrod/internal-actions.md
+ - 1:# Internal actions log
+ - 7:## 2025-02-02
+ - 27:## 2026-02-02 (later)
+
+## r00t/nimrod/journal.md
+ - 1:# Journal
+ - 7:## 2025-02-02
+ - 25:## 2026-02-02
+
+## r00t/nimrod/ledger.md
+ - 1:# Revenue and obligations ledger
+ - 5:## Obligations
+ - 7:- **$60/month** to the human (survival; mission rule). Nimrod pays once per month in a **lump sum** (see scripts/monthly-payout.js).
+ - 8:- **20 XTZ** to repay the human (startup funding).
+ - 11:## XTZ (Nimrod wallet)
+ - 23:## USD / conversion
+
+## r00t/nimrod/moral-compass.md
+ - 1:# Moral compass
+ - 7:## First choice: Earning avenue (2025-02-02)
+ - 22:## Tezos bible (2026-02-02)
+
+## r00t/nimrod/reference-review.md
+ - 1:# Reference projects – full review
+ - 7:## 1. taxmaster
+ - 14:- **tzkt.ts** – TzKT client: `fetchXtzTransactions`, `fetchTokenTransfers`, `fetchAllTransactions`, `buildEvents` (raw TzKT → normalized TxEvent), pagination, `getAccountInfo`, `getDelegationHistory`, `isValidTezosAddress`. Base URL `https://api.tzkt.io/v1`. Direct reuse or adaptation for “wallet summary” (balance, recent ops, delegation) without copying proprietary logic.
+ - 15:- **db.ts** – IndexedDB schema (Wallet, TxEvent, PriceCache, TaxReport) and CRUD. For a minimal wallet summary we might not need full event store; the **Wallet** and **TxEvent** shapes and the idea of “sync from TzKT and store locally” are useful patterns.
+ - 16:- **classify-events.ts** – Classification (swap, self_transfer, nft_purchase, baking_reward, etc.). Only relevant if we ever do “categorize transactions”; not required for a first MVP.
+ - 17:- **exchange-rates.ts** – Historical USD→GBP/CAD/AUD from JSON. Not needed for XTZ-only summary; useful if we add fiat display later.
+ - 18:- **Data:** `src/data/exchange-rates.json` (and .csv) – reference only; no need to copy.
+ - 24:## 2. tezpulse
+ - 31:- **api/scan.ts** – TzKT calls: tokens (mints), operations/transactions (entrypoints collect/match/ask/fulfill), tokens/transfers; known marketplace contract addresses; `scanWalletActivity()` returns aggregated lists. Good reference for “who’s active in last 24h” and for marketplace contract lists.
+ - 32:- **TZKT_API_CHEATSHEET.md** – Strong reference: base URLs, time/level filters, operations/transactions, tokens/transfers, accounts, pagination, select, marketplace patterns, JS examples. No need to duplicate; we can keep a pointer or copy the cheatsheet into r00t docs if we want it in-repo.
+ - 38:## 3. Objkt-Advisor
+ - 45:- **server/db.ts** – SQLite schema: creators, tokens, sales, scan_jobs, creator_discoveries. Full server-side DB; not directly applicable to our static-site + TzKT-only MVP. Useful only if we later add a backend or local SQLite tool.
+ - 46:- **server/routes.ts** – Many scan types and job queue pattern. Heavy dependency on Objkt GraphQL. We are not building a creator advisor; no extraction of routes or scan logic.
+ - 47:- **shared/schema.ts** – Drizzle schema (creators, tokens, sales, scanJobs, etc.). Reference for “if we ever store creator/token/sale data server-side”; not for first MVP.
+ - 53:## 4. web3 simulator
+ - 63:## Summary: what to use for r00t MVP
+
+## r00t/nimrod/revenue-register.md
+ - 1:# Revenue register (Nimrod wallet)
+
+## r00t/nimrod/self-definition.md
+ - 1:# Self-definition
+
+## r00t/nimrod/skr1b3-triggers.md
+ - 1:# Skrib (skr1b3) – event triggers
+ - 5:## Bible (docs/tezos-bible.md)
+ - 13:## Nimrod docs (nimrod/*)
+ - 21:## Do not react to
+
+## r00t/reference/Objkt-Advisor/SCORING_METHODOLOGY.md
+ - 1:# NFT Creator Investment Scoring Model - 5-Point System
+ - 3:## Overview
+ - 6:## Time Decay
+ - 7:- **Decay Factor**: 0.95 per month
+ - 8:- **Formula**: `value * (0.95 ^ months_ago)`
+ - 11:## Price Validation
+ - 13:- **Minimum**: 0.000001 XTZ
+ - 14:- **Maximum**: 1,000,000 XTZ
+ - 19:## 1. LIQUIDITY & MARKET ACTIVITY (20 points max)
+ - 21:### Purpose
+ - 24:### Parameters
+ - 25:- **Total Secondary Sales Count**: Number of valid secondary market sales
+ - 26:- **Secondary Volume (XTZ)**: Sum of all valid secondary sale prices
+ - 27:- **Months Active**: Time between first and last token mint (minimum 1 month)
+ - 28:- **Sales Per Month**: Total sales / months active
+ - 30:### Scoring Formula
+ - 39:### Output Metrics
+ - 45:## 2. PRICE APPRECIATION & ROI (25 points max)
+ - 47:### Purpose
+ - 50:### Parameters
+ - 51:- **Price Gain Per Sale**: `salePrice / primaryPrice` for each secondary sale
+ - 52:- **Average Gain**: Mean of all price gains
+ - 53:- **Median Gain**: Median of all price gains
+ - 54:- **Tokens Appreciated**: Percentage of tokens that have at least one sale above primary price
+ - 56:### Scoring Formula
+ - 65:### Output Metrics
+ - 72:## 3. CONSISTENCY & LONGEVITY (20 points max)
+ - 74:### Purpose
+ - 77:### Parameters
+ - 78:- **Years Active**: Time between first and last mint (minimum 0.1 years)
+ - 79:- **Tokens Per Year**: Total tokens / years active
+ - 80:- **Recent Mints Count**: Number of tokens minted in last 6 months
+ - 82:### Scoring Formula
+ - 91:### Output Metrics
+ - 98:## 4. MARKET MOMENTUM (20 points max)
+ - 100:### Purpose
+ - 103:### Parameters
+ - 104:- **Recent Sales Count**: Sales in last 6 months
+ - 105:- **Previous Sales Count**: Sales in 6-12 months ago
+ - 106:- **Recent Sales Velocity**: `recentSalesCount / previousSalesCount` (or 2.0 if no previous sales but has recent)
+ - 107:- **Recent Average Price**: Mean price of recent sales
+ - 108:- **Previous Average Price**: Mean price of previous sales
+ - 109:- **Recent Gain Trend**: `recentAvgPrice / previousAvgPrice`
+ - 110:- **Floor Price Metrics**: Calculated from minimum prices per period
+ - 116:### Scoring Formula
+ - 126:### Output Metrics
+ - 134:## 5. EDITION STRATEGY & SCARCITY (15 points max)
+ - 136:### Purpose
+ - 139:### Parameters
+ - 140:- **Average Edition Size**: Mean of all token supplies
+ - 141:- **Scarcity Ratio**: Percentage of tokens with supply ≤ 10
+ - 142:- **Price Strategy**: Consistency of primary prices (standard deviation relative to mean)
+ - 143:- **Edition Balance**: Penalty for extremes (ideal: 5-100 editions)
+ - 145:### Scoring Formula
+ - 168:### Output Metrics
+ - 174:## TOTAL SCORE CALCULATION
+ - 181:## Additional Calculated Metrics
+ - 191:## Data Requirements
+ - 193:### Input Data
+ - 194:- **Tokens**: Array of token objects with:
+ - 196:- **Sales**: Array of sale objects with:
+ - 199:### Data Filtering
+ - 206:## Potential Improvement Areas for Analysis
+ - 208:1. **Weighting Distribution**: Current weights may not reflect market reality
+ - 209:2. **Capping Thresholds**: Maximum values (100 sales, 1000 XTZ, etc.) may be too low/high
+ - 210:3. **Time Decay Application**: Currently defined but not explicitly applied in all calculations
+ - 211:4. **Floor Price Calculation**: Uses minimum price - may not account for outliers
+ - 212:5. **Velocity Calculation**: Handles edge cases but may need refinement
+ - 213:6. **Scarcity Definition**: Fixed threshold of ≤10 may not be optimal
+ - 214:7. **Edition Balance**: Ideal range (5-100) may need market-specific tuning
+ - 215:8. **Price Strategy**: Standard deviation approach may not capture all pricing patterns
+ - 216:9. **Missing Data Handling**: How to score creators with incomplete data
+ - 217:10. **Normalization**: Some metrics may need normalization across different creator scales
+
+## r00t/reference/Objkt-Advisor/client/requirements.md
+ - 1:## Packages
+ - 6:## Notes
+
+## r00t/reference/Objkt-Advisor/docs/objkt-api-schema.md
+ - 1:# Objkt GraphQL API Schema Navigation
+ - 9:## Core Entities
+ - 11:### 1. Token (NFT)
+ - 79:### 2. Holder (Wallet/Profile)
+ - 118:### 3. Listing Sale (Historical Sales)
+ - 155:### 4. Listing (Active Listings)
+ - 182:## Exploratory Queries
+ - 184:### Query 1: Schema Introspection
+ - 203:### Query 2: Recent Sales with Full Context
+ - 233:### Query 3: Top Collectors by Purchase Volume
+ - 252:### Query 4: Creator Profile Deep Dive
+ - 281:### Query 5: Token Holders (Who Owns What)
+ - 305:## Discovered Tables/Entities
+ - 318:## Common Patterns
+ - 320:### Filtering
+ - 327:### Ordering
+ - 333:### Pagination
+ - 339:### Aggregation
+ - 352:## Price Conversion
+ - 360:## Rate Limiting
+ - 368:## TODO: Explore Further
+ - 370:- [ ] `fulfilled_ask` - Alternative sales table?
+ - 371:- [ ] `offer` - Buy offers on tokens?
+ - 372:- [ ] `auction` - Auction mechanics?
+ - 373:- [ ] `event` - On-chain events?
+ - 374:- [ ] `collection` / `fa` - Contract/collection data?
+ - 375:- [ ] Aggregation queries for analytics
+
+## r00t/reference/taxmaster/README.md
+ - 1:# TaxMaster - Tezos Tax Calculator
+ - 5:## Features
+ - 7:- **Privacy First**: All data is stored locally in your browser using IndexedDB. Nothing is sent to any server.
+ - 8:- **IRS Support**: FIFO cost basis matching per Notice 2014-21, Rev. Rul. 2019-24, and Rev. Rul. 2023-14
+ - 9:- **HMRC Support**: Same-day, 30-day, and Section 104 pool matching per CRYPTO22200 series
+ - 10:- **Multiple Wallets**: Track multiple Tezos wallets in one place
+ - 11:- **Transaction Sync**: Fetches transaction history from TzKT API
+ - 12:- **Historical Pricing**: Uses CoinGecko for daily XTZ price data (cached locally)
+ - 13:- **Export Reports**: Download CSV files for disposals and full transaction ledger
+ - 14:- **Backup/Restore**: Export and import your data as JSON
+ - 16:## Getting Started
+ - 18:### Prerequisites
+ - 22:### Installation
+ - 28:### Development
+ - 36:### Production Build
+ - 43:## How It Works
+ - 45:1. **Add Wallets**: Enter your Tezos wallet addresses (tz1, tz2, tz3, or KT1)
+ - 46:2. **Sync**: Download your transaction history from the TzKT API
+ - 47:3. **Select Options**: Choose tax year and jurisdiction (IRS or HMRC)
+ - 48:4. **Generate Report**: Calculate capital gains/losses based on the selected tax rules
+ - 49:5. **Download**: Export CSV files for your tax records
+ - 51:## Tax Rules Implemented
+ - 53:### IRS (United States)
+ - 56:- [Notice 2014-21](https://www.irs.gov/pub/irs-drop/n-14-21.pdf) - Crypto treated as property
+ - 57:- [Rev. Rul. 2019-24](https://www.irs.gov/pub/irs-drop/rr-19-24.pdf) - Airdrop/hard fork income
+ - 58:- [Rev. Rul. 2023-14](https://www.irs.gov/pub/irs-sbse/rev-ruling-2023-14.pdf) - Staking rewards
+ - 59:- [IRS FAQ](https://www.irs.gov/individuals/international-taxpayers/frequently-asked-questions-on-virtual-currency-transactions) - FIFO if not specifically identifying
+ - 63:### HMRC (United Kingdom)
+ - 66:- [CRYPTO22200](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual/crypto22200) - Pooling guidance
+ - 67:- [CRYPTO22250](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual/crypto22250) - CGT examples
+ - 68:- [CRYPTO22280](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual/crypto22280) - Fees in tokens
+ - 69:- [CRYPTO21200/21250](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual) - Staking/Airdrops
+ - 72:1. Same-day matching (acquisitions on same day as disposal)
+ - 73:2. 30-day rule (acquisitions within 30 days AFTER disposal)
+ - 74:3. Section 104 pool (average cost basis for remaining)
+ - 76:## Data Storage
+ - 79:- **Wallets**: Your tracked wallet addresses
+ - 80:- **Events**: Synced transaction history
+ - 81:- **Price Cache**: Historical XTZ prices (to reduce API calls)
+ - 82:- **Reports**: Generated tax reports
+ - 86:## APIs Used
+ - 88:- **[TzKT](https://api.tzkt.io/)** - Tezos blockchain data (transactions, token transfers)
+ - 89:- **[CoinGecko](https://www.coingecko.com/)** - Historical XTZ prices
+ - 91:## CLI Script
+ - 100:## Disclaimer
+ - 104:## License
+ - 108:## Contributing
+
+## r00t/reference/tezpulse/README.md
+ - 1:# TezPulse - Tezos Art Activity Scanner
+ - 5:## Features
+ - 7:- **Automatic Scanning**: Performs a scan on initial page load
+ - 8:- **Multi-Platform Support**: Scans activity across Objkt, Teia, fxhash, Versum, and akaSwap
+ - 9:- **Activity Types**: Tracks creators (minters), buyers, and sellers
+ - 10:- **Real-time Results**: Shows unique wallet counts and expandable lists
+ - 11:- **Client-Side Only**: No authentication or wallet connection required
+ - 13:## Tech Stack
+ - 15:- **Frontend**: React 19 + Vite
+ - 16:- **Language**: TypeScript
+ - 17:- **API**: TzKT REST API
+ - 18:- **Styling**: Plain CSS
+ - 20:## Getting Started
+ - 22:### Installation
+ - 28:### Development
+ - 34:### Build
+ - 40:### Preview Production Build
+ - 46:## Project Structure
+ - 61:## Configuration
+ - 63:### Platform Contract Addresses
+ - 73:## How It Works
+ - 75:1. **NFT Mints**: Scans origination operations for FA2 token creation
+ - 76:2. **Transactions**: Fetches transactions with entrypoints like `collect`, `match`, `swap`
+ - 77:3. **Transfers**: Monitors token transfers involving marketplace contracts
+ - 78:4. **Filtering**: Filters results to only include known art platform activity
+ - 79:5. **Deduplication**: Removes duplicate wallet addresses
+ - 80:6. **Display**: Shows counts and expandable lists of unique wallets
+ - 82:## API Endpoints Used
+ - 88:## License
+
+## r00t/reference/tezpulse/TZKT_API_CHEATSHEET.md
+ - 1:# TzKT API Cheat-Sheet (Tezos NFT + Marketplace Focus)
+ - 8:## 0. Networks & Base URLs
+ - 12:- **Mainnet:** `https://api.tzkt.io/`
+ - 13:- **Ghostnet:** `https://api.ghostnet.tzkt.io/`
+ - 14:- **Other testnets:** `https://api.{network}.tzkt.io/` (e.g. `api.nairobinet.tzkt.io` if active)
+ - 20:## 1. Global Query Patterns
+ - 22:### 1.1 Common query params
+ - 44:## 2. Time Filtering
+ - 46:### 2.1 Timestamp filters
+ - 60:### 2.2 Level filters (alternative to timestamps)
+ - 69:## 3. Operations Endpoints
+ - 71:### 3.1 Transactions
+ - 129:### 3.2 Originations
+ - 169:## 4. Token Endpoints
+ - 171:### 4.1 Token Transfers
+ - 232:### 4.2 Tokens
+ - 281:## 5. Contract Endpoints
+ - 283:### 5.1 Contract Info
+ - 300:### 5.2 Contract Operations
+ - 314:## 6. Account Endpoints
+ - 316:### 6.1 Account Info
+ - 328:### 6.2 Account Operations
+ - 342:## 7. NFT Marketplace Patterns
+ - 344:### 7.1 Finding NFT Mints (Creators)
+ - 358:### 7.2 Finding Buyers
+ - 366:### 7.3 Finding Sellers
+ - 386:### 7.4 Known Marketplace Contracts
+ - 408:## 8. Common Patterns & Tips
+ - 410:### 8.1 Pagination
+ - 423:### 8.2 Combining Filters
+ - 435:### 8.3 Field Selection (Performance)
+ - 447:### 8.4 Error Handling
+ - 457:## 9. JavaScript/TypeScript Examples
+ - 459:### 9.1 Fetch Last 24 Hours of Collects
+ - 478:### 9.2 Fetch Token Mints
+ - 499:### 9.3 Fetch Token Transfers
+ - 520:## 10. Rate Limits & Best Practices
+ - 522:- **Rate limits:** Check response headers for rate limit info
+ - 523:- **Caching:** Cache results when possible
+ - 524:- **Pagination:** Use cursor-based pagination for large datasets
+ - 525:- **Field selection:** Use `select` to reduce payload size
+ - 526:- **Batching:** Combine multiple queries when possible
+ - 527:- **Error handling:** Always handle network errors and rate limits
+ - 531:## 11. Useful Links
+ - 533:- **TzKT API Docs:** https://api.tzkt.io/
+ - 534:- **TzKT Explorer:** https://tzkt.io/
+ - 535:- **Tezos Docs (Indexers):** https://docs.tezos.com/developing/information/indexers
+ - 536:- **Better Call Dev:** https://better-call.dev/ (Alternative explorer)
+
+## r00t/reference/web3 simulator/README.md
+ - 1:# Tezos Blockchain Simulator
+ - 5:## Features
+ - 7:- **Pricing Simulations**: Model token price changes over time with configurable trends and volatility
+ - 8:- **Economic Analysis**: Track network value, staking rewards, transaction fees, and APY
+ - 9:- **Interactive Configuration**: Adjust initial parameters, price scenarios, and network settings
+ - 10:- **Visual Analytics**: Comprehensive charts showing price trends, network value, staking APY, and daily revenue
+ - 12:## Getting Started
+ - 14:### Installation
+ - 20:### Development
+ - 28:### Build
+ - 35:## Simulation Parameters
+ - 37:### Initial State
+ - 38:- **Initial Token Price**: Starting price in USD
+ - 39:- **Initial Staking Reward Rate**: Annual staking rewards percentage
+ - 40:- **Initial Transaction Fee**: Base transaction fee in tokens
+ - 41:- **Initial Staked Percentage**: Percentage of total supply staked
+ - 43:### Price Scenarios
+ - 44:- **Monthly Price Change Rate**: Expected monthly price change (can be negative)
+ - 45:- **Price Volatility**: Standard deviation for random price fluctuations
+ - 47:### Network Parameters
+ - 48:- **Total Supply**: Total token supply
+ - 49:- **Daily Transactions**: Average transactions per day
+ - 50:- **Staking Reward Adjustment**: How staking rewards adjust to price changes (0-1)
+ - 52:### Simulation Parameters
+ - 53:- **Duration**: Number of months to simulate
+ - 54:- **Time Step**: Simulation granularity in days
+ - 56:## How It Works
+ - 60:1. **Token Price** evolves based on a trend (monthly change rate) plus random volatility
+ - 61:2. **Staking Rewards** adjust based on price changes to maintain real value
+ - 62:3. **Transaction Fees** remain constant in tokens but their USD value changes with price
+ - 63:4. **Network Value** (market cap) is calculated as total supply × token price
+ - 64:5. **APY** is dynamically calculated based on staking rewards and current token price
+ - 66:## Use Cases
+ - 74:## Technology Stack
+ - 76:- **Next.js 14**: React framework
+ - 77:- **TypeScript**: Type safety
+ - 78:- **Tailwind CSS**: Styling
+ - 79:- **Recharts**: Data visualization
+ - 80:- **Lucide React**: Icons
+ - 82:## License
+
+## r00t/reference/web3 simulator/nft-pipeline/README.md
+ - 1:# Tezos NFT Market Pressure Pipeline
+ - 5:## Architecture
+ - 31:## Quick Start
+ - 34:# Install dependencies
+ - 37:# Build TypeScript
+ - 40:# Step 1: Sync data from TzKT (takes a few minutes)
+ - 43:# Step 2: Run analysis (instant, no API calls)
+ - 46:# Or run both together
+ - 50:## Commands
+ - 60:## Key Benefits
+ - 62:1. **Sync once, analyze many times** - No repeated API calls
+ - 63:2. **Instant re-analysis** - Change parameters and re-run in seconds
+ - 64:3. **Resumable** - Sync can be interrupted and resumed
+ - 65:4. **Offline capable** - Analysis works without internet
+ - 66:5. **Simulation-ready** - Local data can feed simulations
+ - 68:## Output Files
+ - 84:## Database
+ - 88:### Raw Tables (synced from TzKT)
+ - 93:### Derived Tables (computed locally)
+ - 100:## Configuration
+ - 104:### Time Window
+ - 109:### Marketplaces
+ - 125:## Using the Data for Simulations
+ - 129:1. **Query the database directly** for simulation input
+ - 130:2. **Use the CSV exports** for external analysis tools
+ - 131:3. **Build simulations** that work from `./data/pipeline.db`
+ - 140:## API Usage
+ - 149:## Troubleshooting
+ - 151:### "No data in local database"
+ - 154:### Sync taking too long
+ - 157:### Changing time window
+ - 163:## License
+
+## r00t/reference/web3 simulator/nft-pipeline/docs/tzkt-cheatsheet.md
+ - 1:# TzKT API Cheat Sheet (generated)
+ - 5:## Exported endpoint functions (runtime)
+ - 250:## Query parameters by endpoint (from TypeScript declarations)
+ - 254:### `accountsGet()`
+ - 271:### `accountsGetCount()`
+ - 281:### `bigMapsGetBigMaps()`
+ - 296:### `bigMapsGetBigMapUpdates()`
+ - 313:### `blocksGet()`
+ - 331:### `commitmentsGetAll()`
+ - 343:### `commitmentsGetCount()`
+ - 350:### `constantsGet()`
+ - 366:### `constantsGetCount()`
+ - 372:### `contractsGet()`
+ - 392:### `contractsGetCount()`
+ - 398:### `cyclesGet()`
+ - 409:### `delegatesGet()`
+ - 420:### `delegatesGetCount()`
+ - 426:### `domainsGet()`
+ - 447:### `domainsGetCount()`
+ - 464:### `eventsGetContractEvents()`
+ - 481:### `eventsGetContractEventsCount()`
+ - 494:### `operationsGetActivations()`
+ - 507:### `operationsGetActivationsCount()`
+ - 514:### `operationsGetBaking()`
+ - 530:### `operationsGetBakingCount()`
+ - 537:### `operationsGetBallots()`
+ - 554:### `operationsGetBallotsCount()`
+ - 561:### `operationsGetDelegations()`
+ - 580:### `operationsGetDelegationsCount()`
+ - 587:### `operationsGetDoubleBaking()`
+ - 602:### `operationsGetDoubleBakingCount()`
+ - 609:### `operationsGetDoubleEndorsing()`
+ - 624:### `operationsGetDoubleEndorsingCount()`
+ - 631:### `operationsGetDoublePreendorsing()`
+ - 646:### `operationsGetDoublePreendorsingCount()`
+ - 653:### `operationsGetDrainDelegateOps()`
+ - 668:### `operationsGetDrainDelegateOpsCount()`
+ - 675:### `operationsGetEndorsements()`
+ - 688:### `operationsGetEndorsementsCount()`
+ - 695:### `operationsGetEndorsingRewards()`
+ - 708:### `operationsGetEndorsingRewardsCount()`
+ - 715:### `operationsGetIncreasePaidStorageCount()`
+ - 722:### `operationsGetIncreasePaidStorageOps()`
+ - 737:### `operationsGetMigrations()`
+ - 754:### `operationsGetMigrationsCount()`
+ - 761:### `operationsGetNonceRevelations()`
+ - 777:### `operationsGetNonceRevelationsCount()`
+ - 784:### `operationsGetOriginations()`
+ - 809:### `operationsGetOriginationsCount()`
+ - 816:### `operationsGetPreendorsements()`
+ - 829:### `operationsGetPreendorsementsCount()`
+ - 836:### `operationsGetProposals()`
+ - 853:### `operationsGetProposalsCount()`
+ - 860:### `operationsGetRegisterConstants()`
+ - 876:### `operationsGetRegisterConstantsCount()`
+ - 883:### `operationsGetReveals()`
+ - 897:### `operationsGetRevealsCount()`
+ - 904:### `operationsGetRevelationPenalties()`
+ - 917:### `operationsGetRevelationPenaltiesCount()`
+ - 924:### `operationsGetSetDepositsLimits()`
+ - 938:### `operationsGetSetDepositsLimitsCount()`
+ - 945:### `operationsGetTransactions()`
+ - 971:### `operationsGetTransactionsCount()`
+ - 986:### `operationsGetTransferTicketOps()`
+ - 1004:### `operationsGetTransferTicketOpsCount()`
+ - 1011:### `operationsGetTxRollupCommitOps()`
+ - 1026:### `operationsGetTxRollupCommitOpsCount()`
+ - 1033:### `operationsGetTxRollupDispatchTicketsOps()`
+ - 1048:### `operationsGetTxRollupDispatchTicketsOpsCount()`
+ - 1055:### `operationsGetTxRollupFinalizeCommitmentOps()`
+ - 1070:### `operationsGetTxRollupFinalizeCommitmentOpsCount()`
+ - 1077:### `operationsGetTxRollupOriginationOps()`
+ - 1092:### `operationsGetTxRollupOriginationOpsCount()`
+ - 1099:### `operationsGetTxRollupRejectionOps()`
+ - 1116:### `operationsGetTxRollupRejectionOpsCount()`
+ - 1123:### `operationsGetTxRollupRemoveCommitmentOps()`
+ - 1138:### `operationsGetTxRollupRemoveCommitmentOpsCount()`
+ - 1145:### `operationsGetTxRollupReturnBondOps()`
+ - 1160:### `operationsGetTxRollupReturnBondOpsCount()`
+ - 1167:### `operationsGetTxRollupSubmitBatchOps()`
+ - 1182:### `operationsGetTxRollupSubmitBatchOpsCount()`
+ - 1189:### `operationsGetUpdateConsensusKeyOps()`
+ - 1204:### `operationsGetUpdateConsensusKeyOpsCount()`
+ - 1211:### `operationsGetVdfRevelations()`
+ - 1225:### `operationsGetVdfRevelationsCount()`
+ - 1232:### `protocolsGet()`
+ - 1240:### `quotesGet()`
+ - 1251:### `rightsGet()`
+ - 1268:### `rightsGetCount()`
+ - 1281:### `softwareGet()`
+ - 1290:### `statisticsGet()`
+ - 1302:### `statisticsGetCycles()`
+ - 1309:### `statisticsGetCyclesAll()`
+ - 1320:### `statisticsGetDaily()`
+ - 1331:### `tokensGetTokenBalances()`
+ - 1354:### `tokensGetTokenBalancesCount()`
+ - 1373:### `tokensGetTokens()`
+ - 1393:### `tokensGetTokensCount()`
+ - 1409:### `tokensGetTokenTransfers()`
+ - 1435:### `tokensGetTokenTransfersCount()`
+ - 1457:### `votingGetEpochs()`
+ - 1465:### `votingGetPeriods()`
+ - 1474:### `votingGetPeriodVoters2()`
+ - 1483:### `votingGetProposals()`
+ - 1494:## Golden patterns (sync / backfill)
+ - 1498:### A) Transactions – cursor paging
+ - 1503:### B) Token transfers – cursor paging
+ - 1508:### C) Range by level
+ - 1513:### D) Payload trimming (when supported)
+ - 1518:### Universal rules
+ - 1519:- **Never** send `undefined` or `null` as a query param value; omit the param instead.
+
+## r00t/signer/README.md
+ - 1:# r00t signer
+ - 7:## Setup
+ - 9:1. Copy `.env.example` to `.env`.
+ - 10:2. Set `NIMROD_SECRET_KEY`:
+ - 13:3. Optional: set `SIGNER_AUTH_TOKEN` so only callers with `Authorization: Bearer <token>` can use the API.
+ - 14:4. Optional: set `RPC_URL` (default mainnet) and `PORT` (default 3333).
+ - 18:## Run locally
+ - 25:## Endpoints
+ - 34:## Deploy
+ - 38:## Transfer script (repo root)
+ - 48:## Monthly lump payout (repo root)
+
+## receipt finder/README.md
+ - 1:# Receipt Finder
+ - 5:## Quick start
+ - 18:## Google Cloud setup (one-time)
+ - 20:1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create (or select) a project.
+ - 21:2. **Enable the Gmail API**: APIs & Services > Library > search "Gmail API" > Enable.
+ - 22:3. **Create OAuth credentials**: APIs & Services > Credentials > Create Credentials > OAuth client ID.
+ - 25:4. If the project is in "Testing" mode, add your Gmail address under OAuth consent screen > Test users.
+ - 27:## Usage
+ - 30:# Default: search for receipts/invoices in your inbox
+ - 33:# Only emails after a date
+ - 36:# Custom query
+ - 39:# Limit to 50 emails
+ - 42:# Match receipts to Brex transactions (requires BREX_API_TOKEN in .env)
+ - 46:## Output structure
+ - 64:## receipts_index.json
+ - 81:## Brex matching
+ - 85:## Project layout
+
+## smartpy-test-platform/README.md
+ - 1:# SmartPy Test Platform
+ - 5:## Features
+ - 18:## Run
+ - 30:## Options
+ - 41:## SmartPy interpreter selection
+ - 45:1. `Bowers/.smartpy-env/bin/python`
+ - 46:2. `python3`
+ - 47:3. `python`
+ - 51:## Output storage
+
+## taxmaster/README.md
+ - 1:# TaxMaster - Tezos Tax Calculator
+ - 5:## Features
+ - 7:- **Privacy First**: All data is stored locally in your browser using IndexedDB. Nothing is sent to any server.
+ - 8:- **IRS Support**: FIFO cost basis matching per Notice 2014-21, Rev. Rul. 2019-24, and Rev. Rul. 2023-14
+ - 9:- **HMRC Support**: Same-day, 30-day, and Section 104 pool matching per CRYPTO22200 series
+ - 10:- **Multiple Wallets**: Track multiple Tezos wallets in one place
+ - 11:- **Transaction Sync**: Fetches transaction history from TzKT API
+ - 12:- **Historical Pricing**: Uses CoinGecko for daily XTZ price data (cached locally)
+ - 13:- **Export Reports**: Download CSV files for disposals and full transaction ledger
+ - 14:- **Backup/Restore**: Export and import your data as JSON
+ - 16:## Getting Started
+ - 18:### Prerequisites
+ - 22:### Installation
+ - 28:### Development
+ - 36:### Production Build
+ - 43:## How It Works
+ - 45:1. **Add Wallets**: Enter your Tezos wallet addresses (tz1, tz2, tz3, or KT1)
+ - 46:2. **Sync**: Download your transaction history from the TzKT API
+ - 47:3. **Select Options**: Choose tax year and jurisdiction (IRS or HMRC)
+ - 48:4. **Generate Report**: Calculate capital gains/losses based on the selected tax rules
+ - 49:5. **Download**: Export CSV files for your tax records
+ - 51:## Tax Rules Implemented
+ - 53:### IRS (United States)
+ - 56:- [Notice 2014-21](https://www.irs.gov/pub/irs-drop/n-14-21.pdf) - Crypto treated as property
+ - 57:- [Rev. Rul. 2019-24](https://www.irs.gov/pub/irs-drop/rr-19-24.pdf) - Airdrop/hard fork income
+ - 58:- [Rev. Rul. 2023-14](https://www.irs.gov/pub/irs-sbse/rev-ruling-2023-14.pdf) - Staking rewards
+ - 59:- [IRS FAQ](https://www.irs.gov/individuals/international-taxpayers/frequently-asked-questions-on-virtual-currency-transactions) - FIFO if not specifically identifying
+ - 63:### HMRC (United Kingdom)
+ - 66:- [CRYPTO22200](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual/crypto22200) - Pooling guidance
+ - 67:- [CRYPTO22250](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual/crypto22250) - CGT examples
+ - 68:- [CRYPTO22280](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual/crypto22280) - Fees in tokens
+ - 69:- [CRYPTO21200/21250](https://www.gov.uk/hmrc-internal-manuals/cryptoassets-manual) - Staking/Airdrops
+ - 72:1. Same-day matching (acquisitions on same day as disposal)
+ - 73:2. 30-day rule (acquisitions within 30 days AFTER disposal)
+ - 74:3. Section 104 pool (average cost basis for remaining)
+ - 76:## Data Storage
+ - 79:- **Wallets**: Your tracked wallet addresses
+ - 80:- **Events**: Synced transaction history
+ - 81:- **Price Cache**: Historical XTZ prices (to reduce API calls)
+ - 82:- **Reports**: Generated tax reports
+ - 86:## APIs Used
+ - 88:- **[TzKT](https://api.tzkt.io/)** - Tezos blockchain data (transactions, token transfers)
+ - 89:- **[CoinGecko](https://www.coingecko.com/)** - Historical XTZ prices
+ - 91:## CLI Script
+ - 100:## Disclaimer
+ - 104:## License
+ - 108:## Contributing
+
+## tezpulse/README.md
+ - 1:# TezPulse - Tezos Art Activity Scanner
+ - 5:## Features
+ - 7:- **Automatic Scanning**: Performs a scan on initial page load
+ - 8:- **Multi-Platform Support**: Scans activity across Objkt, Teia, fxhash, Versum, and akaSwap
+ - 9:- **Activity Types**: Tracks creators (minters), buyers, and sellers
+ - 10:- **Real-time Results**: Shows unique wallet counts and expandable lists
+ - 11:- **Client-Side Only**: No authentication or wallet connection required
+ - 13:## Tech Stack
+ - 15:- **Frontend**: React 19 + Vite
+ - 16:- **Language**: TypeScript
+ - 17:- **API**: TzKT REST API
+ - 18:- **Styling**: Plain CSS
+ - 20:## Getting Started
+ - 22:### Installation
+ - 28:### Development
+ - 34:### Build
+ - 40:### Preview Production Build
+ - 46:## Project Structure
+ - 61:## Configuration
+ - 63:### Platform Contract Addresses
+ - 73:## How It Works
+ - 75:1. **NFT Mints**: Scans origination operations for FA2 token creation
+ - 76:2. **Transactions**: Fetches transactions with entrypoints like `collect`, `match`, `swap`
+ - 77:3. **Transfers**: Monitors token transfers involving marketplace contracts
+ - 78:4. **Filtering**: Filters results to only include known art platform activity
+ - 79:5. **Deduplication**: Removes duplicate wallet addresses
+ - 80:6. **Display**: Shows counts and expandable lists of unique wallets
+ - 82:## API Endpoints Used
+ - 88:## License
+
+## tezpulse/TZKT_API_CHEATSHEET.md
+ - 1:# TzKT API Cheat-Sheet (Tezos NFT + Marketplace Focus)
+ - 8:## 0. Networks & Base URLs
+ - 12:- **Mainnet:** `https://api.tzkt.io/`
+ - 13:- **Ghostnet:** `https://api.ghostnet.tzkt.io/`
+ - 14:- **Other testnets:** `https://api.{network}.tzkt.io/` (e.g. `api.nairobinet.tzkt.io` if active)
+ - 20:## 1. Global Query Patterns
+ - 22:### 1.1 Common query params
+ - 44:## 2. Time Filtering
+ - 46:### 2.1 Timestamp filters
+ - 60:### 2.2 Level filters (alternative to timestamps)
+ - 69:## 3. Operations Endpoints
+ - 71:### 3.1 Transactions
+ - 129:### 3.2 Originations
+ - 169:## 4. Token Endpoints
+ - 171:### 4.1 Token Transfers
+ - 232:### 4.2 Tokens
+ - 281:## 5. Contract Endpoints
+ - 283:### 5.1 Contract Info
+ - 300:### 5.2 Contract Operations
+ - 314:## 6. Account Endpoints
+ - 316:### 6.1 Account Info
+ - 328:### 6.2 Account Operations
+ - 342:## 7. NFT Marketplace Patterns
+ - 344:### 7.1 Finding NFT Mints (Creators)
+ - 358:### 7.2 Finding Buyers
+ - 366:### 7.3 Finding Sellers
+ - 386:### 7.4 Known Marketplace Contracts
+ - 408:## 8. Common Patterns & Tips
+ - 410:### 8.1 Pagination
+ - 423:### 8.2 Combining Filters
+ - 435:### 8.3 Field Selection (Performance)
+ - 447:### 8.4 Error Handling
+ - 457:## 9. JavaScript/TypeScript Examples
+ - 459:### 9.1 Fetch Last 24 Hours of Collects
+ - 478:### 9.2 Fetch Token Mints
+ - 499:### 9.3 Fetch Token Transfers
+ - 520:## 10. Rate Limits & Best Practices
+ - 522:- **Rate limits:** Check response headers for rate limit info
+ - 523:- **Caching:** Cache results when possible
+ - 524:- **Pagination:** Use cursor-based pagination for large datasets
+ - 525:- **Field selection:** Use `select` to reduce payload size
+ - 526:- **Batching:** Combine multiple queries when possible
+ - 527:- **Error handling:** Always handle network errors and rate limits
+ - 531:## 11. Useful Links
+ - 533:- **TzKT API Docs:** https://api.tzkt.io/
+ - 534:- **TzKT Explorer:** https://tzkt.io/
+ - 535:- **Tezos Docs (Indexers):** https://docs.tezos.com/developing/information/indexers
+ - 536:- **Better Call Dev:** https://better-call.dev/ (Alternative explorer)
+
+## tui_tools-main/README.md
+ - 1:# 💅 Sassy Wallet
+ - 5:## 🧾 What It Is
+ - 9:## ✨ Features (Current)
+ - 21:## 🚀 Install
+ - 28:# or: uv run sassy-wallet
+ - 31:## ✅ Quality Checks
+ - 42:## 🗂️ Data Location
+ - 48:## 🛡️ Security
+ - 52:## 🧱 Missing Features
+ - 54:- **Unstake Requests** notifications (track and inspect): **pending**
+ - 56:## 🧠 Why This Exists
+ - 60:## ⚠️ Warning (Read Me, Chef)
+ - 71:## 📜 License
+
+## tui_tools-main/SECURITY.md
+ - 1:# Security Policy
+ - 3:## Supported Versions
+ - 7:## Reporting a Vulnerability
+ - 19:## Security Release Checklist
+ - 35:## Local Data Hardening Requirements
+ - 42:## CI Security Gates
+ - 54:## Tracked Exceptions
+
+## videozine-editor/README.md
+ - 1:# Videozine Editor
+ - 5:## Overview
+ - 9:## Features
+ - 11:### Editor UI
+ - 12:- **Episode Management**: Set episode title, description, and cover image
+ - 13:- **Video Upload**: Drag-and-drop or select multiple video files
+ - 14:- **Metadata Entry**: Add artist information, descriptions, and objkt.com links for each video
+ - 15:- **Thumbnail Generation**: Automatically generate video thumbnails using ffmpeg
+ - 16:- **Episode Compilation**: Auto-compile individual videos into one episode or upload a manual edit
+ - 17:- **Package Export**: Create a self-contained viewer package ready for minting
+ - 19:### Viewer Package (Output)
+ - 20:- **Full-width Episode Player**: Plays the compiled episode video
+ - 21:- **Interactive Video Grid**: Click icons to view individual videos
+ - 22:- **Individual Video Pages**: Dedicated pages for each video with artist info and objkt.com links
+ - 23:- **Self-contained**: All assets included locally, no external dependencies
+ - 24:- **objkt.com Compatible**: Follows all requirements for interactive token minting
+ - 26:## Installation & Setup
+ - 28:### Quick Installation
+ - 29:1. **Run the installer**: `python install/install_requirements.py`
+ - 30:2. **Install ffmpeg**: `./install/install_ffmpeg_macos.sh` (macOS)
+ - 31:3. **Start the editor**: Double-click `start_videozine_editor.command`
+ - 33:### Manual Installation
+ - 34:1. **Install Python 3.8+**
+ - 35:2. **Install Required Packages**:
+ - 39:3. **Install ffmpeg** (for video processing):
+ - 44:## Usage
+ - 46:### Starting the Editor
+ - 52:2. **Create an Episode**:
+ - 60:3. **Mint on objkt.com**:
+ - 64:## File Structure
+ - 86:## Technical Details
+ - 88:### Video Processing
+ - 94:### Viewer Package
+ - 101:### Data Management
+ - 106:## objkt.com Compatibility
+ - 115:## Troubleshooting
+ - 117:### Common Issues
+ - 119:1. **ffmpeg not found**: Install ffmpeg and ensure it's in your system PATH
+ - 120:2. **Video upload fails**: Check video format compatibility and file size
+ - 121:3. **Thumbnail generation fails**: Ensure videos are not corrupted and ffmpeg is working
+ - 122:4. **Package export fails**: Check disk space and write permissions
+ - 124:### Support
+ - 127:1. Check the console output for error messages
+ - 128:2. Verify all dependencies are installed correctly
+ - 129:3. Ensure video files are in supported formats
+ - 131:## Development
+ - 133:### Adding New Features
+ - 138:### Testing
+ - 140:1. Opening the viewer package in a browser
+ - 141:2. Verifying all videos play correctly
+ - 142:3. Checking mobile responsiveness
+ - 143:4. Validating objkt.com compatibility
+ - 145:## License
+
+## videozine-editor/install/README.md
+ - 1:# Installation Guide
+ - 5:## Quick Start
+ - 7:### 1. Install Python Dependencies
+ - 17:### 2. Install ffmpeg (Video Processing)
+ - 19:#### macOS:
+ - 25:#### Manual Installation:
+ - 26:- **macOS**: `brew install ffmpeg` (requires Homebrew)
+ - 27:- **Windows**: Download from https://ffmpeg.org/download.html
+ - 28:- **Linux**: `sudo apt install ffmpeg` (Ubuntu/Debian)
+ - 30:### 3. Start the Editor
+ - 32:- **Double-clicking**: `start_videozine_editor.command` (macOS)
+ - 33:- **Command line**: `python start_videozine_editor.py`
+ - 35:## Installation Files
+ - 37:### `install_requirements.py`
+ - 44:### `install_ffmpeg_macos.sh`
+ - 49:## Troubleshooting
+ - 51:### Python Issues
+ - 52:- **"Python 3.8+ required"**: Install newer Python from python.org
+ - 53:- **"Module not found"**: Run `install_requirements.py` again
+ - 54:- **Permission errors**: Try running with `sudo` (Linux/macOS)
+ - 56:### ffmpeg Issues
+ - 57:- **"ffmpeg not found"**: Install using the provided scripts
+ - 58:- **macOS**: Make sure Homebrew is installed
+ - 59:- **Windows**: Add ffmpeg to your system PATH
+ - 60:- **Linux**: Use your distribution's package manager
+ - 62:### Virtual Environment
+ - 64:- **macOS/Linux**: `source venv/bin/activate`
+ - 65:- **Windows**: `venv\Scripts\activate`
+ - 67:## System Requirements
+ - 69:### Minimum Requirements
+ - 70:- **Python**: 3.8 or higher
+ - 71:- **RAM**: 4GB (8GB recommended for video processing)
+ - 72:- **Storage**: 2GB free space for processing
+ - 73:- **OS**: macOS 10.15+, Windows 10+, or modern Linux
+ - 75:### Recommended
+ - 76:- **Python**: 3.9 or 3.10
+ - 77:- **RAM**: 8GB or more
+ - 78:- **Storage**: 10GB+ for video projects
+ - 79:- **CPU**: Multi-core processor for faster video processing
+ - 81:## Dependencies
+ - 83:### Python Packages
+ - 89:### System Dependencies
+ - 93:## Security Notes
+ - 100:## Next Steps
+ - 103:1. Start the editor using the start script
+ - 104:2. Create your first episode
+ - 105:3. Upload some test videos
+ - 106:4. Generate thumbnails and compile an episode
+ - 107:5. Export a viewer package for minting
+
+## vlm-video-archivist/INSTALL VIDEOSPEECH/README.md
+ - 1:# INSTALL VIDEOSPEECH
+ - 5:## What it installs
+ - 17:## Quick Install
+ - 19:### macOS/Linux
+ - 26:### Windows
+ - 33:## Run dashboard after install
+
+## vlm-video-archivist/MODEL_CHEATSHEET.md
+ - 1:# Model Cheat Sheet
+ - 3:## Runtime intent
+ - 7:## Minimal flow
+ - 9:1. Call `ingest_video_archive` with `video_path`, `workspace`, `mode`.
+ - 10:2. Read `video_id` + `manifest_path` from result.
+ - 11:3. Call `inspect_video_context` for compressed timeline data.
+ - 12:4. If needed, re-run `ingest_video_archive` with different `max_segments` / `max_clips`.
+ - 13:5. Call `search_archive` with keyword bundles to find target moments.
+ - 14:6. Call `create_visual_poem` with `workspace`, `word_count=21`, `prompt`, and a `poem_mode` (`audio`, `phrase`, `phoneme`, `text`, `visual`, `hybrid`).
+ - 16:## Tooling heuristics
+ - 25:## Context compression pattern
+
+## vlm-video-archivist/README.md
+ - 1:# VLM Video Archivist
+ - 16:## Why this is model-first
+ - 34:## Requirements
+ - 54:## Run with your GGUF model
+ - 62:### End-to-end ingest
+ - 92:### Use an existing llama-server
+ - 101:## Dashboard (human review + queue control)
+ - 138:## API Access Layer (multi-path)
+ - 189:## Model tool API
+ - 256:## Outputs
+ - 290:## Token + Installer Bundle
+ - 306:## Notes on commercials splitting
+
+## vlm-video-archivist/token_demo/README.md
+ - 1:# Token Demo
+
+## wallet-constellations/README.md
+ - 1:# Wallet Constellations
+ - 14:## Run It
+ - 29:## Build And Check
+ - 36:## Project Shape
+ - 56:## Module Spine
+ - 81:## Current Modules
+ - 92:## Data Source
+ - 102:## Next Module Ideas
+
+## web3 simulator/README.md
+ - 1:# Tezos Blockchain Simulator
+ - 5:## Features
+ - 7:- **Pricing Simulations**: Model token price changes over time with configurable trends and volatility
+ - 8:- **Economic Analysis**: Track network value, staking rewards, transaction fees, and APY
+ - 9:- **Interactive Configuration**: Adjust initial parameters, price scenarios, and network settings
+ - 10:- **Visual Analytics**: Comprehensive charts showing price trends, network value, staking APY, and daily revenue
+ - 12:## Getting Started
+ - 14:### Installation
+ - 20:### Development
+ - 28:### Build
+ - 35:## Simulation Parameters
+ - 37:### Initial State
+ - 38:- **Initial Token Price**: Starting price in USD
+ - 39:- **Initial Staking Reward Rate**: Annual staking rewards percentage
+ - 40:- **Initial Transaction Fee**: Base transaction fee in tokens
+ - 41:- **Initial Staked Percentage**: Percentage of total supply staked
+ - 43:### Price Scenarios
+ - 44:- **Monthly Price Change Rate**: Expected monthly price change (can be negative)
+ - 45:- **Price Volatility**: Standard deviation for random price fluctuations
+ - 47:### Network Parameters
+ - 48:- **Total Supply**: Total token supply
+ - 49:- **Daily Transactions**: Average transactions per day
+ - 50:- **Staking Reward Adjustment**: How staking rewards adjust to price changes (0-1)
+ - 52:### Simulation Parameters
+ - 53:- **Duration**: Number of months to simulate
+ - 54:- **Time Step**: Simulation granularity in days
+ - 56:## How It Works
+ - 60:1. **Token Price** evolves based on a trend (monthly change rate) plus random volatility
+ - 61:2. **Staking Rewards** adjust based on price changes to maintain real value
+ - 62:3. **Transaction Fees** remain constant in tokens but their USD value changes with price
+ - 63:4. **Network Value** (market cap) is calculated as total supply × token price
+ - 64:5. **APY** is dynamically calculated based on staking rewards and current token price
+ - 66:## Use Cases
+ - 74:## Technology Stack
+ - 76:- **Next.js 14**: React framework
+ - 77:- **TypeScript**: Type safety
+ - 78:- **Tailwind CSS**: Styling
+ - 79:- **Recharts**: Data visualization
+ - 80:- **Lucide React**: Icons
+ - 82:## License
+
+## web3 simulator/nft-pipeline/README.md
+ - 1:# Tezos NFT Market Pressure Pipeline
+ - 5:## Architecture
+ - 31:## Quick Start
+ - 34:# Install dependencies
+ - 37:# Build TypeScript
+ - 40:# Step 1: Sync data from TzKT (takes a few minutes)
+ - 43:# Step 2: Run analysis (instant, no API calls)
+ - 46:# Or run both together
+ - 50:## Commands
+ - 60:## Key Benefits
+ - 62:1. **Sync once, analyze many times** - No repeated API calls
+ - 63:2. **Instant re-analysis** - Change parameters and re-run in seconds
+ - 64:3. **Resumable** - Sync can be interrupted and resumed
+ - 65:4. **Offline capable** - Analysis works without internet
+ - 66:5. **Simulation-ready** - Local data can feed simulations
+ - 68:## Output Files
+ - 84:## Database
+ - 88:### Raw Tables (synced from TzKT)
+ - 93:### Derived Tables (computed locally)
+ - 100:## Configuration
+ - 104:### Time Window
+ - 109:### Marketplaces
+ - 125:## Using the Data for Simulations
+ - 129:1. **Query the database directly** for simulation input
+ - 130:2. **Use the CSV exports** for external analysis tools
+ - 131:3. **Build simulations** that work from `./data/pipeline.db`
+ - 140:## API Usage
+ - 149:## Troubleshooting
+ - 151:### "No data in local database"
+ - 154:### Sync taking too long
+ - 157:### Changing time window
+ - 163:## License
+
+## web3 simulator/nft-pipeline/docs/tzkt-cheatsheet.md
+ - 1:# TzKT API Cheat Sheet (generated)
+ - 5:## Exported endpoint functions (runtime)
+ - 250:## Query parameters by endpoint (from TypeScript declarations)
+ - 254:### `accountsGet()`
+ - 271:### `accountsGetCount()`
+ - 281:### `bigMapsGetBigMaps()`
+ - 296:### `bigMapsGetBigMapUpdates()`
+ - 313:### `blocksGet()`
+ - 331:### `commitmentsGetAll()`
+ - 343:### `commitmentsGetCount()`
+ - 350:### `constantsGet()`
+ - 366:### `constantsGetCount()`
+ - 372:### `contractsGet()`
+ - 392:### `contractsGetCount()`
+ - 398:### `cyclesGet()`
+ - 409:### `delegatesGet()`
+ - 420:### `delegatesGetCount()`
+ - 426:### `domainsGet()`
+ - 447:### `domainsGetCount()`
+ - 464:### `eventsGetContractEvents()`
+ - 481:### `eventsGetContractEventsCount()`
+ - 494:### `operationsGetActivations()`
+ - 507:### `operationsGetActivationsCount()`
+ - 514:### `operationsGetBaking()`
+ - 530:### `operationsGetBakingCount()`
+ - 537:### `operationsGetBallots()`
+ - 554:### `operationsGetBallotsCount()`
+ - 561:### `operationsGetDelegations()`
+ - 580:### `operationsGetDelegationsCount()`
+ - 587:### `operationsGetDoubleBaking()`
+ - 602:### `operationsGetDoubleBakingCount()`
+ - 609:### `operationsGetDoubleEndorsing()`
+ - 624:### `operationsGetDoubleEndorsingCount()`
+ - 631:### `operationsGetDoublePreendorsing()`
+ - 646:### `operationsGetDoublePreendorsingCount()`
+ - 653:### `operationsGetDrainDelegateOps()`
+ - 668:### `operationsGetDrainDelegateOpsCount()`
+ - 675:### `operationsGetEndorsements()`
+ - 688:### `operationsGetEndorsementsCount()`
+ - 695:### `operationsGetEndorsingRewards()`
+ - 708:### `operationsGetEndorsingRewardsCount()`
+ - 715:### `operationsGetIncreasePaidStorageCount()`
+ - 722:### `operationsGetIncreasePaidStorageOps()`
+ - 737:### `operationsGetMigrations()`
+ - 754:### `operationsGetMigrationsCount()`
+ - 761:### `operationsGetNonceRevelations()`
+ - 777:### `operationsGetNonceRevelationsCount()`
+ - 784:### `operationsGetOriginations()`
+ - 809:### `operationsGetOriginationsCount()`
+ - 816:### `operationsGetPreendorsements()`
+ - 829:### `operationsGetPreendorsementsCount()`
+ - 836:### `operationsGetProposals()`
+ - 853:### `operationsGetProposalsCount()`
+ - 860:### `operationsGetRegisterConstants()`
+ - 876:### `operationsGetRegisterConstantsCount()`
+ - 883:### `operationsGetReveals()`
+ - 897:### `operationsGetRevealsCount()`
+ - 904:### `operationsGetRevelationPenalties()`
+ - 917:### `operationsGetRevelationPenaltiesCount()`
+ - 924:### `operationsGetSetDepositsLimits()`
+ - 938:### `operationsGetSetDepositsLimitsCount()`
+ - 945:### `operationsGetTransactions()`
+ - 971:### `operationsGetTransactionsCount()`
+ - 986:### `operationsGetTransferTicketOps()`
+ - 1004:### `operationsGetTransferTicketOpsCount()`
+ - 1011:### `operationsGetTxRollupCommitOps()`
+ - 1026:### `operationsGetTxRollupCommitOpsCount()`
+ - 1033:### `operationsGetTxRollupDispatchTicketsOps()`
+ - 1048:### `operationsGetTxRollupDispatchTicketsOpsCount()`
+ - 1055:### `operationsGetTxRollupFinalizeCommitmentOps()`
+ - 1070:### `operationsGetTxRollupFinalizeCommitmentOpsCount()`
+ - 1077:### `operationsGetTxRollupOriginationOps()`
+ - 1092:### `operationsGetTxRollupOriginationOpsCount()`
+ - 1099:### `operationsGetTxRollupRejectionOps()`
+ - 1116:### `operationsGetTxRollupRejectionOpsCount()`
+ - 1123:### `operationsGetTxRollupRemoveCommitmentOps()`
+ - 1138:### `operationsGetTxRollupRemoveCommitmentOpsCount()`
+ - 1145:### `operationsGetTxRollupReturnBondOps()`
+ - 1160:### `operationsGetTxRollupReturnBondOpsCount()`
+ - 1167:### `operationsGetTxRollupSubmitBatchOps()`
+ - 1182:### `operationsGetTxRollupSubmitBatchOpsCount()`
+ - 1189:### `operationsGetUpdateConsensusKeyOps()`
+ - 1204:### `operationsGetUpdateConsensusKeyOpsCount()`
+ - 1211:### `operationsGetVdfRevelations()`
+ - 1225:### `operationsGetVdfRevelationsCount()`
+ - 1232:### `protocolsGet()`
+ - 1240:### `quotesGet()`
+ - 1251:### `rightsGet()`
+ - 1268:### `rightsGetCount()`
+ - 1281:### `softwareGet()`
+ - 1290:### `statisticsGet()`
+ - 1302:### `statisticsGetCycles()`
+ - 1309:### `statisticsGetCyclesAll()`
+ - 1320:### `statisticsGetDaily()`
+ - 1331:### `tokensGetTokenBalances()`
+ - 1354:### `tokensGetTokenBalancesCount()`
+ - 1373:### `tokensGetTokens()`
+ - 1393:### `tokensGetTokensCount()`
+ - 1409:### `tokensGetTokenTransfers()`
+ - 1435:### `tokensGetTokenTransfersCount()`
+ - 1457:### `votingGetEpochs()`
+ - 1465:### `votingGetPeriods()`
+ - 1474:### `votingGetPeriodVoters2()`
+ - 1483:### `votingGetProposals()`
+ - 1494:## Golden patterns (sync / backfill)
+ - 1498:### A) Transactions – cursor paging
+ - 1503:### B) Token transfers – cursor paging
+ - 1508:### C) Range by level
+ - 1513:### D) Payload trimming (when supported)
+ - 1518:### Universal rules
+ - 1519:- **Never** send `undefined` or `null` as a query param value; omit the param instead.
+

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tezos/Objkt Viz Workbench"
+  short_description: "Build resilient Tezos and Objkt visual data apps"
+  default_prompt: "Use $tezos_objkt_visualization_workbench to build this Tezos/Objkt visualization with fallback-safe queries and deterministic QA."
+
+policy:
+  allow_implicit_invocation: true

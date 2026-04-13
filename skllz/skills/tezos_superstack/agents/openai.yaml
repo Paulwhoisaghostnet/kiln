@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tezos Superstack"
+  short_description: "Orchestrate Tezos build, data, and visualization flows"
+  default_prompt: "Use $tezos_superstack to route this Tezos request across contract, wallet, data, and visualization skills with one consolidated status."
+
+policy:
+  allow_implicit_invocation: true

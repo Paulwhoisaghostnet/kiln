@@ -1,0 +1,7 @@
+interface:
+  display_name: "Game Systems + LiveOps"
+  short_description: "Design robust game loops with secure live operations"
+  default_prompt: "Use $game_systems_and_liveops to design and harden this game loop with audit-safe progression and moderation controls."
+
+policy:
+  allow_implicit_invocation: true

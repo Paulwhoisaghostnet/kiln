@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tezos Contract Lifecycle"
+  short_description: "Ship Tezos contracts with compile and artifact parity"
+  default_prompt: "Use $tezos_contract_lifecycle to implement this contract change with style mapping, compile parity, and release-gate checks."
+
+policy:
+  allow_implicit_invocation: true

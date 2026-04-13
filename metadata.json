@@ -1,0 +1,5 @@
+{
+  "name": "Tezos Kiln Shadownet",
+  "description": "Secure Michelson injector and contract test rig for Tezos shadownet.",
+  "requestFramePermissions": []
+}

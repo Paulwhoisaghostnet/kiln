@@ -1,0 +1,7 @@
+interface:
+  display_name: "Visual Sim Debug 3js+p5js"
+  short_description: "Stabilize 3js/p5js simulations with reproducible evidence"
+  default_prompt: "Use $visual_sim_debug_3js_p5js to debug this simulation with deterministic controls and artifact-based validation."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Video Local Pipeline"
+  short_description: "Build local video pipelines and mint-ready exports"
+  default_prompt: "Use $video_local_pipeline_and_mintable_export to create a local-first media pipeline and a fully self-contained export package."
+
+policy:
+  allow_implicit_invocation: true

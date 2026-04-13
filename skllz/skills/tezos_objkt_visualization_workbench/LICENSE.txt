@@ -1,0 +1,4 @@
+Local Skill Content License
+
+This skill content is authored for local/personal workflow use.
+Reuse, modify, and adapt freely within your local Codex environment.

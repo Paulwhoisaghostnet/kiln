@@ -1,0 +1,7 @@
+interface:
+  display_name: "Subagent Harvest Loop"
+  short_description: "Run delegate-harvest-patch-cleanup skill loops"
+  default_prompt: "Use $subagent_skill_harvest_loop to run a delegated prototype round, harvest findings, patch skills, and clean up temp workspaces."
+
+policy:
+  allow_implicit_invocation: true

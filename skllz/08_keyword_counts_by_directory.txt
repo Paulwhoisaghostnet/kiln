@@ -1,0 +1,44 @@
+.cursor                      |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+.git                         |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+.playwright-cli              |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+3js projects                 |     1 |      0 |        0 |     16 |     21 |      2 |        0 |     12
+Bowers                       |    19 |    369 |      954 |    130 |     84 |     71 |       67 |      1
+Conflict-Atlas               |     2 |      0 |        0 |      0 |      1 |      2 |        0 |      0
+Crow                         |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+Discord Bots                 |    13 |     63 |        6 |      0 |     88 |     97 |       95 |     15
+Guidance                     |     7 |     19 |       31 |      0 |      7 |      7 |        2 |      0
+Image-Battle-Arena           |     3 |      0 |        0 |      0 |      1 |      2 |        1 |      2
+Lil Guys                     |     2 |      0 |        0 |      0 |      0 |      0 |        0 |      4
+Objkt-Advisor                |     4 |      0 |       37 |      0 |      3 |      1 |        1 |      2
+Particle Painting            |     6 |     23 |       33 |     45 |      5 |      0 |        4 |     40
+Tezos-Intel                  |     2 |     18 |       34 |      0 |      0 |      0 |        1 |      4
+Tezos-Scout                  |     2 |      0 |        0 |      0 |      0 |      0 |        1 |      2
+WTF                          |     4 |     49 |       85 |     25 |     17 |      1 |       19 |      0
+__pycache__                  |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+album packager               |     3 |      1 |       10 |      3 |     15 |      2 |        0 |     12
+archivist-workspace          |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+bootloader-project           |     1 |      1 |        6 |      2 |      8 |      0 |        0 |      0
+color wars                   |     5 |      3 |        2 |      5 |     59 |      3 |       14 |      2
+dweet-bootloader             |     1 |      0 |        1 |      0 |      0 |      0 |        0 |      2
+fafo tax                     |     8 |      3 |       11 |      2 |     14 |      4 |        0 |      5
+ledger-village               |     3 |      4 |       12 |      3 |      8 |      1 |        0 |      0
+local-video-review-lab       |     3 |      0 |        0 |      0 |      0 |     19 |        0 |     41
+model-match-lab              |     3 |      0 |        1 |      4 |      4 |     64 |        0 |      0
+objkt-advisor-db-2026-02-26  |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+objkt-owned-editions-sorter  |     1 |      0 |        1 |      0 |      0 |      1 |        0 |      0
+output                       |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+p5js                         |     3 |      0 |        0 |      4 |      5 |      4 |        1 |     20
+pi-recovery-logs             |     0 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+porcupin-slideshow           |     1 |      0 |        0 |      0 |      0 |      0 |        0 |      0
+projects                     |    28 |     50 |      413 |    212 |    556 |     36 |       64 |    240
+r00t                         |    43 |    528 |      361 |     46 |    132 |    101 |       28 |      3
+receipt finder               |     2 |      0 |        0 |      0 |      2 |      0 |        8 |      0
+skllz                        |     1 |     12 |       58 |     11 |     23 |     35 |        4 |     12
+smartpy-test-platform        |     1 |     11 |        5 |      0 |      5 |      4 |        0 |      0
+taxmaster                    |     2 |     10 |        7 |      0 |      0 |      0 |        0 |      0
+tezpulse                     |     5 |     32 |       76 |      0 |      1 |      3 |        1 |      0
+tui_tools-main               |     4 |     14 |       36 |      0 |     16 |      0 |       20 |      0
+videozine-editor             |     3 |      2 |        5 |      0 |      5 |      0 |        3 |     47
+vlm-video-archivist          |     7 |      0 |        1 |      0 |      1 |     36 |        2 |    200
+wallet-constellations        |     2 |      7 |       22 |      1 |      0 |      3 |        0 |      1
+web3 simulator               |     6 |     43 |      136 |      0 |      1 |      7 |        0 |      1

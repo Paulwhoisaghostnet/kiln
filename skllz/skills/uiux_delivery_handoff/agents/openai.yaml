@@ -1,0 +1,7 @@
+interface:
+  display_name: "UI/UX Delivery Handoff"
+  short_description: "Ship UX work with architecture and handoff rigor"
+  default_prompt: "Use $uiux_delivery_handoff to deliver this UI change with architecture audit notes, handoff docs, and phased remediation."
+
+policy:
+  allow_implicit_invocation: true
