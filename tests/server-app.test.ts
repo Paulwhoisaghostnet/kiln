@@ -372,7 +372,7 @@ describe('createApiApp', () => {
       env: baseEnv(),
       createTezosService: mockTezosServiceFactory().factory,
       compileSmartPy: async () => {
-        throw new Error('SmartPy CLI not found on server PATH.');
+        throw new Error('SmartPy compiler unavailable: no runtime.');
       },
     });
 
@@ -381,7 +381,7 @@ describe('createApiApp', () => {
     });
 
     expect(response.status).toBe(501);
-    expect(response.body.error).toContain('SmartPy CLI not found');
+    expect(response.body.error).toContain('SmartPy compiler unavailable');
   });
 
   it('runs full workflow and issues deployment clearance', async () => {

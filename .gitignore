@@ -9,3 +9,4 @@ reference/
 .env.local
 .env.*.local
 .netlify
+vendor/kiln-python

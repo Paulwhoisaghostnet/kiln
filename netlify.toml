@@ -1,10 +1,11 @@
 [build]
-  command = "npm run build"
+  command = "bash scripts/netlify-build.sh"
   publish = "dist"
   functions = "netlify/functions"
 
 [functions]
   node_bundler = "esbuild"
+  included_files = ["vendor/kiln-python/**"]
 
 [[redirects]]
   from = "/api/*"

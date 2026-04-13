@@ -64,12 +64,13 @@ npm run start
 
 This repo is now pre-configured for Netlify:
 - `netlify.toml` sets:
-  - build command: `npm run build`
+  - build command: `bash scripts/netlify-build.sh` (Vite build plus a **Linux standalone Python** with `smartpy-tezos` under `vendor/kiln-python`, zipped into the API function so SmartPy workflow/compile works—Netlify’s Node runtime does not include system Python)
   - publish dir: `dist`
   - functions dir: `netlify/functions`
   - `/api/*` rewrites to `/.netlify/functions/api/:splat`
   - SPA fallback `/* -> /index.html`
 - `netlify/functions/api.ts` runs the existing Express API in a Netlify Function.
+- Optional: set **`KILN_PYTHON`** to an absolute Python path if you self-host and want a specific interpreter (otherwise the bundled `vendor/kiln-python` is used on Netlify, then `python3` on PATH elsewhere).
 
 ### Local Netlify emulation
 

@@ -498,7 +498,11 @@ export function createApiApp(options: ApiAppOptions = {}) {
         });
       } catch (error) {
         const message = asMessage(error);
-        const status = message.includes('SmartPy CLI not found') ? 501 : 500;
+        const status =
+          message.includes('SmartPy compiler unavailable') ||
+          message.includes('SmartPy CLI not found')
+            ? 501
+            : 500;
         res.status(status).json({ error: message });
       }
     },
