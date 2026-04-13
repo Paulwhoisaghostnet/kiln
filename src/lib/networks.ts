@@ -110,6 +110,36 @@ export function listNetworkProfiles(): KilnNetworkProfile[] {
   return Object.values(NETWORK_PROFILES);
 }
 
+/** Rows for `/api/networks` and UI: active shadownet, planned Tezos mainnet, planned Tezos EVM (Etherlink test+main grouped). Ghostnet and per-env Etherlink rows are omitted. */
+export interface NetworkCatalogRow {
+  id: string;
+  label: string;
+  ecosystem: KilnEcosystem;
+  status: KilnNetworkStatus;
+  defaultRpcUrl: string;
+  chainId?: string;
+  beaconNetworkName?: string;
+  capabilities: KilnNetworkCapabilities;
+}
+
+export function listNetworkCatalog(): NetworkCatalogRow[] {
+  const shadownet = NETWORK_PROFILES['tezos-shadownet'];
+  const mainnet = NETWORK_PROFILES['tezos-mainnet'];
+  const etherlinkMain = NETWORK_PROFILES['etherlink-mainnet'];
+  return [
+    { ...shadownet },
+    { ...mainnet },
+    {
+      id: 'tezos-evm-support',
+      label: 'Tezos EVM support',
+      ecosystem: 'etherlink',
+      status: 'planned',
+      defaultRpcUrl: etherlinkMain.defaultRpcUrl,
+      capabilities: { ...etherlinkMain.capabilities },
+    },
+  ];
+}
+
 export function getNetworkProfile(id: KilnNetworkId): KilnNetworkProfile {
   return NETWORK_PROFILES[id];
 }

@@ -37,7 +37,7 @@ import { getEnv, parseCorsOrigins, type AppEnv } from './lib/env.js';
 import { buildGuidedContractDraft } from './lib/guided-contracts.js';
 import { injectKilnTokens, resolveDummyTokens } from './lib/kiln-injector.js';
 import { parseEntrypointsFromMichelson } from './lib/michelson-parser.js';
-import { listNetworkProfiles, resolveNetworkConfig } from './lib/networks.js';
+import { listNetworkCatalog, resolveNetworkConfig } from './lib/networks.js';
 import { buildOpenApiSpec } from './lib/openapi.js';
 import { listGuidedElementsFromReferences } from './lib/reference-guided-elements.js';
 import { listReferenceContracts } from './lib/reference-contracts.js';
@@ -242,7 +242,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
     res.json({
       success: true,
       active: runtimeNetwork,
-      supported: listNetworkProfiles(),
+      supported: listNetworkCatalog(),
     });
   });
 

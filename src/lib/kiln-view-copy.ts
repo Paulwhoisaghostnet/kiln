@@ -26,8 +26,8 @@ const C = {
     tip: 'Shows which network Kiln is talking to right now. Shadownet is for practice; “planned” means the UI is aware of mainnet-style targets but you are not live on them from this screen alone.',
   },
   networkArchBody: {
-    b: 'Shadownet is active now. Mainnet and Etherlink are modeled as planned targets.',
-    e: 'You are on the practice chain (Shadownet). Mainnet and Etherlink are listed so you know they exist—not that you are deploying there automatically.',
+    b: 'Shadownet is active now. Tezos Mainnet and Tezos EVM support are modeled as planned targets.',
+    e: 'You are on the practice chain (Shadownet). Mainnet and Tezos EVM (rollup-style) support are listed as future targets—not live from this screen.',
     tip: 'Always double-check the “Active” line before you sign anything in your real wallet. Practice networks use worthless test coins.',
   },
   deploymentTitle: {

@@ -196,8 +196,11 @@ describe('createApiApp', () => {
     expect(response.body.supported).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'tezos-mainnet' }),
-        expect.objectContaining({ id: 'etherlink-mainnet' }),
+        expect.objectContaining({ id: 'tezos-evm-support', label: 'Tezos EVM support' }),
       ]),
+    );
+    expect(response.body.supported.some((row: { id: string }) => row.id === 'tezos-ghostnet')).toBe(
+      false,
     );
   });
 
