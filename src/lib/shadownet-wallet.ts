@@ -21,7 +21,8 @@ const SHADOWNET_CHAIN_ID = 'NetXsqzbfFenSTS';
 const SHADOWNET_NETWORK_NAME = 'shadownet';
 const KUKAI_SHADOWNET_URL = 'https://shadownet.kukai.app';
 const TEMPLE_WALLET_URL = 'https://templewallet.com';
-const BURN_PLACEHOLDER_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX';
+/** Fixed address used in compiled storage as admin placeholder until deploy (Tezos ecosystem convention). */
+export const BURN_PLACEHOLDER_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX';
 
 let tezosToolkit: TezosToolkit | null = null;
 let beaconWallet: BeaconWallet | null = null;

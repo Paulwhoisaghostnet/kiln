@@ -3,6 +3,7 @@ import { Activity, RefreshCw, Terminal, Upload, Wallet } from 'lucide-react';
 import DynamicRig from './components/DynamicRig';
 import {
   assignConnectedWalletAsAdmin,
+  BURN_PLACEHOLDER_ADDRESS,
   connectShadownetWallet,
   disconnectShadownetWallet,
   getConnectedShadownetWallet,
@@ -134,7 +135,8 @@ export default function App() {
   const [connectedWallet, setConnectedWallet] = useState<ConnectedWalletState | null>(
     null,
   );
-  const [assignAdminToConnectedWallet, setAssignAdminToConnectedWallet] =
+  /** When deploying with Beacon, substitute template admin address in storage with the connected wallet. */
+  const [useConnectedWalletAsContractAdmin, setUseConnectedWalletAsContractAdmin] =
     useState(true);
   const [e2eEntrypoint, setE2EEntrypoint] = useState('');
   const [e2eArgs, setE2EArgs] = useState('[]');
@@ -365,13 +367,13 @@ export default function App() {
       throw new Error('Connect a shadownet wallet before deploying with user wallet mode.');
     }
 
-    const storageForDeployment = assignAdminToConnectedWallet
+    const storageForDeployment = useConnectedWalletAsContractAdmin
       ? assignConnectedWalletAsAdmin(initialStorage, connectedWallet.address)
       : initialStorage;
 
-    if (assignAdminToConnectedWallet && storageForDeployment === initialStorage) {
+    if (useConnectedWalletAsContractAdmin && storageForDeployment === initialStorage) {
       addLog(
-        'No admin placeholder found in storage. Ensure storage admin is set to your wallet manually if needed.',
+        `No template admin address (${BURN_PLACEHOLDER_ADDRESS}) in initial storage; deploying with your Micheline unchanged.`,
         'info',
       );
     }
@@ -633,15 +635,25 @@ export default function App() {
               ) : (
                 <p className="text-xs text-base-content/60">No wallet connected yet.</p>
               )}
-              <label className="label cursor-pointer justify-start gap-3">
+              <label className="label cursor-pointer items-start gap-3 py-1">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-sm"
-                  checked={assignAdminToConnectedWallet}
-                  onChange={(event) => setAssignAdminToConnectedWallet(event.target.checked)}
+                  className="checkbox checkbox-sm mt-0.5"
+                  checked={useConnectedWalletAsContractAdmin}
+                  onChange={(event) => setUseConnectedWalletAsContractAdmin(event.target.checked)}
                 />
-                <span className="label-text text-xs">
-                  Replace burn placeholder in storage with connected wallet address
+                <span className="label-text text-xs space-y-1 block">
+                  <span className="font-medium text-base-content">
+                    Set my connected wallet as the contract admin in initial storage
+                  </span>
+                  <span className="block text-base-content/60 leading-snug">
+                    Only for <strong>Deploy with Connected Wallet</strong>. Compiled Kiln token
+                    storage leaves a fixed <span className="font-medium">admin</span> address in
+                    the Micheline; with this on, that address is replaced by your Beacon{' '}
+                    <span className="font-mono">tz1…</span> before origination so your wallet holds
+                    admin. Uncheck if you already set admin yourself. Match is literal:{' '}
+                    <code className="text-[0.65rem] bg-base-200 px-1 rounded">{BURN_PLACEHOLDER_ADDRESS}</code>
+                  </span>
                 </span>
               </label>
             </div>
