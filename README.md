@@ -79,7 +79,7 @@ npm run netlify:deploy:prod
 
 ### Required Netlify environment variables
 
-Set these in Netlify Site Settings -> Environment Variables:
+Set these in Netlify Site Settings → Environment variables (use the same names for **Production** and **Deploy previews** unless you intentionally split them):
 
 - `TEZOS_RPC_URL`
 - `TEZOS_CHAIN_ID` (recommended to pin for safety)
@@ -91,13 +91,25 @@ Set these in Netlify Site Settings -> Environment Variables:
 - `KILN_TOKEN_PLATINUM`
 - `KILN_TOKEN_DIAMOND`
 
+If you protect the API with a token, you **must** also set the client-visible build variable (same value as the server secret):
+
+- **`API_AUTH_TOKEN`** — checked in the Netlify function on protected routes (including **`GET /api/kiln/balances`** for Bert/Ernie).
+- **`VITE_API_TOKEN`** — same string as `API_AUTH_TOKEN`, but this name is chosen so **Vite inlines it at build time** into the browser bundle. The UI sends it as the `x-api-token` header on `/api/...` requests.
+
+Without `VITE_API_TOKEN` on the **build**, production will show **Shadownet online** (health is unauthenticated) while Bert/Ernie balances stay in **error** or **401**: the balance route rejects the request.
+
 Optional:
 - `KILN_DUMMY_TOKENS` (legacy fallback list)
-- `API_AUTH_TOKEN`
 - `API_RATE_LIMIT_WINDOW_MS`
 - `API_RATE_LIMIT_MAX`
 - `API_JSON_LIMIT`
 - `CORS_ORIGINS`
+
+### Bert/Ernie balances on Netlify
+
+- **`/api/health`** does not use `API_AUTH_TOKEN`. **`/api/kiln/balances`** does when the token is configured.
+- If balances fail with **401**, add **`VITE_API_TOKEN`** in Netlify and trigger a **new deploy** (clear cache if needed) so the static bundle picks it up.
+- If balances fail with **500**, check function logs: missing `WALLET_*` keys, chain mismatch (`TEZOS_CHAIN_ID`), or RPC errors are common causes.
 
 ### Same-origin/CORS configuration (important)
 
@@ -114,6 +126,7 @@ If you must allow external origins:
 
 ### Netlify-specific operational notes
 
+- `vite-plugin-node-polyfills` is listed under **dependencies** (not only devDependencies) so Netlify installs it even when the install step runs with production-style omission of dev-only packages; the Vite config imports it for Beacon/Taquito browser shims (`Buffer`, `global`, `process`).
 - Contract origination + confirmation can be slow on shadownet.
 - Netlify Functions have execution limits; long confirmation waits may time out.
 - If this happens in production, ideal architecture is:
