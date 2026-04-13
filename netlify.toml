@@ -5,6 +5,9 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Bundle standalone Python only for the SmartPy API; avoids copying it into every function.
+[functions.api]
   included_files = ["vendor/kiln-python/**"]
 
 [[redirects]]
