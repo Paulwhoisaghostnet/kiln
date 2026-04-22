@@ -50,10 +50,15 @@ function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
     API_RATE_LIMIT_MAX: 100,
     API_JSON_LIMIT: '10mb',
     CORS_ORIGINS: undefined,
+    KILN_REFERENCE_MAX_FILES: 200,
+    KILN_REFERENCE_MAX_BYTES: 200 * 1024 * 1024,
     ...overrides,
     KILN_REQUIRE_SIM_CLEARANCE:
       overrides.KILN_REQUIRE_SIM_CLEARANCE ?? false,
     KILN_ACTIVITY_LOG_PATH: overrides.KILN_ACTIVITY_LOG_PATH,
+    KILN_PYTHON: overrides.KILN_PYTHON,
+    KILN_EXPORT_ROOT: overrides.KILN_EXPORT_ROOT,
+    KILN_REFERENCE_ROOT: overrides.KILN_REFERENCE_ROOT,
   };
 }
 

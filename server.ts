@@ -1,7 +1,5 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { getEnv } from './src/lib/env.js';
 import { createApiApp } from './src/server-app.js';
@@ -13,7 +11,11 @@ export async function startServer() {
   const app = createApiApp({ env }) as express.Express;
 
   if (env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
+    // Dev-only dynamic import via string specifier so esbuild / node prod
+    // bundle never attempts to resolve vite at runtime. vite is a devDep.
+    const viteSpecifier = 'vite';
+    const viteModule = (await import(viteSpecifier)) as typeof import('vite');
+    const vite = await viteModule.createServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
@@ -31,9 +33,17 @@ export async function startServer() {
   });
 }
 
+// Entry-point detection that works both when this file is loaded as
+// ESM via `tsx server.ts` (dev) and when it is bundled to CJS by esbuild
+// and run as `node dist/server.cjs` (prod). `import.meta` isn't
+// available in CJS output, so we deliberately avoid it and just match
+// on the script basename passed to the process.
+const entryScript = process.argv[1] ?? '';
+const entryBase = entryScript ? path.basename(entryScript) : '';
 const isMainModule =
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  entryBase === 'server.ts' ||
+  entryBase === 'server.js' ||
+  entryBase === 'server.cjs';
 
 if (isMainModule) {
   startServer().catch((error) => {

@@ -1,0 +1,74 @@
+name: Deploy Kiln to Hetzner
+
+# Manual dispatch only for phase-1 burn-in. Once the deploy surface is
+# validated we can switch to `push` on main (mirroring WTF's pattern).
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action: "provision" (first-time setup) or "deploy" (pull + rebuild + restart)'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - provision
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (for commit tag in logs only)
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Provision host (one-time)
+        if: inputs.action == 'provision'
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" << 'EOF'
+            set -e
+            # Pull the provision script fresh over HTTPS so we don't depend
+            # on any pre-existing repo checkout to bootstrap ourselves.
+            TMP=$(mktemp -d)
+            curl -fsSL https://raw.githubusercontent.com/Paulwhoisaghostnet/kiln/main/scripts/server-provision.sh -o "$TMP/server-provision.sh"
+            chmod +x "$TMP/server-provision.sh"
+            sudo "$TMP/server-provision.sh"
+            rm -rf "$TMP"
+          EOF
+
+      - name: Deploy
+        if: inputs.action == 'deploy' || inputs.action == 'provision'
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" << 'EOF'
+            set -e
+            cd /opt/platform/repos/shadownet-kiln
+            sudo KILN_DEPLOY_BRANCH=main bash scripts/server-deploy.sh
+          EOF
+
+      - name: Health check (external)
+        run: |
+          echo "Sleeping 5s to let Caddy pick up the restart..."
+          sleep 5
+          for attempt in 1 2 3 4 5; do
+            if curl -sf https://kiln.wtfgameshow.app/api/health >/dev/null; then
+              echo "External health check passed."
+              exit 0
+            fi
+            # Fall back to direct host port if Caddy/DNS not yet wired.
+            if curl -sf "http://${{ secrets.HETZNER_HOST }}:3001/api/health" >/dev/null; then
+              echo "Direct-host health check passed (Caddy/TLS still pending?)."
+              exit 0
+            fi
+            echo "Attempt $attempt failed; retrying in 8s..."
+            sleep 8
+          done
+          echo "ERROR: external and direct health checks both failed"
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
+            "sudo journalctl -u kiln.service -n 60 --no-pager"
+          exit 1

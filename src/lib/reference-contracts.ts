@@ -148,11 +148,19 @@ async function parseEntrypointsFromFile(
   }
 }
 
+export function resolveReferenceRoot(): string {
+  const fromEnv = process.env.KILN_REFERENCE_ROOT?.trim();
+  if (fromEnv) {
+    return resolve(fromEnv);
+  }
+  return resolve(process.cwd(), 'reference');
+}
+
 export async function listReferenceContracts(input?: {
   referenceRoot?: string;
 }): Promise<ReferenceContractSummary[]> {
   const referenceRoot =
-    input?.referenceRoot?.trim() || resolve(process.cwd(), 'reference');
+    input?.referenceRoot?.trim() || resolveReferenceRoot();
   const indexPath = join(referenceRoot, 'INDEX.json');
 
   let indexRows: ReferenceIndexRow[] = [];

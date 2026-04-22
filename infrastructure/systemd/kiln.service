@@ -1,0 +1,40 @@
+[Unit]
+Description=Shadownet Kiln (native Node runtime)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kiln
+Group=kiln
+WorkingDirectory=/opt/platform/repos/shadownet-kiln
+EnvironmentFile=/opt/platform/repos/shadownet-kiln/.env
+# Runtime paths (also echoed in .env.example; systemd is the source of truth
+# in production and must win if both are set).
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=KILN_PYTHON=/opt/platform/venvs/kiln/bin/python
+Environment=KILN_ACTIVITY_LOG_PATH=/var/log/kiln/activity.log
+Environment=KILN_EXPORT_ROOT=/var/lib/kiln/exports
+Environment=KILN_REFERENCE_ROOT=/var/lib/kiln/reference
+# Absolute node path matches the nodesource deb; server-provision.sh
+# verifies this at first install.
+ExecStart=/usr/bin/node dist/server.cjs
+Restart=always
+RestartSec=5
+# Only allow writes to the runtime dirs this service actually needs; the
+# repo checkout stays read-only from the service user's perspective so a
+# compromised process can't rewrite deployed artifacts.
+ProtectSystem=strict
+ReadWritePaths=/var/log/kiln /var/lib/kiln
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+# Avoid inheriting a tty/stdin for a long-running service.
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

@@ -104,6 +104,10 @@ function buildReadinessMarkdown(input: BundleExportInput): string {
 }
 
 export function resolveExportRoot(): string {
+  const fromEnv = process.env.KILN_EXPORT_ROOT?.trim();
+  if (fromEnv) {
+    return resolve(fromEnv);
+  }
   return resolve(process.cwd(), 'exports');
 }
 

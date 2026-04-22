@@ -57,6 +57,17 @@ const envSchema = z.object({
   CORS_ORIGINS: optionalNonEmptyString,
   KILN_REQUIRE_SIM_CLEARANCE: envBoolean.default(true),
   KILN_ACTIVITY_LOG_PATH: optionalNonEmptyString,
+  // Native hosting paths (Phase 1 of Hetzner migration). All optional so dev
+  // retains repo-relative defaults; production systemd unit pins absolute paths.
+  KILN_PYTHON: optionalNonEmptyString,
+  KILN_EXPORT_ROOT: optionalNonEmptyString,
+  KILN_REFERENCE_ROOT: optionalNonEmptyString,
+  // Reference corpus bootstrap caps. Defaults chosen to match
+  // `scripts/fetch-reference-mainnet-contracts.py`'s built-in bundle (5
+  // contracts * ~3 artifacts each). Raise carefully: each contract can pull
+  // 1–5 MB of JSON.
+  KILN_REFERENCE_MAX_FILES: z.coerce.number().int().positive().default(200),
+  KILN_REFERENCE_MAX_BYTES: z.coerce.number().int().positive().default(200 * 1024 * 1024),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
