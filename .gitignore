@@ -10,3 +10,9 @@ reference/
 .env.*.local
 .netlify
 vendor/kiln-python
+
+# Local Hetzner deploy keys (never commit)
+.ssh-local/
+
+# One line: root@<hetzner-ipv4> (never commit)
+.kiln-deploy-host
