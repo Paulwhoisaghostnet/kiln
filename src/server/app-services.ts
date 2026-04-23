@@ -13,9 +13,11 @@ import {
   type BundleExportResult,
 } from '../lib/bundle-export.js';
 import { getEnv, type AppEnv } from '../lib/env.js';
+import { EtherlinkService } from '../lib/etherlink-service.js';
 import { injectKilnTokens } from '../lib/kiln-injector.js';
 import {
   resolveNetworkConfig,
+  type KilnNetworkId,
   type RuntimeNetworkConfig,
 } from '../lib/networks.js';
 import {
@@ -25,6 +27,7 @@ import {
 import {
   TezosService,
   type TezosServiceLike,
+  resolveRpcUrlForNetwork,
 } from '../lib/tezos-service.js';
 import {
   runContractWorkflow,
@@ -34,7 +37,8 @@ import type { WalletType } from '../lib/types.js';
 
 export interface ApiAppOptions {
   env?: AppEnv;
-  createTezosService?: (wallet: WalletType) => TezosServiceLike;
+  createTezosService?: (wallet: WalletType, networkId?: KilnNetworkId) => TezosServiceLike;
+  createEtherlinkService?: (networkId?: KilnNetworkId) => EtherlinkService;
   compileSmartPy?: (
     source: string,
     scenario?: string,
@@ -50,11 +54,17 @@ export interface ApiAppOptions {
 
 export interface ApiAppServices {
   env: AppEnv;
+  /** The server-default network (from `KILN_NETWORK` env). Used when a request doesn't specify one. */
   runtimeNetwork: RuntimeNetworkConfig;
   activityLogger: ActivityLogger;
   requireApiToken: RequestHandler;
   mutationLimiter: RequestHandler;
-  createTezosService: (wallet: WalletType) => TezosServiceLike;
+  /** Per-request factory — pass `networkId` to target a specific network. Defaults to `runtimeNetwork` when omitted. */
+  createTezosService: (wallet: WalletType, networkId?: KilnNetworkId) => TezosServiceLike;
+  /** Per-request EVM service factory for Etherlink networks. */
+  createEtherlinkService: (networkId?: KilnNetworkId) => EtherlinkService;
+  /** Resolve the runtime network config for a given (optional) networkId. */
+  resolveNetwork: (networkId?: KilnNetworkId) => RuntimeNetworkConfig;
   compileSmartPy: (
     source: string,
     scenario?: string,
@@ -70,9 +80,23 @@ export function createApiAppServices(
   options: ApiAppOptions = {},
 ): ApiAppServices {
   const env = options.env ?? getEnv();
+
+  const resolveNetwork = (networkId?: KilnNetworkId): RuntimeNetworkConfig =>
+    resolveNetworkConfig({
+      networkId: networkId ?? env.KILN_NETWORK,
+      rpcUrl: resolveRpcUrlForNetwork(networkId ?? env.KILN_NETWORK, env),
+      chainId: env.TEZOS_CHAIN_ID,
+    });
+
   const createTezosService =
     options.createTezosService ??
-    ((wallet: WalletType) => new TezosService(wallet, env));
+    ((wallet: WalletType, networkId?: KilnNetworkId) =>
+      new TezosService(wallet, env, networkId));
+
+  const createEtherlinkService =
+    options.createEtherlinkService ??
+    ((networkId?: KilnNetworkId) => new EtherlinkService(env, networkId));
+
   const compileSmartPy = options.compileSmartPy ?? compileSmartPySource;
   const clearanceStore =
     options.clearanceStore ?? new DeploymentClearanceStore();
@@ -83,17 +107,14 @@ export function createApiAppServices(
         compileSmartPy,
         injectKilnTokens: (code: string) => injectKilnTokens(code, env),
         estimateOrigination: async (code, initialStorage) => {
-          const tezosService = createTezosService('A');
+          // Tezos-only path — network is picked per-workflow by the router.
+          const tezosService = createTezosService('A', env.KILN_NETWORK);
           return tezosService.validateOrigination(code, initialStorage);
         },
         clearanceStore,
       }));
   const exportBundle = options.exportBundle ?? createMainnetReadyBundle;
-  const runtimeNetwork = resolveNetworkConfig({
-    networkId: env.KILN_NETWORK,
-    rpcUrl: env.TEZOS_RPC_URL,
-    chainId: env.TEZOS_CHAIN_ID,
-  });
+  const runtimeNetwork = resolveNetwork();
   const activityLogger = createActivityLogger(env.KILN_ACTIVITY_LOG_PATH);
 
   const requireApiToken: RequestHandler = (req, res, next) => {
@@ -126,6 +147,8 @@ export function createApiAppServices(
     requireApiToken,
     mutationLimiter,
     createTezosService,
+    createEtherlinkService,
+    resolveNetwork,
     compileSmartPy,
     clearanceStore,
     runWorkflow,

@@ -1,13 +1,18 @@
 import { NetworkType } from '@airgap/beacon-dapp';
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { TezosToolkit } from '@taquito/taquito';
-import { getNetworkProfile, type KilnNetworkId } from './networks.js';
+import {
+  getDefaultNetworkId,
+  getNetworkProfile,
+  type KilnNetworkId,
+} from './networks.js';
 
 export type WalletConnectTarget = 'temple' | 'kukai';
 
 export interface ConnectedWalletState {
   address: string;
   networkName: string | null;
+  networkId: KilnNetworkId;
   rpcUrl: string | null;
 }
 
@@ -17,28 +22,32 @@ export interface ConnectedOriginationResult {
   level: number | null;
 }
 
-const ACTIVE_BROWSER_NETWORK_ID: KilnNetworkId = 'tezos-shadownet';
-const ACTIVE_BROWSER_NETWORK = getNetworkProfile(ACTIVE_BROWSER_NETWORK_ID);
-const ACTIVE_NETWORK_RPC_URL = ACTIVE_BROWSER_NETWORK.defaultRpcUrl;
-const ACTIVE_NETWORK_CHAIN_ID = ACTIVE_BROWSER_NETWORK.chainId;
-const ACTIVE_NETWORK_NAME =
-  ACTIVE_BROWSER_NETWORK.beaconNetworkName ?? 'shadownet';
 const KUKAI_SHADOWNET_URL = 'https://shadownet.kukai.app';
+const KUKAI_MAINNET_URL = 'https://wallet.kukai.app';
 const TEMPLE_WALLET_URL = 'https://templewallet.com';
-/** Fixed address used in compiled storage as admin placeholder until deploy (Tezos ecosystem convention). */
+/** Fixed address used in compiled storage as admin placeholder until deploy. */
 export const BURN_PLACEHOLDER_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX';
 
-let tezosToolkit: TezosToolkit | null = null;
-let beaconWallet: BeaconWallet | null = null;
-let initializingWallet: Promise<BeaconWallet> | null = null;
+type TezosWalletHandle = {
+  toolkit: TezosToolkit;
+  wallet: BeaconWallet;
+  networkId: KilnNetworkId;
+};
 
-function resolveNetworkType(): string {
+let activeHandle: TezosWalletHandle | null = null;
+let initializingFor: KilnNetworkId | null = null;
+let initializing: Promise<TezosWalletHandle> | null = null;
+
+function resolveBeaconNetworkType(): string {
   const typedNetworkType = NetworkType as unknown as {
+    MAINNET?: string;
+    GHOSTNET?: string;
     SHADOWNET?: string;
     CUSTOM?: string;
   };
-
   return (
+    typedNetworkType.MAINNET ??
+    typedNetworkType.GHOSTNET ??
     typedNetworkType.SHADOWNET ??
     typedNetworkType.CUSTOM ??
     'custom'
@@ -58,77 +67,116 @@ function clearStaleBeaconStorage(): void {
       localStorage.removeItem(key);
     }
   } catch {
-    // Ignore storage access errors in restricted browser contexts.
+    /* ignore restricted storage */
   }
 }
 
-async function ensureWallet(): Promise<BeaconWallet> {
-  if (beaconWallet) {
-    return beaconWallet;
+function normalizedBeaconNetworkName(networkId: KilnNetworkId): string {
+  const profile = getNetworkProfile(networkId);
+  return profile.beaconNetworkName ?? profile.id.replace('tezos-', '');
+}
+
+/**
+ * Ensures a Beacon-backed TezosToolkit exists for the given network. If the
+ * user changed networks since last call, the previous wallet is cleared and a
+ * fresh one is built — Beacon's SDK keeps active-account state per-instance.
+ */
+async function ensureToolkit(networkId: KilnNetworkId): Promise<TezosWalletHandle> {
+  if (activeHandle && activeHandle.networkId === networkId) {
+    return activeHandle;
   }
 
-  if (!initializingWallet) {
-    initializingWallet = (async () => {
-      clearStaleBeaconStorage();
-      const networkType = resolveNetworkType();
-      const wallet = new BeaconWallet({
-        name: 'Tezos Kiln',
-        iconUrl: '/favicon.ico',
-        network: {
-          type: networkType as never,
-          name: ACTIVE_NETWORK_NAME,
-          rpcUrl: ACTIVE_NETWORK_RPC_URL,
-        },
-      });
+  if (initializing && initializingFor === networkId) {
+    return initializing;
+  }
 
-      if (!tezosToolkit) {
-        tezosToolkit = new TezosToolkit(ACTIVE_NETWORK_RPC_URL);
+  initializingFor = networkId;
+  initializing = (async () => {
+    clearStaleBeaconStorage();
+
+    if (activeHandle) {
+      try {
+        await activeHandle.wallet.clearActiveAccount();
+      } catch {
+        /* ignore */
       }
-      tezosToolkit.setWalletProvider(wallet);
-      beaconWallet = wallet;
-      return wallet;
-    })().finally(() => {
-      initializingWallet = null;
-    });
-  }
+    }
 
-  return initializingWallet;
+    const profile = getNetworkProfile(networkId);
+    if (profile.ecosystem !== 'tezos') {
+      throw new Error(
+        `Beacon wallet requires a Tezos network; got ${profile.ecosystem} network ${profile.id}.`,
+      );
+    }
+
+    const wallet = new BeaconWallet({
+      name: 'Tezos Kiln',
+      iconUrl: '/favicon.ico',
+      network: {
+        type: resolveBeaconNetworkType() as never,
+        name: normalizedBeaconNetworkName(networkId),
+        rpcUrl: profile.defaultRpcUrl,
+      },
+    });
+
+    const toolkit = new TezosToolkit(profile.defaultRpcUrl);
+    toolkit.setWalletProvider(wallet);
+
+    activeHandle = { toolkit, wallet, networkId };
+    return activeHandle;
+  })().finally(() => {
+    initializing = null;
+    initializingFor = null;
+  });
+
+  return initializing;
 }
 
-function openWalletTarget(target: WalletConnectTarget): void {
-  const url = target === 'kukai' ? KUKAI_SHADOWNET_URL : TEMPLE_WALLET_URL;
+function openWalletTarget(target: WalletConnectTarget, networkId: KilnNetworkId): void {
+  const url =
+    target === 'kukai'
+      ? networkId === 'tezos-mainnet'
+        ? KUKAI_MAINNET_URL
+        : networkId === 'tezos-shadownet'
+          ? KUKAI_SHADOWNET_URL
+          : KUKAI_MAINNET_URL
+      : TEMPLE_WALLET_URL;
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-async function assertExpectedNetwork(wallet: BeaconWallet): Promise<void> {
-  if (!tezosToolkit) {
-    throw new Error('Tezos toolkit is not initialized.');
-  }
+async function assertExpectedNetwork(
+  handle: TezosWalletHandle,
+  networkId: KilnNetworkId,
+): Promise<void> {
+  const profile = getNetworkProfile(networkId);
+  const expectedName = normalizedBeaconNetworkName(networkId);
 
-  const account = await wallet.client.getActiveAccount();
-  const networkName = account?.network?.name?.toLowerCase() ?? null;
-  const networkRpc = account?.network?.rpcUrl?.toLowerCase() ?? null;
+  const account = await handle.wallet.client.getActiveAccount();
+  const accountNetworkName = account?.network?.name?.toLowerCase() ?? null;
 
-  if (networkName && !networkName.includes(ACTIVE_NETWORK_NAME)) {
+  // Shadownet/ghostnet need a substring match to allow custom labels (e.g.
+  // `shadownet-test-rc1`). Mainnet must be an exact match to prevent someone
+  // accidentally signing on the wrong chain.
+  if (profile.tier === 'mainnet') {
+    if (accountNetworkName && accountNetworkName !== expectedName) {
+      throw new Error(
+        `Wallet is on ${accountNetworkName}. Switch to Tezos Mainnet and reconnect.`,
+      );
+    }
+  } else if (accountNetworkName && !accountNetworkName.includes(expectedName)) {
     throw new Error(
-      `Wallet connected to ${networkName}. Please switch to Shadownet and reconnect.`,
+      `Wallet connected to ${accountNetworkName}. Please switch to ${profile.label} and reconnect.`,
     );
   }
 
-  if (networkRpc && !networkRpc.includes(ACTIVE_NETWORK_NAME)) {
-    throw new Error(
-      `Wallet RPC is ${networkRpc}. Kukai users must use ${KUKAI_SHADOWNET_URL}.`,
-    );
-  }
-
-  if (!ACTIVE_NETWORK_CHAIN_ID) {
+  if (!profile.chainId) {
     return;
   }
 
-  const chainId = await tezosToolkit.rpc.getChainId();
-  if (chainId !== ACTIVE_NETWORK_CHAIN_ID) {
+  const chainId = await handle.toolkit.rpc.getChainId();
+  if (chainId !== profile.chainId) {
     throw new Error(
-      `Chain mismatch detected. Expected ${ACTIVE_NETWORK_CHAIN_ID}, got ${chainId}.`,
+      `Chain mismatch: expected ${profile.chainId} (${profile.label}), got ${chainId}.`,
     );
   }
 }
@@ -137,7 +185,6 @@ function findContractAddress(node: unknown): string | null {
   if (typeof node === 'string' && /^KT1[1-9A-HJ-NP-Za-km-z]{33}$/.test(node)) {
     return node;
   }
-
   if (Array.isArray(node)) {
     for (const item of node) {
       const found = findContractAddress(item);
@@ -147,7 +194,6 @@ function findContractAddress(node: unknown): string | null {
     }
     return null;
   }
-
   if (node && typeof node === 'object') {
     for (const value of Object.values(node as Record<string, unknown>)) {
       const found = findContractAddress(value);
@@ -156,22 +202,22 @@ function findContractAddress(node: unknown): string | null {
       }
     }
   }
-
   return null;
 }
 
 export async function connectShadownetWallet(
   target: WalletConnectTarget,
+  networkId: KilnNetworkId = getDefaultNetworkId(),
 ): Promise<ConnectedWalletState> {
-  openWalletTarget(target);
-  const wallet = await ensureWallet();
+  openWalletTarget(target, networkId);
+  const handle = await ensureToolkit(networkId);
 
-  await wallet.clearActiveAccount();
-  await wallet.requestPermissions();
+  await handle.wallet.clearActiveAccount();
+  await handle.wallet.requestPermissions();
 
-  await assertExpectedNetwork(wallet);
+  await assertExpectedNetwork(handle, networkId);
 
-  const activeAccount = await wallet.client.getActiveAccount();
+  const activeAccount = await handle.wallet.client.getActiveAccount();
   if (!activeAccount?.address) {
     throw new Error('Wallet connected but no active account address was returned.');
   }
@@ -179,13 +225,16 @@ export async function connectShadownetWallet(
   return {
     address: activeAccount.address,
     networkName: activeAccount.network?.name ?? null,
+    networkId,
     rpcUrl: activeAccount.network?.rpcUrl ?? null,
   };
 }
 
-export async function getConnectedShadownetWallet(): Promise<ConnectedWalletState | null> {
-  const wallet = await ensureWallet();
-  const activeAccount = await wallet.client.getActiveAccount();
+export async function getConnectedShadownetWallet(
+  networkId: KilnNetworkId = getDefaultNetworkId(),
+): Promise<ConnectedWalletState | null> {
+  const handle = await ensureToolkit(networkId);
+  const activeAccount = await handle.wallet.client.getActiveAccount();
   if (!activeAccount?.address) {
     return null;
   }
@@ -193,27 +242,27 @@ export async function getConnectedShadownetWallet(): Promise<ConnectedWalletStat
   return {
     address: activeAccount.address,
     networkName: activeAccount.network?.name ?? null,
+    networkId,
     rpcUrl: activeAccount.network?.rpcUrl ?? null,
   };
 }
 
 export async function disconnectShadownetWallet(): Promise<void> {
-  const wallet = await ensureWallet();
-  await wallet.clearActiveAccount();
+  if (!activeHandle) {
+    return;
+  }
+  await activeHandle.wallet.clearActiveAccount();
 }
 
 export async function originateWithConnectedWallet(
   code: string,
   initialStorage: string,
+  networkId: KilnNetworkId = getDefaultNetworkId(),
 ): Promise<ConnectedOriginationResult> {
-  const wallet = await ensureWallet();
-  if (!tezosToolkit) {
-    throw new Error('Tezos toolkit is not initialized.');
-  }
+  const handle = await ensureToolkit(networkId);
+  await assertExpectedNetwork(handle, networkId);
 
-  await assertExpectedNetwork(wallet);
-
-  const operation = await tezosToolkit.wallet
+  const operation = await handle.toolkit.wallet
     .originate({ code, init: initialStorage })
     .send();
 
@@ -238,7 +287,7 @@ export async function originateWithConnectedWallet(
 
   if (!contractAddress) {
     throw new Error(
-      `Origination operation ${operation.opHash} confirmed but KT1 address was not found.`,
+      `Origination ${operation.opHash} confirmed but KT1 address was not found.`,
     );
   }
 

@@ -1,7 +1,11 @@
 import { TezosToolkit } from '@taquito/taquito';
 import { InMemorySigner } from '@taquito/signer';
 import { getEnv, getWalletSecret, type AppEnv } from './env.js';
-import { resolveNetworkConfig } from './networks.js';
+import {
+  resolveNetworkConfig,
+  type KilnNetworkId,
+  type RuntimeNetworkConfig,
+} from './networks.js';
 import type { ContractCallResult, WalletType } from './types.js';
 
 const SAFE_ORIGINATION_GAS_LIMIT = 600_000;
@@ -58,21 +62,62 @@ export interface TezosServiceLike {
   ): Promise<ContractCallResult>;
 }
 
+/**
+ * Picks the right RPC URL for a given network, giving env overrides precedence
+ * over the default bundled in the network profile. This lets ops set a private
+ * RPC per-network (e.g. their own mainnet node) without touching code.
+ */
+function resolveRpcUrlForNetwork(
+  networkId: KilnNetworkId | undefined,
+  env: AppEnv,
+): string | undefined {
+  if (!networkId) {
+    return env.TEZOS_RPC_URL;
+  }
+  switch (networkId) {
+    case 'tezos-shadownet':
+      return env.TEZOS_RPC_URL;
+    case 'tezos-ghostnet':
+      return env.TEZOS_GHOSTNET_RPC_URL;
+    case 'tezos-mainnet':
+      return env.TEZOS_MAINNET_RPC_URL;
+    case 'etherlink-testnet':
+      return env.ETHERLINK_TESTNET_RPC_URL;
+    case 'etherlink-mainnet':
+      return env.ETHERLINK_MAINNET_RPC_URL;
+    default:
+      return undefined;
+  }
+}
+
+export { resolveRpcUrlForNetwork };
+
 export class TezosService implements TezosServiceLike {
   private tezos: TezosToolkit;
   private signer: InMemorySigner;
   private expectedChainId?: string;
   private activeChainId?: string;
+  readonly network: RuntimeNetworkConfig;
 
-  constructor(walletType: WalletType, env: AppEnv = getEnv()) {
+  constructor(
+    walletType: WalletType,
+    env: AppEnv = getEnv(),
+    networkOverride?: KilnNetworkId,
+  ) {
     const network = resolveNetworkConfig({
-      networkId: env.KILN_NETWORK,
-      rpcUrl: env.TEZOS_RPC_URL,
+      networkId: networkOverride ?? env.KILN_NETWORK,
+      rpcUrl: resolveRpcUrlForNetwork(networkOverride ?? env.KILN_NETWORK, env),
       chainId: env.TEZOS_CHAIN_ID,
     });
 
-    const rpcUrl = network.rpcUrl;
-    this.tezos = new TezosToolkit(rpcUrl);
+    if (network.ecosystem !== 'tezos') {
+      throw new Error(
+        `TezosService cannot be used for ecosystem '${network.ecosystem}'. Use EtherlinkService for ${network.id}.`,
+      );
+    }
+
+    this.network = network;
+    this.tezos = new TezosToolkit(network.rpcUrl);
     this.expectedChainId = network.chainId;
 
     const secretKey = getWalletSecret(env, walletType);

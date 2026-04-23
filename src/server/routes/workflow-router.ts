@@ -9,7 +9,10 @@ import {
   hashContractCode,
   runContractSimulation,
 } from '../../lib/contract-simulation.js';
+import { selectNetworkForRequest } from '../../lib/ecosystem-resolver.js';
+import { injectKilnTokens } from '../../lib/kiln-injector.js';
 import { parseEntrypointsFromMichelson } from '../../lib/michelson-parser.js';
+import { runContractWorkflow } from '../../lib/workflow-runner.js';
 import type { ApiAppServices } from '../app-services.js';
 import { asMessage, validationErrorMessage } from '../http.js';
 import { materializeContractSource } from '../pipelines/contract-source.js';
@@ -85,18 +88,38 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
       }
 
       try {
-        const result = await services.runWorkflow({
-          sourceType: payload.data.sourceType,
-          source: payload.data.source,
-          initialStorage: payload.data.initialStorage,
-          scenario: payload.data.scenario,
-          simulationSteps: mapSimulationSteps(payload.data.simulationSteps),
-        });
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM. Use /api/kiln/evm/compile + /api/kiln/evm/estimate for Solidity workflows.`,
+          });
+          return;
+        }
+
+        const result = await runContractWorkflow(
+          {
+            sourceType: payload.data.sourceType,
+            source: payload.data.source,
+            initialStorage: payload.data.initialStorage,
+            scenario: payload.data.scenario,
+            simulationSteps: mapSimulationSteps(payload.data.simulationSteps),
+          },
+          {
+            compileSmartPy: services.compileSmartPy,
+            injectKilnTokens: (code: string) => injectKilnTokens(code, services.env),
+            estimateOrigination: async (code, initialStorage) => {
+              const tezos = services.createTezosService('A', network.id);
+              return tezos.validateOrigination(code, initialStorage);
+            },
+            clearanceStore: services.clearanceStore,
+          },
+        );
 
         services.activityLogger.log({
           timestamp: new Date().toISOString(),
           requestId: res.locals.requestId as string | undefined,
           event: 'workflow_run',
+          networkId: network.id,
           approved: result.clearance.approved,
           validatePassed: result.validate.passed,
           auditPassed: result.audit.passed,
@@ -106,6 +129,8 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
 
         res.json({
           success: true,
+          networkId: network.id,
+          ecosystem: network.ecosystem,
           ...result,
         });
       } catch (error) {
@@ -217,18 +242,30 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
         return;
       }
 
-      const result = await runPredeployValidation(
-        {
-          code: payload.data.code,
-          initialStorage: payload.data.initialStorage,
-        },
-        {
-          env: services.env,
-          createTezosService: services.createTezosService,
-        },
-      );
+      try {
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM. Use /api/kiln/evm/compile + /api/kiln/evm/estimate for Solidity predeploy checks.`,
+          });
+          return;
+        }
 
-      res.json(result);
+        const result = await runPredeployValidation(
+          {
+            code: payload.data.code,
+            initialStorage: payload.data.initialStorage,
+          },
+          {
+            env: services.env,
+            createTezosService: (wallet) => services.createTezosService(wallet, network.id),
+          },
+        );
+
+        res.json({ ...result, networkId: network.id, ecosystem: network.ecosystem });
+      } catch (error) {
+        res.status(500).json({ error: asMessage(error) });
+      }
     },
   );
 

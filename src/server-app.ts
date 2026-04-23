@@ -4,6 +4,7 @@ import {
   type ApiAppOptions,
 } from './server/app-services.js';
 import { configureApiApp } from './server/app-middleware.js';
+import { createEvmRouter } from './server/routes/evm-router.js';
 import { createExportRouter } from './server/routes/export-router.js';
 import { createReferenceRouter } from './server/routes/reference-router.js';
 import { createRuntimeRouter } from './server/routes/runtime-router.js';
@@ -18,6 +19,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
   app.use(createReferenceRouter(services));
   app.use(createWorkflowRouter(services));
   app.use(createRuntimeRouter(services));
+  app.use(createEvmRouter(services));
   app.use(createExportRouter(services));
 
   return app;

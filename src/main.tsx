@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { KilnViewProvider } from './context/KilnViewProvider.tsx';
+import { NetworkProvider } from './context/NetworkProvider.tsx';
 import './index.css';
 
 const browserGlobal = globalThis as unknown as {
@@ -46,7 +47,9 @@ if (!browserGlobal.process.nextTick) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <KilnViewProvider>
-      <App />
+      <NetworkProvider>
+        <App />
+      </NetworkProvider>
     </KilnViewProvider>
   </StrictMode>,
 );

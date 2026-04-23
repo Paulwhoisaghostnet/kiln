@@ -390,6 +390,166 @@ const C = {
     e: 'No buttons to show yet—entrypoints missing or not readable.',
     tip: 'Run workflow after deploy so Kiln can parse Michelson annotations, or check that your contract exposes standard entrypoint tags.',
   },
+  tabSetupLabel: {
+    b: 'Setup',
+    e: 'Set up',
+    tip: 'Pick the network and connect the wallet you want to use for this session. Everything downstream assumes this is correct.',
+  },
+  tabBuildLabel: {
+    b: 'Build',
+    e: 'Build',
+    tip: 'Author or paste the contract source. Tezos mode accepts Michelson/SmartPy; Etherlink mode accepts Solidity.',
+  },
+  tabValidateLabel: {
+    b: 'Validate',
+    e: 'Check',
+    tip: 'Compile, shape-check, static audit, and simulate against puppet wallets. Deployment is blocked until this passes.',
+  },
+  tabDeployLabel: {
+    b: 'Deploy',
+    e: 'Launch',
+    tip: 'Originate the contract. Locked until validation grants a clearance ticket.',
+  },
+  tabTestLabel: {
+    b: 'Test',
+    e: 'Poke it',
+    tip: 'Dynamic rig for post-deploy calls and Bert/Ernie E2E runs (where supported).',
+  },
+  tabHandoffLabel: {
+    b: 'Handoff',
+    e: 'Wrap up',
+    tip: 'Export source, compiled artifacts, and a mainnet-ready zip bundle so someone else can verify and redeploy.',
+  },
+  tabSetupIntro: {
+    b: 'Choose a network, connect a wallet, and check puppet funds before you spend iteration time.',
+    e: 'First: pick where this is going, link a wallet, and see if the robot test wallets have practice coins.',
+    tip: 'Switching networks mid-session is safe — state is preserved. Mainnets prompt a consent dialog because they spend real money.',
+  },
+  tabBuildIntro: {
+    b: 'Write or import contract source. The guided builder can generate scaffolds; the injector accepts anything you paste.',
+    e: 'Write your contract here. You can use the helper to get a starter, or paste your own.',
+    tip: 'Tezos networks accept Michelson or SmartPy. Etherlink networks expect Solidity (compiled server-side via solc-js).',
+  },
+  tabValidateIntro: {
+    b: 'Compile, shape-check, static audit, and simulate against puppets. All must pass before Deploy unlocks.',
+    e: 'Run the full checklist: compile, sanity-check, security scan, and pretend wallet tests.',
+    tip: 'Validation results grant a short-lived clearance id. Editing source invalidates it — re-run before deploying.',
+  },
+  tabDeployIntro: {
+    b: 'Originate the contract. Puppet deploy is fastest on sandboxes; connected wallet is required on mainnet.',
+    e: 'Ready to publish? Pick how you want to sign it, then press Deploy. On mainnet, it will be your own wallet.',
+    tip: 'Deploys write to the live chain. Mainnets cost real tez/XTZ; double-check the address, admin, and initial storage.',
+  },
+  tabTestIntro: {
+    b: 'Drive the live contract. Bert/Ernie E2E runs where puppets are available; manual execute works on every network.',
+    e: 'Your contract is alive. Push buttons on it and see what happens. Robot wallets are only on practice chains.',
+    tip: 'For mainnet contracts, use the dynamic rig carefully — each button is a real transaction.',
+  },
+  tabHandoffIntro: {
+    b: 'Export reproducible artifacts so the next person can verify, audit, and mainnet-deploy on their own.',
+    e: 'Save everything: your source, the compiled output, test results, and a zip to share.',
+    tip: 'The mainnet bundle includes source, compiled Michelson, validation report, audit findings, and deployment metadata.',
+  },
+  networkPickerTitle: {
+    b: 'Target Network',
+    e: 'Which chain are we pointing at?',
+    tip: 'Controls where every deploy, call, and estimate goes. Sandbox is free. Testnets need faucet funds. Mainnets spend real money.',
+  },
+  networkPickerBody: {
+    b: 'Kiln now ships with Tezos Shadownet/Mainnet and Etherlink Testnet/Mainnet. Switch any time; state persists.',
+    e: 'You can build on the sandbox and push to mainnet later. Etherlink is the Tezos EVM rollup — Solidity lives there.',
+    tip: 'Switching mainnet requires explicit consent. RPC URLs can be overridden via env vars if defaults rate-limit you.',
+  },
+  walletTezosConnect: {
+    b: 'Connect Tezos wallet',
+    e: 'Hook up a Tezos wallet',
+    tip: 'Opens Beacon — pick Temple or Kukai. Make sure the wallet is on the same Tezos network as Kiln or the deploy will refuse.',
+  },
+  walletEvmConnect: {
+    b: 'Connect EVM wallet',
+    e: 'Hook up MetaMask',
+    tip: 'Uses EIP-1193. Kiln will ask MetaMask to switch or add the Etherlink chain automatically.',
+  },
+  walletEvmMissing: {
+    b: 'No EVM wallet detected — install MetaMask and reload.',
+    e: 'You need MetaMask (or a similar wallet) installed in this browser.',
+    tip: 'Etherlink deploys go through your browser wallet directly — Kiln never handles your private key.',
+  },
+  mainnetBanner: {
+    b: 'Mainnet mode: real funds. Puppets disabled. Double-check every approval.',
+    e: 'You are on mainnet. The money is real. Read before clicking.',
+    tip: 'Mainnet is irreversible. Validate thoroughly, make sure admin is correct, and budget enough tez/XTZ for fees and storage.',
+  },
+  sourceLangMichelson: {
+    b: 'Michelson',
+    e: 'Michelson',
+    tip: 'Tezos stack-based bytecode. What the chain actually runs. Text form is .tz; compact JSON is .json.',
+  },
+  sourceLangSmartpy: {
+    b: 'SmartPy',
+    e: 'SmartPy (Python)',
+    tip: 'Python-flavoured DSL that compiles to Michelson server-side. Good for rapid iteration.',
+  },
+  sourceLangSolidity: {
+    b: 'Solidity',
+    e: 'Solidity',
+    tip: 'EVM contract language. Kiln compiles it with solc-js on the server and you deploy via MetaMask.',
+  },
+  solidityCompileBtn: {
+    b: 'Compile Solidity',
+    e: 'Turn my Solidity into bytecode',
+    tip: 'Runs solc-js on the server, returns bytecode + ABI. Errors show inline. Warnings do not block deploy.',
+  },
+  solidityEstimateBtn: {
+    b: 'Estimate deploy gas',
+    e: 'How much will this cost to launch?',
+    tip: 'Asks the Etherlink node for a gas estimate using the compiled bytecode + your constructor args.',
+  },
+  solidityDryRunBtn: {
+    b: 'Dry-run deploy',
+    e: 'Pretend-deploy to see if it works',
+    tip: 'Submits the deploy to the node in a simulated call — no tx fires, but constructor reverts get surfaced.',
+  },
+  evmDeployBtn: {
+    b: 'Deploy via MetaMask',
+    e: 'Send it to mainnet (MetaMask)',
+    tip: 'Kiln encodes the deploy calldata; MetaMask will ask you to approve the transaction.',
+  },
+  stepperGuardLocked: {
+    b: 'Locked — complete earlier steps first.',
+    e: 'Not unlocked yet. Finish the steps before this one.',
+    tip: 'Tabs unlock as you satisfy their prerequisites (source → clearance → deploy → test).',
+  },
+  stepperGuardReady: {
+    b: 'Ready',
+    e: 'Good to go',
+    tip: 'All prerequisites met — this tab will do real work when clicked.',
+  },
+  stepperGuardDone: {
+    b: 'Done',
+    e: 'Finished',
+    tip: 'You have completed the primary action for this tab. You can revisit freely.',
+  },
+  deployClearanceId: {
+    b: 'Clearance id',
+    e: 'Safety ticket number',
+    tip: 'This id is required on the deploy endpoint. If source changes, Kiln invalidates it — rerun validation.',
+  },
+  evmCompileHint: {
+    b: 'Solidity compile runs solc-js server-side. Paste a single-file contract; imports are not resolved yet.',
+    e: 'One file only, no imports yet. Paste the whole thing and press Compile.',
+    tip: 'Import resolution for node_modules / remappings is on the roadmap. Flatten your contract for now.',
+  },
+  evmConstructorArgs: {
+    b: 'Constructor args (JSON array)',
+    e: 'Inputs for the contract constructor',
+    tip: 'Must be a JSON array, e.g. [] or ["0xYourAddress", 1000000]. Order matches the constructor signature.',
+  },
+  evmEntryContract: {
+    b: 'Entry contract name',
+    e: 'Which contract in the file to deploy',
+    tip: 'If the source declares multiple contracts, name the one you want deployed. Leave blank to pick the last one.',
+  },
 } as const;
 
 export type CopyKey = keyof typeof C;

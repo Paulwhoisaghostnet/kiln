@@ -42,6 +42,11 @@ const envSchema = z.object({
   KILN_NETWORK: networkSchema.default(getDefaultNetworkId()),
   TEZOS_RPC_URL: z.string().url().default('https://rpc.shadownet.teztnets.com'),
   TEZOS_CHAIN_ID: optionalNonEmptyString,
+  /** Per-network RPC overrides. Set these when the defaults are rate-limited or you run your own node. */
+  TEZOS_MAINNET_RPC_URL: optionalNonEmptyString,
+  TEZOS_GHOSTNET_RPC_URL: optionalNonEmptyString,
+  ETHERLINK_TESTNET_RPC_URL: optionalNonEmptyString,
+  ETHERLINK_MAINNET_RPC_URL: optionalNonEmptyString,
   WALLET_A_SECRET_KEY: optionalNonEmptyString,
   WALLET_B_SECRET_KEY: optionalNonEmptyString,
   KILN_DUMMY_TOKENS: optionalNonEmptyString,

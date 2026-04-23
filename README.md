@@ -1,26 +1,115 @@
-# Tezos Kiln (Shadownet)
+# Tezos Kiln — Multi-Network Contract Rig
 
-Tezos Kiln is a typed React + Express test rig for:
+Tezos Kiln is a typed React + Express test rig that covers the contract
+lifecycle across the Tezos family of networks in one environment:
+
+- Tezos Shadownet (sandbox — pre-funded puppets, free-spend testing)
+- Etherlink Testnet (Solidity via faucet funds)
+- Tezos Mainnet (connected-wallet only, puppets disabled)
+- Etherlink Mainnet (connected MetaMask only, real XTZ)
+
+The UI is a six-tab stepper — **Setup → Build → Validate → Deploy → Test →
+Handoff** — with progressive unlock, shared session state, URL-hash routing,
+a persistent terminal dock, and a mainnet consent modal that blocks real-fund
+flows until the user acknowledges risk.
+
+## Capabilities
+
+### Tezos rails (Michelson + SmartPy)
+
 - Michelson token-address injection
 - Pre-deployment contract validation (structure + RPC origination estimate)
 - Staged workflow gate: compile -> validate -> audit -> simulate -> clearance
-- Contract origination on Tezos shadownet
-- Connected-wallet deployment via Beacon (Temple + Kukai shadownet)
+- Contract origination on Shadownet or Tezos Mainnet
+- Connected-wallet deployment via Beacon (Temple + Kukai)
 - Dynamic entrypoint execution
-- Post-deploy Bert/Ernie puppet-wallet E2E execution
+- Post-deploy Bert/Ernie puppet-wallet E2E (Shadownet only)
 - Guided contract creation wizard (FA2 fungible, NFT collection, marketplace)
 - Reference-informed guided element slicing from `reference/` examples
-- SmartPy scaffold + Michelson test-stub generation for laymen workflows
+- SmartPy scaffold + Michelson test-stub generation for layman workflows
+
+### Etherlink rails (Solidity via viem + solc-js)
+
+- Server-side Solidity compile with configurable evm-version and optimizer runs
+- Static audit of the compiled bytecode (selector collisions, empty deployed
+  code, deprecated opcodes) folded into the same clearance object as Tezos
+- Gas + fee estimation with `eth_estimateGas` / `eth_feeHistory` headroom
+- `eth_call` dry-run against the pending nonce
+- Connected-wallet deploy from MetaMask (EIP-1193) with auto chain-switch /
+  chain-add for Etherlink Testnet (`0x1f47b`) and Mainnet (`0xa729`)
+
+### Shared
+
+- Ecosystem-aware capability matrix surfaced in `/api/networks` and enforced on
+  every server route (returns HTTP 412 with `capability: "<flag>"` on misuse).
+- Per-request Tezos + Etherlink service pools keyed by `networkId`, so a single
+  running server can serve all four networks without restarts.
 - Activity logging for HTTP + workflow/audit events (troubleshooting/audit trail)
 - Mainnet-readiness bundle export as a zipped release package
-- Wallet balance visibility for test accounts
-- Netlify production hosting (SPA + serverless API)
-- Future-ready multi-network architecture (Tezos mainnet/testnet + Etherlink planned)
+- Wallet balance visibility for test accounts (puppets only; reports
+  `puppetsAvailable: false` on every non-Shadownet network)
+- Native Hetzner hosting (systemd) as the primary runtime; Netlify remains as
+  rollback until the native deploy is signed off.
+
+## Network tier matrix
+
+Capability flags come straight from `src/lib/networks.ts` and are what the
+server uses to decide which routes to accept for a given `networkId`. The UI
+mirrors the same flags to grey out buttons before the request is even made.
+
+| Network             | Ecosystem | Tier    | Puppet wallets (Bert/Ernie) | Connected wallet | Source languages       | Post-deploy E2E |
+|---------------------|-----------|---------|-----------------------------|------------------|------------------------|-----------------|
+| `tezos-shadownet`   | tezos     | sandbox | yes                         | Beacon           | michelson, smartpy     | yes             |
+| `tezos-ghostnet`    | tezos     | testnet | no                          | Beacon           | michelson, smartpy     | no (planned)    |
+| `tezos-mainnet`     | tezos     | mainnet | **no — blocked**            | Beacon           | michelson, smartpy     | yes             |
+| `etherlink-testnet` | etherlink | testnet | no                          | MetaMask         | solidity               | yes             |
+| `etherlink-mainnet` | etherlink | mainnet | **no — blocked**            | MetaMask         | solidity               | yes             |
+
+Server-side guards:
+
+- Attempting `/api/kiln/upload`, `/api/kiln/execute`, or `/api/kiln/e2e/run`
+  against any mainnet returns HTTP 412 with
+  `{"capability":"puppetWallets"}`.
+- Attempting `/api/kiln/evm/*` against a Tezos network returns HTTP 412 with
+  an ecosystem-mismatch message, and vice-versa.
+- `GET /api/kiln/balances` short-circuits to
+  `{"puppetsAvailable": false, "walletA": null, "walletB": null}` on every
+  non-Shadownet network rather than erroring out — that way the UI renders
+  a clean "puppets n/a" state on mainnet without a red banner.
+
+## Six-tab flow
+
+The app is organised as a stepper with URL-hash routing (`#setup`, `#build`,
+`#validate`, etc.) and progressive unlock. Tabs that aren't ready yet are
+visible but disabled, which makes the dependency chain legible at a glance.
+
+1. **Setup** — pick a network via `NetworkSwitcher`, confirm the
+   `MainnetConsentModal` if moving to a mainnet tier, and (for Tezos)
+   connect a Beacon wallet or inspect Bert/Ernie balances. EVM networks
+   show a MetaMask prompt.
+2. **Build** — write or upload source. The panel swaps between a Michelson
+   + SmartPy editor (Tezos) and a Solidity editor backed by the
+   `SolidityPanel` (Etherlink) depending on the active ecosystem.
+3. **Validate** — compile → validate → audit → simulate → clearance.
+   Results render in `WorkflowResultsPanel` with uniform stats regardless of
+   ecosystem. No clearance, no deploy.
+4. **Deploy** — connected-wallet or Bert deploy on Tezos, connected-MetaMask
+   deploy on Etherlink. Clearance record id is carried forward so the
+   deploy transaction can be tied back to a specific validate run.
+5. **Test** — post-deploy entrypoint execution with Bert/Ernie on
+   Shadownet, or live `eth_call` / dry-run on Etherlink.
+6. **Handoff** — mainnet-readiness bundle export (zip of artifacts,
+   workflow trace, clearance, deployed address, and network metadata).
+
+A persistent terminal dock follows you across every tab, and the session
+summary pill shows the active source, clearance id, and deployed contract
+so the "where am I" question never needs a scroll.
 
 ## Prerequisites
 
 - Node.js 22+
-- `WALLET_A_SECRET_KEY` / `WALLET_B_SECRET_KEY` funded on shadownet
+- `WALLET_A_SECRET_KEY` / `WALLET_B_SECRET_KEY` funded on shadownet (only used
+  when the active network is `tezos-shadownet`)
 
 ## Setup
 
@@ -171,15 +260,27 @@ If you must allow external origins:
 Primary machine endpoints:
 - `GET /api/kiln/capabilities` (runtime/stage/export metadata)
 - `GET /api/kiln/openapi.json` (OpenAPI-style endpoint map)
-- `POST /api/kiln/workflow/run` (compile/validate/audit/simulate/clearance)
+- `GET /api/networks` (network catalog + capability matrix; `{ active, networks }`)
+- `POST /api/kiln/workflow/run` (compile/validate/audit/simulate/clearance — ecosystem-aware)
 - `POST /api/kiln/audit/run`
 - `POST /api/kiln/simulate/run`
-- `POST /api/kiln/upload` (deploy; clearance enforced by default)
+- `POST /api/kiln/upload` (Tezos deploy; clearance + `puppetWallets` enforced)
 - `GET /api/kiln/activity/recent?limit=100` (ops/audit tail)
 - `GET /api/kiln/reference/contracts` (reference corpus introspection)
 - `POST /api/kiln/contracts/guided/elements` (reference-derived composition elements)
 - `POST /api/kiln/export/bundle` (mainnet-readiness zipped artifact)
 - `GET /api/kiln/export/download/:fileName` (bundle download)
+
+EVM-only endpoints (Etherlink testnet + mainnet):
+
+- `POST /api/kiln/evm/compile` (solc-js → bytecode + ABI + static audit)
+- `POST /api/kiln/evm/estimate` (gas + fee estimate against the live RPC)
+- `POST /api/kiln/evm/dry-run` (`eth_call` simulation)
+- `POST /api/kiln/evm/deploy` (server-side deploy path; real deploys go
+  through the user's connected MetaMask from the client)
+
+Every route accepts `networkId` in the body (POST) or query string (GET) and
+falls back to `KILN_NETWORK` from the env if omitted.
 
 ## CLI (Human + Agent Friendly)
 

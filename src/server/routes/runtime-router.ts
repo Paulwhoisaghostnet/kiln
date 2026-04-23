@@ -4,6 +4,12 @@ import {
   executePayloadSchema,
   uploadPayloadSchema,
 } from '../../lib/api-schemas.js';
+import {
+  assertCapability,
+  NetworkCapabilityError,
+  selectNetworkForRequest,
+} from '../../lib/ecosystem-resolver.js';
+import { getDefaultNetworkId } from '../../lib/networks.js';
 import type { ApiAppServices } from '../app-services.js';
 import { asMessage, validationErrorMessage } from '../http.js';
 import {
@@ -31,15 +37,30 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
       }
 
       try {
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        // Puppet-wallet deploys only run where puppet keys are actually present,
+        // which by design excludes every mainnet. This is our last-mile guard.
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM — use /api/kiln/evm/deploy for Solidity deploys.`,
+          });
+          return;
+        }
+        assertCapability(network.id, 'puppetWallets');
+
         const result = await deployContract(payload.data, {
           env: services.env,
           clearanceStore: services.clearanceStore,
-          createTezosService: services.createTezosService,
+          createTezosService: (wallet) => services.createTezosService(wallet, network.id),
         });
-        res.json(result);
+        res.json({ ...result, networkId: network.id });
       } catch (error) {
         if (error instanceof DeploymentBlockedError) {
           res.status(412).json({ error: error.message });
+          return;
+        }
+        if (error instanceof NetworkCapabilityError) {
+          res.status(412).json({ error: error.message, capability: error.capability });
           return;
         }
         console.error('Upload Error:', error);
@@ -62,12 +83,24 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
       }
 
       try {
-        const result = await executeContractCall(
-          payload.data,
-          services.createTezosService,
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM — contract execution uses the browser wallet directly on Etherlink.`,
+          });
+          return;
+        }
+        assertCapability(network.id, 'puppetWallets');
+
+        const result = await executeContractCall(payload.data, (wallet) =>
+          services.createTezosService(wallet, network.id),
         );
-        res.json(result);
+        res.json({ ...result, networkId: network.id });
       } catch (error) {
+        if (error instanceof NetworkCapabilityError) {
+          res.status(412).json({ error: error.message, capability: error.capability });
+          return;
+        }
         console.error('Execute Error:', error);
         res.status(500).json({ error: asMessage(error) });
       }
@@ -87,18 +120,69 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
         return;
       }
 
-      const result = await runContractE2E(
-        payload.data,
-        services.createTezosService,
-      );
-      res.json(result);
+      try {
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM — post-deploy E2E uses the browser wallet, not server puppets.`,
+          });
+          return;
+        }
+        assertCapability(network.id, 'postdeployE2E');
+        assertCapability(network.id, 'puppetWallets');
+
+        const result = await runContractE2E(payload.data, (wallet) =>
+          services.createTezosService(wallet, network.id),
+        );
+        res.json({ ...result, networkId: network.id });
+      } catch (error) {
+        if (error instanceof NetworkCapabilityError) {
+          res.status(412).json({ error: error.message, capability: error.capability });
+          return;
+        }
+        console.error('E2E Error:', error);
+        res.status(500).json({ error: asMessage(error) });
+      }
     },
   );
 
-  router.get('/api/kiln/balances', services.requireApiToken, async (_req, res) => {
+  router.get('/api/kiln/balances', services.requireApiToken, async (req, res) => {
     try {
-      const balances = await readWalletBalances(services.createTezosService);
-      res.json(balances);
+      const requested = req.query.networkId ?? getDefaultNetworkId();
+      const network = selectNetworkForRequest(services.env, requested);
+      if (network.ecosystem !== 'tezos') {
+        // EVM networks have no server-held puppet keys, so there's nothing to
+        // report. Return an empty response the UI can render as "n/a" without
+        // throwing an error.
+        res.json({
+          networkId: network.id,
+          ecosystem: network.ecosystem,
+          puppetsAvailable: false,
+          walletA: null,
+          walletB: null,
+        });
+        return;
+      }
+      if (!network.capabilities.puppetWallets) {
+        res.json({
+          networkId: network.id,
+          ecosystem: network.ecosystem,
+          puppetsAvailable: false,
+          walletA: null,
+          walletB: null,
+        });
+        return;
+      }
+
+      const balances = await readWalletBalances((wallet) =>
+        services.createTezosService(wallet, network.id),
+      );
+      res.json({
+        networkId: network.id,
+        ecosystem: network.ecosystem,
+        puppetsAvailable: true,
+        ...balances,
+      });
     } catch (error) {
       console.error('Balances Error:', error);
       res.status(500).json({ error: asMessage(error) });

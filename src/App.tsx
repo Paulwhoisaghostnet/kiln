@@ -1,8 +1,41 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Activity, RefreshCw, Terminal, Upload, Wallet } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Activity,
+  Boxes,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FlaskConical,
+  Globe,
+  Hammer,
+  Lock,
+  Package,
+  RefreshCw,
+  Rocket,
+  ShieldCheck,
+  Terminal,
+  TerminalSquare,
+  Upload,
+  Wallet,
+} from 'lucide-react';
 import DynamicRig from './components/DynamicRig';
 import GuidedContractBuilder from './components/GuidedContractBuilder';
+import {
+  MainnetConsentModal,
+  NetworkStatusPill,
+  NetworkSwitcher,
+} from './components/NetworkSwitcher';
+import {
+  SolidityPanel,
+  type SolidityCompileResult,
+} from './components/SolidityPanel';
+import {
+  WorkflowResultsPanel,
+  type WorkflowSummary,
+} from './components/WorkflowResultsPanel';
 import { KilnCopy, useKilnView } from './context/KilnViewProvider';
+import { useKilnNetwork } from './context/NetworkProvider';
 import {
   assignConnectedWalletAsAdmin,
   BURN_PLACEHOLDER_ADDRESS,
@@ -16,7 +49,9 @@ import type { AbiEntrypoint, WalletType } from './lib/types';
 
 type LogType = 'info' | 'error' | 'success';
 type DeployMode = 'connected' | 'puppet';
-type ContractSourceType = 'michelson' | 'smartpy';
+type ContractSourceType = 'michelson' | 'smartpy' | 'solidity';
+
+type TabKey = 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
 
 interface LogEntry {
   time: string;
@@ -30,8 +65,12 @@ interface WalletBalance {
 }
 
 interface BalancesResponse {
-  walletA: WalletBalance;
-  walletB: WalletBalance;
+  walletA?: WalletBalance | null;
+  walletB?: WalletBalance | null;
+  error?: string;
+  puppetsAvailable?: boolean;
+  ecosystem?: 'tezos' | 'etherlink';
+  networkId?: string;
 }
 
 interface UploadResponse {
@@ -45,35 +84,6 @@ interface ExecuteResponse {
   success: boolean;
   hash: string;
   level: number;
-}
-
-interface PredeployValidationResponse {
-  success: boolean;
-  valid: boolean;
-  issues: string[];
-  warnings: string[];
-  entrypoints: AbiEntrypoint[];
-  injectedCode: string;
-  estimate: {
-    gasLimit: number;
-    storageLimit: number;
-    suggestedFeeMutez: number;
-    minimalFeeMutez: number;
-  } | null;
-  checks: {
-    hasParameterSection: boolean;
-    hasStorageSection: boolean;
-    hasCodeSection: boolean;
-  };
-}
-
-interface PreparedValidationResult extends PredeployValidationResponse {
-  preparedCode: string;
-  preparedInitialStorage: string;
-  sourceType: ContractSourceType;
-  clearanceId?: string;
-  auditScore?: number;
-  simulationPassed?: boolean;
 }
 
 interface E2ERunResponse {
@@ -101,60 +111,15 @@ interface ConnectedWalletState {
   target: WalletConnectTarget;
 }
 
-interface SmartPyCompileResponse {
-  success: boolean;
-  scenario: string;
-  michelson: string;
-  initialStorage: string;
-}
-
-interface WorkflowRunResponse {
+interface WorkflowRunResponse extends WorkflowSummary {
   success: boolean;
   sourceType: ContractSourceType;
-  compile: {
-    performed: boolean;
-    scenario?: string;
-    warnings: string[];
-  };
+  compile: { performed: boolean; scenario?: string; warnings: string[] };
   artifacts: {
     michelson: string;
     initialStorage: string;
     entrypoints: string[];
     codeHash: string;
-  };
-  validate: {
-    passed: boolean;
-    issues: string[];
-    warnings: string[];
-    estimate: PredeployValidationResponse['estimate'];
-  };
-  audit: {
-    passed: boolean;
-    score: number;
-    findings: Array<{
-      id: string;
-      severity: 'info' | 'warning' | 'error';
-      title: string;
-      description: string;
-      recommendation?: string;
-    }>;
-  };
-  simulation: {
-    success: boolean;
-    summary: {
-      total: number;
-      passed: number;
-      failed: number;
-    };
-    warnings: string[];
-  };
-  clearance: {
-    approved: boolean;
-    record?: {
-      id: string;
-      createdAt: string;
-      expiresAt: string;
-    };
   };
 }
 
@@ -167,30 +132,7 @@ interface BundleExportResponse {
   downloadUrl: string;
 }
 
-interface SupportedNetwork {
-  id: string;
-  label: string;
-  ecosystem: 'tezos' | 'etherlink';
-  status: 'active' | 'planned';
-  defaultRpcUrl: string;
-}
-
-interface NetworksResponse {
-  success: boolean;
-  active: {
-    id: string;
-    label: string;
-    rpcUrl: string;
-    ecosystem: 'tezos' | 'etherlink';
-    status: 'active' | 'planned';
-  };
-  supported: SupportedNetwork[];
-}
-
-const puppetWalletLabels: Record<WalletType, string> = {
-  A: 'Bert',
-  B: 'Ernie',
-};
+const puppetWalletLabels: Record<WalletType, string> = { A: 'Bert', B: 'Ernie' };
 
 function getApiToken(): string | undefined {
   const raw = import.meta.env.VITE_API_TOKEN;
@@ -206,12 +148,10 @@ function safeParseJsonArray(raw: string): unknown[] {
   if (!trimmed) {
     return [];
   }
-
   const parsed = JSON.parse(trimmed) as unknown;
   if (!Array.isArray(parsed)) {
-    throw new Error('E2E args must be a JSON array, for example: [] or ["42"].');
+    throw new Error('Args must be a JSON array, e.g. [] or ["42"].');
   }
-
   return parsed;
 }
 
@@ -226,12 +166,24 @@ function looksLikeSmartPy(source: string): boolean {
   );
 }
 
+function looksLikeSolidity(source: string): boolean {
+  const normalized = source.toLowerCase();
+  return (
+    normalized.includes('pragma solidity') ||
+    normalized.includes('contract ') ||
+    normalized.includes('// spdx-license-identifier')
+  );
+}
+
 function detectContractSourceType(
   source: string,
+  ecosystem: 'tezos' | 'etherlink',
   fileName?: string,
 ): ContractSourceType {
   const lowerName = fileName?.toLowerCase() ?? '';
-
+  if (ecosystem === 'etherlink' || lowerName.endsWith('.sol')) {
+    return 'solidity';
+  }
   if (
     lowerName.endsWith('.tz') ||
     lowerName.endsWith('.json') ||
@@ -239,7 +191,6 @@ function detectContractSourceType(
   ) {
     return 'michelson';
   }
-
   if (
     lowerName.endsWith('.smartpy') ||
     lowerName.endsWith('.sp') ||
@@ -248,7 +199,9 @@ function detectContractSourceType(
   ) {
     return looksLikeSmartPy(source) ? 'smartpy' : 'michelson';
   }
-
+  if (looksLikeSolidity(source)) {
+    return 'solidity';
+  }
   return looksLikeSmartPy(source) ? 'smartpy' : 'michelson';
 }
 
@@ -261,7 +214,10 @@ function hasMichelsonSectionLocal(
 
 export default function App() {
   const { mode, setMode, t, tip } = useKilnView();
+  const { networkId, network, isTezos, isEvm, can, requestNetworkChange } = useKilnNetwork();
+
   const [michelsonCode, setMichelsonCode] = useState('');
+  const [solidityCode, setSolidityCode] = useState('');
   const [contractSourceType, setContractSourceType] =
     useState<ContractSourceType>('michelson');
   const [initialStorage, setInitialStorage] = useState('Unit');
@@ -275,28 +231,31 @@ export default function App() {
   const [contractAddress, setContractAddress] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [balances, setBalances] = useState<BalancesResponse | null>(null);
-  const [balancesStatus, setBalancesStatus] = useState<'loading' | 'ready' | 'error'>(
-    'loading',
-  );
+  const [balancesStatus, setBalancesStatus] = useState<
+    'loading' | 'ready' | 'error' | 'unsupported'
+  >('loading');
   const [balancesError, setBalancesError] = useState<string | null>(null);
   const [networkHealth, setNetworkHealth] = useState<
     'checking' | 'online' | 'offline'
   >('checking');
-  const [activeNetwork, setActiveNetwork] = useState<NetworksResponse['active'] | null>(
-    null,
-  );
-  const [supportedNetworks, setSupportedNetworks] = useState<SupportedNetwork[]>([]);
   const [abi, setAbi] = useState<AbiEntrypoint[]>([]);
-  const [connectedWallet, setConnectedWallet] = useState<ConnectedWalletState | null>(
-    null,
-  );
-  /** When deploying with Beacon, substitute template admin address in storage with the connected wallet. */
+  const [connectedWallet, setConnectedWallet] = useState<ConnectedWalletState | null>(null);
   const [useConnectedWalletAsContractAdmin, setUseConnectedWalletAsContractAdmin] =
     useState(true);
   const [e2eEntrypoint, setE2EEntrypoint] = useState('');
   const [e2eArgs, setE2EArgs] = useState('[]');
   const [clearanceId, setClearanceId] = useState<string | null>(null);
   const [lastWorkflow, setLastWorkflow] = useState<WorkflowRunResponse | null>(null);
+  const [lastSolidityCompile, setLastSolidityCompile] =
+    useState<SolidityCompileResult | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
+    if (typeof window === 'undefined') {
+      return 'setup';
+    }
+    const hash = window.location.hash.replace('#', '');
+    return isTabKey(hash) ? hash : 'setup';
+  });
+  const [terminalOpen, setTerminalOpen] = useState(true);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const contractUploadInputRef = useRef<HTMLInputElement>(null);
@@ -317,16 +276,60 @@ export default function App() {
     setLogs((prev) => [...prev, { time: new Date().toLocaleTimeString(), msg, type }]);
   };
 
+  // Scroll terminal to bottom on new logs.
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
+  // Sync the current tab with the URL hash so deep-links land on the right step.
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.location.hash = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handler = () => {
+      const next = window.location.hash.replace('#', '');
+      if (isTabKey(next)) {
+        setActiveTab(next);
+      }
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  // Initial probes — only health is network-independent. Balances are fetched per-network.
   useEffect(() => {
     void checkHealth();
-    void fetchNetworkCatalog();
-    void fetchBalances();
     void hydrateConnectedWallet();
   }, []);
+
+  // Every time the network changes, re-fetch balances and clear deploy state that
+  // is network-specific. The clearance id is also invalidated because the workflow
+  // runner generates network-bound ids.
+  useEffect(() => {
+    setClearanceId(null);
+    setContractAddress('');
+    setAbi([]);
+    setLastWorkflow(null);
+    setLastSolidityCompile(null);
+    setBalances(null);
+    void fetchBalances();
+    void hydrateConnectedWallet();
+    addLog(`Switched to ${network.label} (${network.ecosystem}).`, 'info');
+  }, [networkId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the source type aligned with the ecosystem. Moving to EVM should switch
+  // the Build tab into Solidity mode unless the user explicitly typed Solidity.
+  useEffect(() => {
+    if (isEvm && contractSourceType !== 'solidity') {
+      setContractSourceType('solidity');
+    } else if (isTezos && contractSourceType === 'solidity') {
+      setContractSourceType('michelson');
+    }
+  }, [isEvm, isTezos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!e2eEntrypoint && abi.length > 0) {
@@ -339,8 +342,12 @@ export default function App() {
   }, [michelsonCode, initialStorage, contractSourceType]);
 
   const hydrateConnectedWallet = async () => {
+    if (!isTezos) {
+      setConnectedWallet(null);
+      return;
+    }
     try {
-      const wallet = await getConnectedShadownetWallet();
+      const wallet = await getConnectedShadownetWallet(networkId);
       if (!wallet) {
         setConnectedWallet(null);
         return;
@@ -360,27 +367,18 @@ export default function App() {
     }
   };
 
-  const fetchNetworkCatalog = async () => {
-    try {
-      const res = await fetch('/api/networks', {
-        headers: buildHeaders(),
-      });
-      if (!res.ok) {
-        return;
-      }
-      const payload = (await res.json()) as NetworksResponse;
-      setActiveNetwork(payload.active);
-      setSupportedNetworks(payload.supported);
-    } catch {
-      // Optional metadata for UX only.
-    }
-  };
-
   const fetchBalances = async () => {
+    if (!can('puppetWallets')) {
+      setBalancesStatus('unsupported');
+      setBalances(null);
+      setBalancesError(null);
+      return;
+    }
+
     setBalancesStatus('loading');
     setBalancesError(null);
     try {
-      const res = await fetch('/api/kiln/balances', {
+      const res = await fetch(`/api/kiln/balances?networkId=${networkId}`, {
         headers: buildHeaders(),
       });
       const text = await res.text();
@@ -395,9 +393,8 @@ export default function App() {
         const body = parsed as { error?: string };
         const message =
           res.status === 401
-            ? 'Bert/Ernie balances: unauthorized (401). If the API uses API_AUTH_TOKEN, rebuild the site with VITE_API_TOKEN set to the same value in Netlify (Environment variables → same value for Builds and Functions). Vite only inlines VITE_* at build time.'
-            : (body.error ??
-              `Bert/Ernie balances: request failed (HTTP ${res.status}).`);
+            ? 'Bert/Ernie balances: unauthorized (401). Rebuild with VITE_API_TOKEN matching the server.'
+            : (body.error ?? `Bert/Ernie balances: request failed (HTTP ${res.status}).`);
         setBalances(null);
         setBalancesStatus('error');
         setBalancesError(message);
@@ -406,12 +403,19 @@ export default function App() {
       }
 
       const data = parsed as BalancesResponse;
+      if (data.puppetsAvailable === false) {
+        setBalances(null);
+        setBalancesStatus('unsupported');
+        setBalancesError(null);
+        return;
+      }
       setBalances(data);
       setBalancesStatus('ready');
       setBalancesError(null);
     } catch (error) {
-      const message = `Bert/Ernie balances: ${error instanceof Error ? error.message : 'network or parse error'}`;
-      console.error('Failed to fetch balances', error);
+      const message = `Bert/Ernie balances: ${
+        error instanceof Error ? error.message : 'network or parse error'
+      }`;
       setBalances(null);
       setBalancesStatus('error');
       setBalancesError(message);
@@ -424,17 +428,17 @@ export default function App() {
     if (!file) {
       return;
     }
-
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
       const loadedSource = String(loadEvent.target?.result ?? '');
-      const detectedType = detectContractSourceType(loadedSource, file.name);
+      const detectedType = detectContractSourceType(loadedSource, network.ecosystem, file.name);
       setContractSourceType(detectedType);
-      setMichelsonCode(loadedSource);
-      addLog(
-        `Loaded file: ${file.name} (${detectedType === 'smartpy' ? 'SmartPy source' : 'Michelson source'})`,
-        'info',
-      );
+      if (detectedType === 'solidity') {
+        setSolidityCode(loadedSource);
+      } else {
+        setMichelsonCode(loadedSource);
+      }
+      addLog(`Loaded file: ${file.name} (${detectedType}).`, 'info');
     };
     reader.readAsText(file);
   };
@@ -454,15 +458,14 @@ export default function App() {
     setIsConnectingWallet(true);
     addLog(
       target === 'kukai'
-        ? 'Opening Kukai Shadownet and requesting Beacon permissions...'
-        : 'Opening Temple wallet and requesting Beacon permissions...',
+        ? `Opening Kukai and requesting Beacon permissions on ${network.label}...`
+        : `Opening Temple and requesting Beacon permissions on ${network.label}...`,
       'info',
     );
-
     try {
-      const wallet = await connectShadownetWallet(target);
+      const wallet = await connectShadownetWallet(target, networkId);
       setConnectedWallet({ ...wallet, target });
-      addLog(`Connected wallet ${wallet.address} on shadownet.`, 'success');
+      addLog(`Connected wallet ${wallet.address} on ${network.label}.`, 'success');
     } catch (error) {
       addLog(
         `Wallet connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -477,7 +480,7 @@ export default function App() {
     try {
       await disconnectShadownetWallet();
       setConnectedWallet(null);
-      addLog('Disconnected connected wallet session.', 'info');
+      addLog('Disconnected wallet session.', 'info');
     } catch (error) {
       addLog(
         `Wallet disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -498,34 +501,57 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const activeSourceForTezos = (): string => michelsonCode;
+
   const exportCurrentSource = () => {
-    if (!michelsonCode.trim()) {
-      addLog('No contract source available to export.', 'error');
+    const source = isEvm ? solidityCode : activeSourceForTezos();
+    if (!source.trim()) {
+      addLog('No contract source to export.', 'error');
       return;
     }
-    const extension = contractSourceType === 'smartpy' ? 'py' : 'tz';
-    downloadTextFile(`kiln-source.${extension}`, michelsonCode);
-    addLog(`Exported current contract source as kiln-source.${extension}.`, 'success');
+    const extension = isEvm
+      ? 'sol'
+      : contractSourceType === 'smartpy'
+        ? 'py'
+        : 'tz';
+    downloadTextFile(`kiln-source.${extension}`, source);
+    addLog(`Exported source as kiln-source.${extension}.`, 'success');
   };
 
   const exportLatestMichelson = () => {
     if (!lastWorkflow?.artifacts.michelson) {
-      addLog('No compiled Michelson available yet. Run workflow first.', 'error');
+      addLog('No compiled Michelson available. Run the workflow first.', 'error');
       return;
     }
     downloadTextFile('kiln-compiled.tz', lastWorkflow.artifacts.michelson);
     addLog('Exported compiled Michelson as kiln-compiled.tz.', 'success');
   };
 
+  const exportSolidityBytecode = () => {
+    if (!lastSolidityCompile?.entry) {
+      addLog('Compile Solidity first.', 'error');
+      return;
+    }
+    const payload = {
+      networkId,
+      name: lastSolidityCompile.entry.name,
+      abi: lastSolidityCompile.entry.abi,
+      bytecode: lastSolidityCompile.entry.bytecode,
+      deployedBytecode: lastSolidityCompile.entry.deployedBytecode,
+      solcVersion: lastSolidityCompile.solcVersion,
+    };
+    downloadTextFile('kiln-solidity.json', JSON.stringify(payload, null, 2));
+    addLog('Exported Solidity artifacts as kiln-solidity.json.', 'success');
+  };
+
   const exportMainnetBundle = async () => {
     const workflow = lastWorkflow;
     if (!workflow) {
-      addLog('Run full workflow before exporting a mainnet-ready bundle.', 'error');
+      addLog('Run the workflow before exporting a bundle.', 'error');
       return;
     }
-
     setIsExportingBundle(true);
-    addLog('Building mainnet-ready zip bundle from latest workflow artifacts...', 'info');
+    addLog('Building mainnet-ready bundle from latest workflow artifacts...', 'info');
     try {
       const response = await fetch('/api/kiln/export/bundle', {
         method: 'POST',
@@ -542,8 +568,8 @@ export default function App() {
           audit: workflow.audit,
           simulation: workflow.simulation,
           deployment: {
-            networkId: activeNetwork?.id,
-            rpcUrl: activeNetwork?.rpcUrl,
+            networkId: network.id,
+            rpcUrl: network.defaultRpcUrl,
             contractAddress: contractAddress || undefined,
             originatedAt: contractAddress ? new Date().toISOString() : undefined,
           },
@@ -552,12 +578,9 @@ export default function App() {
       const payload = (await response.json()) as BundleExportResponse | { error?: string };
       if (!response.ok || !('downloadUrl' in payload)) {
         throw new Error(
-          'error' in payload && payload.error
-            ? payload.error
-            : 'Bundle export failed',
+          'error' in payload && payload.error ? payload.error : 'Bundle export failed',
         );
       }
-
       const zipResponse = await fetch(payload.downloadUrl, {
         headers: buildHeaders(),
       });
@@ -573,9 +596,7 @@ export default function App() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-
       addLog(`Bundle exported: ${payload.zipFileName}`, 'success');
-      addLog(`Export directory: ${payload.exportDir}`, 'info');
     } catch (error) {
       addLog(
         `Bundle export error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -586,16 +607,14 @@ export default function App() {
     }
   };
 
-  const runPredeployValidation = async (): Promise<PreparedValidationResult | null> => {
+  const runTezosWorkflow = async (): Promise<WorkflowRunResponse | null> => {
     if (!michelsonCode.trim()) {
-      addLog('Please upload or paste contract source first.', 'error');
+      addLog('Please paste or upload contract source before validating.', 'error');
       return null;
     }
-
     setIsValidating(true);
     setIsRunningWorkflow(true);
-    addLog('Running full workflow: compile -> validate -> audit -> simulate...', 'info');
-
+    addLog(`Running validation workflow on ${network.label}...`, 'info');
     try {
       let simulationArgs: unknown[] = [];
       try {
@@ -603,7 +622,6 @@ export default function App() {
       } catch {
         simulationArgs = [];
       }
-
       const simulationEntrypoint = e2eEntrypoint.trim();
       const simulationSteps = simulationEntrypoint
         ? [
@@ -621,117 +639,47 @@ export default function App() {
             },
           ]
         : [];
-
       const res = await fetch('/api/kiln/workflow/run', {
         method: 'POST',
         headers: buildHeaders(true),
         body: JSON.stringify({
-          sourceType: contractSourceType,
+          networkId,
+          sourceType: contractSourceType === 'solidity' ? 'auto' : contractSourceType,
           source: michelsonCode,
           initialStorage: initialStorage.trim() || undefined,
           simulationSteps,
         }),
       });
-
       const payload = (await res.json()) as WorkflowRunResponse | { error?: string };
       if (!res.ok || !('artifacts' in payload)) {
         throw new Error(
-          'error' in payload && payload.error
-            ? payload.error
-            : 'Workflow validation failed',
+          'error' in payload && payload.error ? payload.error : 'Workflow validation failed',
         );
       }
-
       setLastWorkflow(payload);
       const parsedEntrypoints: AbiEntrypoint[] = payload.artifacts.entrypoints.map((name) => ({
         name,
         args: [],
       }));
       setAbi(parsedEntrypoints);
-
-      if (payload.compile.performed) {
-        addLog(
-          `SmartPy compiled successfully${payload.compile.scenario ? ` (scenario ${payload.compile.scenario})` : ''}.`,
-          'success',
-        );
-      }
-
-      for (const warning of payload.compile.warnings) {
-        addLog(`Compile warning: ${warning}`, 'info');
-      }
-
-      if (payload.validate.issues.length > 0) {
-        for (const issue of payload.validate.issues) {
-          addLog(`Validation issue: ${issue}`, 'error');
-        }
-      }
-      for (const warning of payload.validate.warnings) {
-        addLog(`Validation warning: ${warning}`, 'info');
-      }
-      if (payload.validate.estimate) {
-        addLog(
-          `Estimate -> gas ${payload.validate.estimate.gasLimit}, storage ${payload.validate.estimate.storageLimit}.`,
-          'info',
-        );
-      }
-
       addLog(
-        `Audit score ${payload.audit.score}/100 (${payload.audit.findings.length} findings).`,
-        payload.audit.passed ? 'success' : 'error',
+        `Audit score ${payload.audit.score}/100 · Validation ${
+          payload.validate.passed ? 'passed' : 'failed'
+        }`,
+        payload.audit.passed && payload.validate.passed ? 'success' : 'error',
       );
-      for (const finding of payload.audit.findings.slice(0, 6)) {
-        addLog(`[${finding.severity}] ${finding.title}: ${finding.description}`, finding.severity === 'error' ? 'error' : 'info');
-      }
-      for (const warning of payload.simulation.warnings) {
-        addLog(`Simulation warning: ${warning}`, 'info');
-      }
-      addLog(
-        `Simulation ${payload.simulation.summary.passed}/${payload.simulation.summary.total} passed.`,
-        payload.simulation.success ? 'success' : 'error',
-      );
-
       if (payload.clearance.approved && payload.clearance.record?.id) {
         setClearanceId(payload.clearance.record.id);
-        addLog(
-          `Deployment clearance granted (${payload.clearance.record.id}).`,
-          'success',
-        );
+        addLog(`Clearance granted: ${payload.clearance.record.id}`, 'success');
       } else {
         setClearanceId(null);
-        addLog('Deployment clearance not granted. Fix findings before deploy.', 'error');
+        addLog('Deployment clearance withheld — address findings above.', 'error');
       }
-
       const preparedInitialStorage = payload.artifacts.initialStorage;
       if (preparedInitialStorage && preparedInitialStorage !== initialStorage) {
         setInitialStorage(preparedInitialStorage);
       }
-
-      return {
-        success: true,
-        valid:
-          payload.validate.passed &&
-          payload.audit.passed &&
-          payload.simulation.success,
-        issues: payload.validate.issues,
-        warnings: [
-          ...payload.validate.warnings,
-          ...payload.simulation.warnings,
-        ],
-        entrypoints: parsedEntrypoints,
-        injectedCode: payload.artifacts.michelson,
-        estimate: payload.validate.estimate,
-        checks: {
-          hasParameterSection: hasMichelsonSectionLocal(payload.artifacts.michelson, 'parameter'),
-          hasStorageSection: hasMichelsonSectionLocal(payload.artifacts.michelson, 'storage'),
-          hasCodeSection: hasMichelsonSectionLocal(payload.artifacts.michelson, 'code'),
-        },
-        preparedCode: payload.artifacts.michelson,
-        preparedInitialStorage,
-        sourceType: payload.sourceType,
-        clearanceId: payload.clearance.record?.id,
-        auditScore: payload.audit.score,
-        simulationPassed: payload.simulation.success,
-      };
+      return payload;
     } catch (error) {
       addLog(
         `Workflow error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -744,88 +692,77 @@ export default function App() {
     }
   };
 
-  const deployWithPuppetWallet = async (
-    validation: PreparedValidationResult,
-  ) => {
+  const deployTezosWithPuppet = async (workflow: WorkflowRunResponse) => {
+    if (!can('puppetWallets')) {
+      throw new Error(
+        `Puppet wallets are disabled on ${network.label}. Use the connected wallet instead.`,
+      );
+    }
     const res = await fetch('/api/kiln/upload', {
       method: 'POST',
       headers: buildHeaders(true),
       body: JSON.stringify({
-        code: validation.preparedCode,
+        networkId,
+        code: workflow.artifacts.michelson,
         wallet: 'A',
-        initialStorage: validation.preparedInitialStorage,
-        clearanceId: validation.clearanceId ?? clearanceId ?? undefined,
+        initialStorage: workflow.artifacts.initialStorage,
+        clearanceId: workflow.clearance.record?.id ?? clearanceId ?? undefined,
       }),
     });
-
     const payload = (await res.json()) as UploadResponse | { error?: string };
     if (!res.ok || !('contractAddress' in payload)) {
       throw new Error(
         'error' in payload && payload.error ? payload.error : 'Deployment failed',
       );
     }
-
     setContractAddress(payload.contractAddress);
-    setAbi(validation.entrypoints);
-    addLog(`Contract deployed with puppet wallet Bert at ${payload.contractAddress}`, 'success');
+    setAbi(payload.entrypoints);
+    addLog(`Deployed via Bert: ${payload.contractAddress}`, 'success');
   };
 
-  const deployWithConnectedWallet = async (
-    validation: PreparedValidationResult,
-  ) => {
+  const deployTezosWithConnectedWallet = async (workflow: WorkflowRunResponse) => {
     if (!connectedWallet) {
-      throw new Error('Connect a shadownet wallet before deploying with user wallet mode.');
+      throw new Error('Connect a Tezos wallet before deploying.');
     }
-
     const storageForDeployment = useConnectedWalletAsContractAdmin
       ? assignConnectedWalletAsAdmin(
-          validation.preparedInitialStorage,
+          workflow.artifacts.initialStorage,
           connectedWallet.address,
         )
-      : validation.preparedInitialStorage;
-
-    if (
-      useConnectedWalletAsContractAdmin &&
-      storageForDeployment === validation.preparedInitialStorage
-    ) {
-      addLog(
-        `No template admin address (${BURN_PLACEHOLDER_ADDRESS}) in initial storage; deploying with your Micheline unchanged.`,
-        'info',
-      );
-    }
-
+      : workflow.artifacts.initialStorage;
     const result = await originateWithConnectedWallet(
-      validation.injectedCode,
+      workflow.artifacts.michelson,
       storageForDeployment,
+      networkId,
     );
-
     setContractAddress(result.contractAddress);
-    setAbi(validation.entrypoints);
+    setAbi(
+      workflow.artifacts.entrypoints.map((name) => ({ name, args: [] })),
+    );
     addLog(
-      `Contract deployed from connected wallet ${connectedWallet.address} at ${result.contractAddress}`,
+      `Deployed from ${connectedWallet.address}: ${result.contractAddress} (hash ${result.hash})`,
       'success',
     );
-    addLog(`Origination hash: ${result.hash}`, 'info');
   };
 
-  const handleDeploy = async () => {
-    const validation = await runPredeployValidation();
-    if (!validation || !validation.valid) {
-      return;
+  const handleTezosDeploy = async () => {
+    let workflow = lastWorkflow;
+    if (!workflow || !clearanceId) {
+      workflow = await runTezosWorkflow();
     }
-    if (!validation.clearanceId) {
+    if (!workflow || !workflow.clearance.approved || !workflow.clearance.record?.id) {
       addLog('Deployment blocked: workflow clearance missing.', 'error');
       return;
     }
-
     setIsDeploying(true);
     try {
       if (deployMode === 'connected') {
-        await deployWithConnectedWallet(validation);
+        await deployTezosWithConnectedWallet(workflow);
       } else {
-        await deployWithPuppetWallet(validation);
+        await deployTezosWithPuppet(workflow);
       }
       void fetchBalances();
+      setActiveTab('test');
     } catch (error) {
       addLog(
         `Deployment error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -841,25 +778,27 @@ export default function App() {
     args: unknown[],
     wallet: WalletType,
   ) => {
-    addLog(
-      `Executing ${entrypoint} with puppet wallet ${puppetWalletLabels[wallet]}...`,
-      'info',
-    );
+    if (!can('puppetWallets')) {
+      addLog(
+        `Puppet execution is disabled on ${network.label}. Use a connected wallet flow.`,
+        'error',
+      );
+      return;
+    }
+    addLog(`Executing ${entrypoint} as ${puppetWalletLabels[wallet]}...`, 'info');
     try {
       const res = await fetch('/api/kiln/execute', {
         method: 'POST',
         headers: buildHeaders(true),
-        body: JSON.stringify({ contractAddress, entrypoint, args, wallet }),
+        body: JSON.stringify({ networkId, contractAddress, entrypoint, args, wallet }),
       });
-
       const payload = (await res.json()) as ExecuteResponse | { error?: string };
       if (!res.ok || !('hash' in payload) || !('level' in payload)) {
         throw new Error(
           'error' in payload && payload.error ? payload.error : 'Execution failed',
         );
       }
-
-      addLog(`Execution successful! Hash: ${payload.hash} (Block: ${payload.level})`, 'success');
+      addLog(`Execution ok: ${payload.hash} (block ${payload.level}).`, 'success');
       void fetchBalances();
     } catch (error) {
       addLog(
@@ -874,13 +813,18 @@ export default function App() {
       addLog('Deploy a contract before running Bert/Ernie E2E tests.', 'error');
       return;
     }
-
-    const selectedEntrypoint = e2eEntrypoint.trim() || abi[0]?.name;
-    if (!selectedEntrypoint) {
-      addLog('Choose an entrypoint for Bert/Ernie E2E testing.', 'error');
+    if (!can('postdeployE2E') || !can('puppetWallets')) {
+      addLog(
+        `Post-deploy puppet E2E is not available on ${network.label}.`,
+        'error',
+      );
       return;
     }
-
+    const selectedEntrypoint = e2eEntrypoint.trim() || abi[0]?.name;
+    if (!selectedEntrypoint) {
+      addLog('Pick an entrypoint before running E2E.', 'error');
+      return;
+    }
     let parsedArgs: unknown[] = [];
     try {
       parsedArgs = safeParseJsonArray(e2eArgs);
@@ -891,61 +835,44 @@ export default function App() {
       );
       return;
     }
-
     setIsRunningE2E(true);
-    addLog(`Running post-deployment E2E using Bert and Ernie on ${selectedEntrypoint}...`, 'info');
-
+    addLog(`Running post-deploy E2E (Bert + Ernie) on ${selectedEntrypoint}...`, 'info');
     try {
       const res = await fetch('/api/kiln/e2e/run', {
         method: 'POST',
         headers: buildHeaders(true),
         body: JSON.stringify({
+          networkId,
           contractAddress,
           steps: [
-            {
-              label: 'Bert step',
-              wallet: 'A',
-              entrypoint: selectedEntrypoint,
-              args: parsedArgs,
-            },
-            {
-              label: 'Ernie step',
-              wallet: 'B',
-              entrypoint: selectedEntrypoint,
-              args: parsedArgs,
-            },
+            { label: 'Bert step', wallet: 'A', entrypoint: selectedEntrypoint, args: parsedArgs },
+            { label: 'Ernie step', wallet: 'B', entrypoint: selectedEntrypoint, args: parsedArgs },
           ],
         }),
       });
-
       const payload = (await res.json()) as E2ERunResponse | { error?: string };
       if (!res.ok || !('summary' in payload)) {
         throw new Error(
           'error' in payload && payload.error ? payload.error : 'E2E run failed',
         );
       }
-
       for (const result of payload.results) {
         if (result.status === 'passed') {
-          addLog(
-            `${result.label} passed (${result.wallet}) hash ${result.hash}`,
-            'success',
-          );
+          addLog(`${result.label} passed (${result.wallet}) hash ${result.hash}`, 'success');
         } else {
           addLog(
-            `${result.label} failed (${result.wallet}): ${result.error ?? 'Unknown error'}`,
+            `${result.label} failed (${result.wallet}): ${result.error ?? 'unknown error'}`,
             'error',
           );
         }
       }
-
       addLog(
         `E2E summary: ${payload.summary.passed}/${payload.summary.total} passed.`,
         payload.success ? 'success' : 'error',
       );
     } catch (error) {
       addLog(
-        `E2E test error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `E2E run error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'error',
       );
     } finally {
@@ -953,557 +880,1394 @@ export default function App() {
     }
   };
 
+  // Tab guard logic
+  const tabs = useMemo<
+    Array<{
+      key: TabKey;
+      label: string;
+      icon: React.ReactNode;
+      tipKey: Parameters<typeof tip>[0];
+      ready: boolean;
+      done: boolean;
+    }>
+  >(() => {
+    const hasSource = isEvm ? solidityCode.trim().length > 0 : michelsonCode.trim().length > 0;
+    const hasClearance = isEvm ? Boolean(lastSolidityCompile?.entry) : Boolean(clearanceId);
+    const hasContract = Boolean(contractAddress);
+    return [
+      {
+        key: 'setup',
+        label: t('tabSetupLabel'),
+        icon: <Globe className="w-4 h-4" />,
+        tipKey: 'tabSetupLabel',
+        ready: true,
+        done: true,
+      },
+      {
+        key: 'build',
+        label: t('tabBuildLabel'),
+        icon: <Hammer className="w-4 h-4" />,
+        tipKey: 'tabBuildLabel',
+        ready: true,
+        done: hasSource,
+      },
+      {
+        key: 'validate',
+        label: t('tabValidateLabel'),
+        icon: <ShieldCheck className="w-4 h-4" />,
+        tipKey: 'tabValidateLabel',
+        ready: hasSource,
+        done: hasClearance,
+      },
+      {
+        key: 'deploy',
+        label: t('tabDeployLabel'),
+        icon: <Rocket className="w-4 h-4" />,
+        tipKey: 'tabDeployLabel',
+        ready: hasClearance,
+        done: hasContract,
+      },
+      {
+        key: 'test',
+        label: t('tabTestLabel'),
+        icon: <FlaskConical className="w-4 h-4" />,
+        tipKey: 'tabTestLabel',
+        ready: hasContract,
+        done: false,
+      },
+      {
+        key: 'handoff',
+        label: t('tabHandoffLabel'),
+        icon: <Package className="w-4 h-4" />,
+        tipKey: 'tabHandoffLabel',
+        ready: hasSource,
+        done: Boolean(lastWorkflow || lastSolidityCompile),
+      },
+    ];
+  }, [
+    isEvm,
+    solidityCode,
+    michelsonCode,
+    lastSolidityCompile,
+    clearanceId,
+    contractAddress,
+    lastWorkflow,
+    t,
+  ]);
+
+  const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
+  const prevTab = activeIndex > 0 ? tabs[activeIndex - 1]?.key : null;
+  const nextTab = activeIndex >= 0 && activeIndex < tabs.length - 1 ? tabs[activeIndex + 1]?.key : null;
+
+  const sessionSummary = useMemo(
+    () => ({
+      source: isEvm
+        ? solidityCode.trim().length > 0
+          ? `${solidityCode.trim().split('\n').length} lines of Solidity`
+          : null
+        : michelsonCode.trim().length > 0
+          ? `${michelsonCode.trim().split('\n').length} lines of ${contractSourceType}`
+          : null,
+      clearance: isEvm
+        ? lastSolidityCompile?.entry
+          ? `solc ${lastSolidityCompile.solcVersion}`
+          : null
+        : clearanceId,
+      contract: contractAddress,
+    }),
+    [isEvm, solidityCode, michelsonCode, contractSourceType, lastSolidityCompile, clearanceId, contractAddress],
+  );
+
   return (
-    <div className="min-h-screen bg-base-300 text-base-content p-4 md:p-8 font-sans" data-theme="dark">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-base-100 p-6 rounded-2xl shadow-lg border border-base-200">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-3">
-              <Activity className="w-8 h-8 text-primary" />
-              Tezos Kiln
-            </h1>
-            <KilnCopy k="headerTagline" as="p" className="text-base-content/60 mt-1" />
+    <div
+      className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col"
+      data-theme="dark"
+    >
+      <Header
+        networkHealth={networkHealth}
+        mode={mode}
+        setMode={setMode}
+        fetchBalances={fetchBalances}
+      />
+
+      {network.tier === 'mainnet' ? (
+        <div className="bg-error/10 border-y border-error/30 text-error px-4 py-2 text-xs text-center">
+          <KilnCopy k="mainnetBanner" as="span" />
+        </div>
+      ) : null}
+
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-6 space-y-6">
+        <SessionSummary summary={sessionSummary} />
+
+        <div className="bg-base-100 rounded-2xl shadow-lg border border-base-200 overflow-hidden">
+          <div className="flex items-stretch overflow-x-auto border-b border-base-300">
+            {tabs.map((tab, idx) => {
+              const isActive = tab.key === activeTab;
+              const isLocked = !tab.ready;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    if (!isLocked) {
+                      setActiveTab(tab.key);
+                    }
+                  }}
+                  title={
+                    isLocked
+                      ? 'Locked — complete earlier steps.'
+                      : (tip(tab.tipKey) ?? undefined)
+                  }
+                  className={`relative flex-1 min-w-[120px] px-3 md:px-4 py-4 text-left border-r border-base-300 last:border-r-0 transition-colors ${
+                    isActive
+                      ? 'bg-base-200/60'
+                      : isLocked
+                        ? 'opacity-60 cursor-not-allowed'
+                        : 'hover:bg-base-200/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`flex items-center justify-center w-6 h-6 rounded-full text-[0.65rem] font-bold ${
+                          tab.done
+                            ? 'bg-success text-success-content'
+                            : isActive
+                              ? 'bg-primary text-primary-content'
+                              : 'bg-base-300 text-base-content/60'
+                        }`}
+                      >
+                        {tab.done ? <CheckCircle2 className="w-3 h-3" /> : idx + 1}
+                      </div>
+                      <span className={`font-semibold text-sm ${isActive ? '' : 'text-base-content/80'}`}>
+                        {tab.label}
+                      </span>
+                    </div>
+                    {isLocked ? <Lock className="w-3 h-3 text-base-content/40" /> : tab.icon}
+                  </div>
+                  {isActive ? (
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-            <div className="join join-horizontal shrink-0">
-              <button
-                type="button"
-                title={tip('viewModeBuilder')}
-                className={`btn btn-xs join-item ${mode === 'builder' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
-                onClick={() => setMode('builder')}
-              >
-                {t('viewModeBuilder')}
-              </button>
-              <button
-                type="button"
-                title={tip('viewModeEli5')}
-                className={`btn btn-xs join-item ${mode === 'eli5' ? 'btn-secondary' : 'btn-ghost border border-base-300'}`}
-                onClick={() => setMode('eli5')}
-              >
-                {t('viewModeEli5')}
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  networkHealth === 'online'
-                    ? 'bg-success'
-                    : networkHealth === 'checking'
-                      ? 'bg-warning animate-pulse'
-                      : 'bg-error'
-                }`}
+          <div className="p-6">
+            {activeTab === 'setup' ? (
+              <SetupTab
+                balances={balances}
+                balancesStatus={balancesStatus}
+                balancesError={balancesError}
+                fetchBalances={fetchBalances}
+                connectedWallet={connectedWallet}
+                onConnect={connectWallet}
+                onDisconnect={disconnectWallet}
+                isConnectingWallet={isConnectingWallet}
               />
-              <span className="text-sm font-medium">
-                {activeNetwork?.label ?? 'Network'} {networkHealth}
-              </span>
+            ) : null}
+            {activeTab === 'build' ? (
+              <BuildTab
+                isTezos={isTezos}
+                contractSourceType={contractSourceType}
+                setContractSourceType={setContractSourceType}
+                michelsonCode={michelsonCode}
+                setMichelsonCode={setMichelsonCode}
+                solidityCode={solidityCode}
+                setSolidityCode={setSolidityCode}
+                initialStorage={initialStorage}
+                setInitialStorage={setInitialStorage}
+                contractUploadInputRef={contractUploadInputRef}
+                openContractFilePicker={openContractFilePicker}
+                handleFileUpload={handleFileUpload}
+                onApplyGuidedDraft={applyGuidedMichelsonDraft}
+                buildHeaders={buildHeaders}
+                addLog={addLog}
+                onCompiled={setLastSolidityCompile}
+                onDeployedEvm={(info) => {
+                  setContractAddress(info.contractAddress);
+                  addLog(`EVM contract live at ${info.contractAddress}.`, 'success');
+                  setActiveTab('test');
+                }}
+              />
+            ) : null}
+            {activeTab === 'validate' ? (
+              <ValidateTab
+                isTezos={isTezos}
+                isRunningWorkflow={isRunningWorkflow}
+                hasSource={isTezos ? michelsonCode.trim().length > 0 : solidityCode.trim().length > 0}
+                runWorkflow={runTezosWorkflow}
+                workflow={lastWorkflow}
+                solidityResult={lastSolidityCompile}
+              />
+            ) : null}
+            {activeTab === 'deploy' ? (
+              <DeployTab
+                isTezos={isTezos}
+                deployMode={deployMode}
+                setDeployMode={setDeployMode}
+                useConnectedWalletAsContractAdmin={useConnectedWalletAsContractAdmin}
+                setUseConnectedWalletAsContractAdmin={setUseConnectedWalletAsContractAdmin}
+                connectedWallet={connectedWallet}
+                clearanceId={clearanceId}
+                lastWorkflow={lastWorkflow}
+                solidityResult={lastSolidityCompile}
+                contractAddress={contractAddress}
+                isDeploying={isDeploying}
+                isValidating={isValidating}
+                onTezosDeploy={handleTezosDeploy}
+                canPuppet={can('puppetWallets')}
+                onReconnect={() => setActiveTab('setup')}
+              />
+            ) : null}
+            {activeTab === 'test' ? (
+              <TestTab
+                isTezos={isTezos}
+                contractAddress={contractAddress}
+                abi={abi}
+                onExecute={handleExecute}
+                e2eEntrypoint={e2eEntrypoint}
+                setE2EEntrypoint={setE2EEntrypoint}
+                e2eArgs={e2eArgs}
+                setE2EArgs={setE2EArgs}
+                runE2E={runPostDeployE2E}
+                isRunningE2E={isRunningE2E}
+                canPuppet={can('puppetWallets') && can('postdeployE2E')}
+              />
+            ) : null}
+            {activeTab === 'handoff' ? (
+              <HandoffTab
+                isTezos={isTezos}
+                hasTezosSource={michelsonCode.trim().length > 0}
+                hasSoliditySource={solidityCode.trim().length > 0}
+                hasCompiledMichelson={Boolean(lastWorkflow?.artifacts.michelson)}
+                hasSolidityCompile={Boolean(lastSolidityCompile?.entry)}
+                isExportingBundle={isExportingBundle}
+                exportCurrentSource={exportCurrentSource}
+                exportLatestMichelson={exportLatestMichelson}
+                exportSolidityBytecode={exportSolidityBytecode}
+                exportMainnetBundle={exportMainnetBundle}
+                contractAddress={contractAddress}
+                networkLabel={network.label}
+              />
+            ) : null}
+          </div>
+
+          <div className="border-t border-base-300 p-3 flex items-center justify-between flex-wrap gap-2 bg-base-200/30">
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost gap-1"
+              onClick={() => prevTab && setActiveTab(prevTab)}
+              disabled={!prevTab}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {prevTab ? tabs[activeIndex - 1]?.label : 'Back'}
+            </button>
+            <div className="text-xs text-base-content/60">
+              Step {activeIndex + 1} of {tabs.length}
             </div>
             <button
-              onClick={fetchBalances}
-              className="btn btn-ghost btn-sm btn-circle"
-              aria-label="Refresh balances"
+              type="button"
+              className="btn btn-sm btn-primary gap-1"
+              onClick={() => nextTab && setActiveTab(nextTab)}
+              disabled={!nextTab || !tabs[activeIndex + 1]?.ready}
             >
-              <RefreshCw className="w-4 h-4" />
+              {nextTab ? tabs[activeIndex + 1]?.label : 'Done'}
+              <ChevronRight className="w-4 h-4" />
             </button>
-          </div>
-        </header>
-
-        <section className="bg-base-100 p-4 rounded-2xl shadow-lg border border-base-200 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
-                <KilnCopy k="networkArchTitle" />
-              </h2>
-              <KilnCopy k="networkArchBody" as="p" className="text-xs text-base-content/60" />
-            </div>
-            {activeNetwork ? (
-              <div className="text-xs font-mono text-base-content/70">
-                Active: {activeNetwork.id} ({activeNetwork.rpcUrl})
-              </div>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {supportedNetworks.map((network) => (
-              <span
-                key={network.id}
-                className={`badge badge-sm ${
-                  network.status === 'active' ? 'badge-success' : 'badge-outline'
-                }`}
-              >
-                {network.label} · {network.status}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        <section className="bg-base-100 p-6 rounded-2xl shadow-lg border border-base-200 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold">
-                <KilnCopy k="deploymentTitle" />
-              </h2>
-              <KilnCopy k="deploymentBody" as="p" className="text-sm text-base-content/60" />
-            </div>
-            <div className="join">
-              <button
-                title={tip('deployModeConnected')}
-                className={`btn btn-sm join-item ${deployMode === 'connected' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setDeployMode('connected')}
-              >
-                {t('deployModeConnected')}
-              </button>
-              <button
-                title={tip('deployModePuppet')}
-                className={`btn btn-sm join-item ${deployMode === 'puppet' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setDeployMode('puppet')}
-              >
-                {t('deployModePuppet')}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <p
-                className={`text-sm font-semibold ${mode === 'eli5' && tip('connectWalletHeading') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
-                title={mode === 'eli5' ? tip('connectWalletHeading') : undefined}
-              >
-                {mode === 'builder'
-                  ? `Connect ${activeNetwork?.label ?? 'Shadownet'} Wallet (Beacon)`
-                  : `${t('connectWalletHeading')} (${activeNetwork?.label ?? 'Shadownet'})`}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={() => connectWallet('temple')}
-                  disabled={isConnectingWallet}
-                >
-                  Connect Temple
-                </button>
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={() => connectWallet('kukai')}
-                  disabled={isConnectingWallet}
-                >
-                  Connect Kukai (shadownet.kukai.app)
-                </button>
-                <button className="btn btn-sm btn-ghost" onClick={disconnectWallet}>
-                  Disconnect
-                </button>
-              </div>
-              <KilnCopy
-                k="kukaiNote"
-                as="p"
-                className="text-xs text-base-content/60"
-              >
-                {mode === 'builder' ? (
-                  <>
-                    Kukai users: keep Kukai opened on{' '}
-                    <span className="font-mono">shadownet.kukai.app</span> before approving.
-                  </>
-                ) : (
-                  <>
-                    {t('kukaiNote')}{' '}
-                    <span className="font-mono">shadownet.kukai.app</span>
-                  </>
-                )}
-              </KilnCopy>
-            </div>
-
-            <div className="space-y-2">
-              <p
-                className={`text-sm font-semibold ${mode === 'eli5' && tip('connectedWalletHeading') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
-                title={mode === 'eli5' ? tip('connectedWalletHeading') : undefined}
-              >
-                {t('connectedWalletHeading')}
-              </p>
-              {connectedWallet ? (
-                <div className="text-xs space-y-1 font-mono">
-                  <div>Address: {connectedWallet.address}</div>
-                  <div>Network: {connectedWallet.networkName ?? 'unknown'}</div>
-                  <div>RPC: {connectedWallet.rpcUrl ?? 'unknown'}</div>
-                </div>
-              ) : (
-                <KilnCopy k="noWalletConnected" as="p" className="text-xs text-base-content/60" />
-              )}
-              <label className="label cursor-pointer items-start gap-3 py-1">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm mt-0.5"
-                  checked={useConnectedWalletAsContractAdmin}
-                  onChange={(event) => setUseConnectedWalletAsContractAdmin(event.target.checked)}
-                />
-                <span className="label-text text-xs space-y-1 block">
-                  <KilnCopy
-                    k="adminCheckboxTitle"
-                    as="span"
-                    className="font-medium text-base-content block"
-                  />
-                  <KilnCopy
-                    k="adminCheckboxDetail"
-                    as="span"
-                    className="block text-base-content/60 leading-snug"
-                  >
-                    {mode === 'builder' ? (
-                      <>
-                        Only for <strong>Deploy with Connected Wallet</strong>. Compiled Kiln token
-                        storage leaves a fixed <span className="font-medium">admin</span> address in
-                        the Micheline; with this on, that address is replaced by your Beacon{' '}
-                        <span className="font-mono">tz1…</span> before origination so your wallet holds
-                        admin. Uncheck if you already set admin yourself. Match is literal:{' '}
-                        <code className="text-[0.65rem] bg-base-200 px-1 rounded">
-                          {BURN_PLACEHOLDER_ADDRESS}
-                        </code>
-                      </>
-                    ) : (
-                      <>
-                        {t('adminCheckboxDetail')}{' '}
-                        <code className="text-[0.65rem] bg-base-200 px-1 rounded">
-                          {BURN_PLACEHOLDER_ADDRESS}
-                        </code>
-                      </>
-                    )}
-                  </KilnCopy>
-                </span>
-              </label>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-base-100 p-4 rounded-2xl shadow-lg border border-base-200 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
-                <KilnCopy k="workflowGateTitle" />
-              </h2>
-              <KilnCopy k="workflowGateLine1" as="p" className="text-xs text-base-content/60" />
-              <KilnCopy k="workflowGateLine2" as="p" className="text-xs text-base-content/50" />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                title={tip('runFullWorkflow')}
-                className="btn btn-xs btn-outline"
-                onClick={() => {
-                  void runPredeployValidation();
-                }}
-                disabled={isRunningWorkflow || isDeploying || !michelsonCode.trim()}
-              >
-                {isRunningWorkflow ? 'Running…' : t('runFullWorkflow')}
-              </button>
-              <button
-                title={tip('exportSource')}
-                className="btn btn-xs btn-outline"
-                onClick={exportCurrentSource}
-                disabled={!michelsonCode.trim()}
-              >
-                {t('exportSource')}
-              </button>
-              <button
-                title={tip('exportMichelson')}
-                className="btn btn-xs btn-outline"
-                onClick={exportLatestMichelson}
-                disabled={!lastWorkflow?.artifacts.michelson}
-              >
-                {t('exportMichelson')}
-              </button>
-              <button
-                title={tip('exportMainnetBundle')}
-                className="btn btn-xs btn-outline"
-                onClick={() => {
-                  void exportMainnetBundle();
-                }}
-                disabled={!lastWorkflow || isExportingBundle}
-              >
-                {isExportingBundle ? 'Bundling…' : t('exportMainnetBundle')}
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 items-center text-xs">
-            <span
-              title={
-                clearanceId ? tip('clearedForDeployment') ?? undefined : tip('notCleared') ?? undefined
-              }
-              className={`badge badge-sm ${
-                clearanceId ? 'badge-success' : 'badge-warning'
-              }`}
-            >
-              {clearanceId ? t('clearedForDeployment') : t('notCleared')}
-            </span>
-            {clearanceId ? <span className="font-mono">{clearanceId}</span> : null}
-            {lastWorkflow ? (
-              <span className="text-base-content/60">
-                Audit: {lastWorkflow.audit.score}/100 · Simulation:{' '}
-                {lastWorkflow.simulation.summary.passed}/{lastWorkflow.simulation.summary.total}
-              </span>
-            ) : null}
-          </div>
-        </section>
-
-        {balancesStatus === 'error' && balancesError ? (
-          <div className="alert alert-error text-sm" role="alert">
-            <span>{balancesError}</span>
-          </div>
-        ) : null}
-
-        <KilnCopy
-          k="bertErnieNearWallets"
-          as="p"
-          className={`text-xs mt-1 ${mode === 'builder' ? 'text-warning' : 'text-base-content/80'}`}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {(['A', 'B'] as const).map((wallet) => {
-            const wData = balances?.[`wallet${wallet}`];
-            const label = puppetWalletLabels[wallet];
-            const addressLabel =
-              balancesStatus === 'ready' && wData?.address
-                ? wData.address
-                : balancesStatus === 'loading'
-                  ? 'Loading…'
-                  : 'Unavailable';
-            const balanceReady =
-              balancesStatus === 'ready' && typeof wData?.balance === 'number';
-            return (
-              <div key={wallet} className="bg-base-100 p-6 rounded-2xl shadow-lg border border-base-200 flex items-center gap-4">
-                <div className={`p-4 rounded-xl ${wallet === 'A' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'}`}>
-                  <Wallet className="w-8 h-8" />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <h3 className="text-lg font-bold">{label}</h3>
-                  <KilnCopy
-                    k={wallet === 'A' ? 'bertWalletSubtitle' : 'ernieWalletSubtitle'}
-                    as="p"
-                    className="text-xs text-base-content/50"
-                  />
-                  <p className="text-sm text-base-content/60 font-mono truncate">{addressLabel}</p>
-                </div>
-                <div className="text-right min-h-[2.5rem] flex flex-col items-end justify-center">
-                  {balancesStatus === 'loading' ? (
-                    <span className="loading loading-spinner loading-md text-primary" aria-label="Loading balance" />
-                  ) : (
-                    <div className="text-2xl font-bold font-mono">
-                      {balanceReady ? wData.balance.toFixed(2) : '—'}
-                    </div>
-                  )}
-                  <div className="text-xs text-base-content/50 uppercase tracking-wider">XTZ</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <GuidedContractBuilder
-              buildHeaders={buildHeaders}
-              onApplyMichelsonDraft={applyGuidedMichelsonDraft}
-              onLog={addLog}
-            />
-
-            <div className="bg-base-100 rounded-2xl shadow-lg border border-base-200 overflow-hidden flex flex-col h-[620px]">
-              <div className="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-                <h2 className="font-bold flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-primary" />
-                  <KilnCopy k="contractInjectorTitle" />
-                </h2>
-                <div className="flex items-center gap-2">
-                  <div className="join">
-                    <button
-                      title={tip('michelsonModeBtn')}
-                      className={`btn btn-xs join-item ${
-                        contractSourceType === 'michelson' ? 'btn-primary' : 'btn-outline'
-                      }`}
-                      onClick={() => setContractSourceType('michelson')}
-                    >
-                      {t('michelsonModeBtn')}
-                    </button>
-                    <button
-                      title={tip('smartpyModeBtn')}
-                      className={`btn btn-xs join-item ${
-                        contractSourceType === 'smartpy' ? 'btn-primary' : 'btn-outline'
-                      }`}
-                      onClick={() => setContractSourceType('smartpy')}
-                    >
-                      {t('smartpyModeBtn')}
-                    </button>
-                  </div>
-                  <label className="btn btn-sm btn-outline btn-primary" title={tip('uploadSource')}>
-                    {t('uploadSource')}
-                    <input
-                      ref={contractUploadInputRef}
-                      type="file"
-                      accept=".tz,.json,.smartpy,.sp,.py,.txt,.md"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="p-4 border-b border-base-200 bg-base-100">
-                <label className="label py-1">
-                  <span
-                    className={`label-text text-xs uppercase tracking-wider ${mode === 'eli5' && tip('initialStorageLabel') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
-                    title={mode === 'eli5' ? tip('initialStorageLabel') : undefined}
-                  >
-                    {t('initialStorageLabel')}
-                  </span>
-                </label>
-                <input
-                  className="input input-bordered w-full font-mono"
-                  value={initialStorage}
-                  onChange={(event) => setInitialStorage(event.target.value)}
-                  placeholder='Ex: Unit or Pair "tz1..." 100'
-                />
-                <KilnCopy k="smartpyHelpBlurb" as="p" className="text-[0.7rem] text-base-content/60 mt-1">
-                  {mode === 'builder' ? (
-                    <>
-                      SmartPy sources can be loaded from <span className="font-mono">.py</span>,{' '}
-                      <span className="font-mono">.smartpy</span>, <span className="font-mono">.sp</span>, or{' '}
-                      <span className="font-mono">.txt</span> files. The workflow compiles SmartPy to Michelson
-                      server-side when SmartPy mode is active or auto-detected.
-                    </>
-                  ) : (
-                    <>{t('smartpyHelpBlurb')}</>
-                  )}
-                </KilnCopy>
-              </div>
-              <div className="flex-1 p-4">
-                <textarea
-                  className="textarea textarea-bordered w-full h-full font-mono text-sm resize-none bg-base-300/50 focus:bg-base-300 transition-colors"
-                  placeholder={
-                    contractSourceType === 'smartpy'
-                      ? t('placeholderSmartpy')
-                      : t('placeholderMichelson')
-                  }
-                  value={michelsonCode}
-                  onChange={(event) => {
-                    const source = event.target.value;
-                    setMichelsonCode(source);
-                    setContractSourceType(detectContractSourceType(source));
-                  }}
-                  onDoubleClick={openContractFilePicker}
-                />
-              </div>
-              <div className="p-4 border-t border-base-200 bg-base-200/50 flex flex-col md:flex-row gap-3">
-                <button
-                  title={tip('runWorkflowTests')}
-                  className="btn btn-outline md:flex-1"
-                  onClick={() => {
-                    void runPredeployValidation();
-                  }}
-                  disabled={isValidating || isRunningWorkflow || isDeploying || !michelsonCode.trim()}
-                >
-                  {isRunningWorkflow ? <span className="loading loading-spinner" /> : t('runWorkflowTests')}
-                </button>
-                <button
-                  title={
-                    deployMode === 'connected'
-                      ? tip('deployWithConnected') ?? undefined
-                      : tip('deployWithBert') ?? undefined
-                  }
-                  className="btn btn-primary md:flex-1"
-                  onClick={handleDeploy}
-                  disabled={
-                    isDeploying ||
-                    isValidating ||
-                    isRunningWorkflow ||
-                    !michelsonCode.trim() ||
-                    !clearanceId
-                  }
-                >
-                  {isDeploying ? (
-                    <span className="loading loading-spinner" />
-                  ) : deployMode === 'connected' ? (
-                    t('deployWithConnected')
-                  ) : (
-                    t('deployWithBert')
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-neutral rounded-2xl shadow-lg overflow-hidden h-[300px] flex flex-col border border-neutral-focus">
-              <div className="bg-neutral-focus p-3 flex items-center gap-2 border-b border-black/20">
-                <Terminal className="w-4 h-4 text-neutral-content/50" />
-                <span
-                  className={`text-xs font-mono text-neutral-content/70 uppercase tracking-wider ${mode === 'eli5' && tip('kilnTerminalLabel') ? 'cursor-help underline decoration-dotted decoration-neutral-content/40 underline-offset-2' : ''}`}
-                  title={mode === 'eli5' ? tip('kilnTerminalLabel') : undefined}
-                >
-                  {t('kilnTerminalLabel')}
-                </span>
-              </div>
-              <div className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-2">
-                {logs.length === 0 && <div className="text-neutral-content/30 italic">Waiting for operations...</div>}
-                {logs.map((log, index) => (
-                  <div key={`${log.time}-${index}`} className="flex gap-3">
-                    <span className="text-neutral-content/40 shrink-0">[{log.time}]</span>
-                    <span
-                      className={`
-                        ${log.type === 'error' ? 'text-error' : ''}
-                        ${log.type === 'success' ? 'text-success' : ''}
-                        ${log.type === 'info' ? 'text-info' : ''}
-                      `}
-                    >
-                      {log.msg}
-                    </span>
-                  </div>
-                ))}
-                <div ref={logsEndRef} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col h-[944px]">
-            <div className="p-4 border-b border-base-200 bg-base-200/50 space-y-3">
-              <h2 className="font-bold flex items-center gap-2">
-                <Activity className="w-5 h-5 text-secondary" />
-                <KilnCopy k="dynamicRigTitle" />
-              </h2>
-              <div className="space-y-2">
-                <label className="label py-0">
-                  <span
-                    className={`label-text text-xs uppercase tracking-wider ${mode === 'eli5' && tip('e2eEntrypointLabel') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
-                    title={mode === 'eli5' ? tip('e2eEntrypointLabel') : undefined}
-                  >
-                    {t('e2eEntrypointLabel')}
-                  </span>
-                </label>
-                <input
-                  className="input input-sm input-bordered w-full font-mono"
-                  value={e2eEntrypoint}
-                  onChange={(event) => setE2EEntrypoint(event.target.value)}
-                  placeholder="Ex: transfer"
-                />
-                <label className="label py-0">
-                  <span
-                    className={`label-text text-xs uppercase tracking-wider ${mode === 'eli5' && tip('e2eArgsLabel') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
-                    title={mode === 'eli5' ? tip('e2eArgsLabel') : undefined}
-                  >
-                    {t('e2eArgsLabel')}
-                  </span>
-                </label>
-                <input
-                  className="input input-sm input-bordered w-full font-mono"
-                  value={e2eArgs}
-                  onChange={(event) => setE2EArgs(event.target.value)}
-                  placeholder='Ex: [] or ["tz1...", "1"]'
-                />
-                <button
-                  title={tip('runBertErnieE2e')}
-                  className="btn btn-sm btn-secondary w-full"
-                  onClick={runPostDeployE2E}
-                  disabled={isRunningE2E || !contractAddress}
-                >
-                  {isRunningE2E ? <span className="loading loading-spinner" /> : t('runBertErnieE2e')}
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 p-4 overflow-y-auto">
-              <DynamicRig contractAddress={contractAddress} abi={abi} onExecute={handleExecute} />
-            </div>
           </div>
         </div>
       </div>
+
+      <TerminalDock
+        open={terminalOpen}
+        setOpen={setTerminalOpen}
+        logs={logs}
+        logsEndRef={logsEndRef}
+        onClear={() => setLogs([])}
+      />
+
+      <MainnetConsentModal />
+
+      {/* Hidden file input for global uploads */}
+      <input
+        ref={contractUploadInputRef}
+        type="file"
+        accept=".tz,.json,.smartpy,.sp,.py,.txt,.md,.sol"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Persistent header pill/switcher row is embedded in <Header />. */}
+      <Spacer requestNetworkChange={requestNetworkChange} />
+    </div>
+  );
+}
+
+function isTabKey(value: string): value is TabKey {
+  return ['setup', 'build', 'validate', 'deploy', 'test', 'handoff'].includes(value);
+}
+
+/** Bottom spacer so the terminal dock never covers the tab nav. */
+function Spacer({ requestNetworkChange }: { requestNetworkChange: (id: never) => void }) {
+  void requestNetworkChange;
+  return <div className="h-24" aria-hidden />;
+}
+
+function Header({
+  networkHealth,
+  mode,
+  setMode,
+  fetchBalances,
+}: {
+  networkHealth: 'checking' | 'online' | 'offline';
+  mode: 'builder' | 'eli5';
+  setMode: (next: 'builder' | 'eli5') => void;
+  fetchBalances: () => Promise<void>;
+}) {
+  const { t, tip } = useKilnView();
+  return (
+    <header className="sticky top-0 z-40 bg-base-100/95 backdrop-blur border-b border-base-300">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20">
+            <Activity className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Tezos Kiln
+            </h1>
+            <KilnCopy k="headerTagline" as="p" className="text-xs text-base-content/60 max-w-md leading-tight" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <NetworkStatusPill health={networkHealth} />
+          <NetworkSwitcher />
+          <div className="join join-horizontal shrink-0">
+            <button
+              type="button"
+              title={tip('viewModeBuilder')}
+              className={`btn btn-xs join-item ${mode === 'builder' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
+              onClick={() => setMode('builder')}
+            >
+              {t('viewModeBuilder')}
+            </button>
+            <button
+              type="button"
+              title={tip('viewModeEli5')}
+              className={`btn btn-xs join-item ${mode === 'eli5' ? 'btn-secondary' : 'btn-ghost border border-base-300'}`}
+              onClick={() => setMode('eli5')}
+            >
+              {t('viewModeEli5')}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void fetchBalances();
+            }}
+            className="btn btn-ghost btn-sm btn-circle"
+            title="Refresh puppet balances"
+            aria-label="Refresh balances"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function SessionSummary({
+  summary,
+}: {
+  summary: { source: string | null; clearance: string | null; contract: string };
+}) {
+  const { network } = useKilnNetwork();
+  return (
+    <div className="bg-base-100 rounded-2xl border border-base-200 px-4 py-3 flex items-center gap-4 flex-wrap text-xs">
+      <div className="flex items-center gap-2">
+        <Boxes className="w-4 h-4 text-base-content/60" />
+        <span className="opacity-60">Network:</span>
+        <span className="font-semibold">{network.label}</span>
+        <span className="opacity-60">({network.ecosystem})</span>
+      </div>
+      <div className="w-px h-4 bg-base-300" aria-hidden />
+      <div className="flex items-center gap-2">
+        <Hammer className="w-4 h-4 text-base-content/60" />
+        <span className="opacity-60">Source:</span>
+        <span className={summary.source ? 'font-mono' : 'italic opacity-60'}>
+          {summary.source ?? 'not started'}
+        </span>
+      </div>
+      <div className="w-px h-4 bg-base-300" aria-hidden />
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="w-4 h-4 text-base-content/60" />
+        <span className="opacity-60">Clearance:</span>
+        <span className={summary.clearance ? 'font-mono text-success' : 'italic opacity-60'}>
+          {summary.clearance ?? 'none yet'}
+        </span>
+      </div>
+      <div className="w-px h-4 bg-base-300" aria-hidden />
+      <div className="flex items-center gap-2">
+        <Rocket className="w-4 h-4 text-base-content/60" />
+        <span className="opacity-60">Contract:</span>
+        <span className={summary.contract ? 'font-mono' : 'italic opacity-60'}>
+          {summary.contract || 'not deployed'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SetupTab({
+  balances,
+  balancesStatus,
+  balancesError,
+  fetchBalances,
+  connectedWallet,
+  onConnect,
+  onDisconnect,
+  isConnectingWallet,
+}: {
+  balances: BalancesResponse | null;
+  balancesStatus: 'loading' | 'ready' | 'error' | 'unsupported';
+  balancesError: string | null;
+  fetchBalances: () => Promise<void>;
+  connectedWallet: ConnectedWalletState | null;
+  onConnect: (target: WalletConnectTarget) => Promise<void>;
+  onDisconnect: () => Promise<void>;
+  isConnectingWallet: boolean;
+}) {
+  const { network, isTezos, isEvm, requestNetworkChange, pickable } = useKilnNetwork();
+  const { t } = useKilnView();
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Globe className="w-5 h-5 text-primary" />
+          <KilnCopy k="networkPickerTitle" />
+        </h2>
+        <KilnCopy k="networkPickerBody" as="p" className="text-sm text-base-content/60 mt-1" />
+        <KilnCopy k="tabSetupIntro" as="p" className="text-xs text-base-content/50 mt-1" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {pickable.map((profile) => (
+          <button
+            key={profile.id}
+            type="button"
+            onClick={() => requestNetworkChange(profile.id)}
+            className={`text-left p-4 rounded-xl border transition-colors ${
+              profile.id === network.id
+                ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                : 'border-base-300 hover:border-primary/40 hover:bg-base-200/40'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">{profile.label}</div>
+              <span className={`badge badge-xs badge-${profile.accent}`}>
+                {profile.tier}
+              </span>
+            </div>
+            <p className="text-xs text-base-content/70 mt-1">{profile.blurb}</p>
+            <div className="text-[0.65rem] text-base-content/50 mt-2 font-mono truncate">
+              {profile.defaultRpcUrl}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {isTezos ? (
+        <section className="space-y-3 border-t border-base-300 pt-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+            Connect Tezos wallet
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                void onConnect('temple');
+              }}
+              disabled={isConnectingWallet}
+            >
+              Connect Temple
+            </button>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                void onConnect('kukai');
+              }}
+              disabled={isConnectingWallet}
+            >
+              Connect Kukai
+            </button>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                void onDisconnect();
+              }}
+              disabled={!connectedWallet}
+            >
+              Disconnect
+            </button>
+          </div>
+          {connectedWallet ? (
+            <div className="rounded-xl border border-success/40 bg-success/5 p-3 text-xs font-mono space-y-0.5">
+              <div>Address: {connectedWallet.address}</div>
+              <div>Network: {connectedWallet.networkName ?? 'unknown'}</div>
+              <div>RPC: {connectedWallet.rpcUrl ?? 'unknown'}</div>
+            </div>
+          ) : (
+            <KilnCopy k="noWalletConnected" as="p" className="text-xs text-base-content/60" />
+          )}
+        </section>
+      ) : (
+        <section className="space-y-3 border-t border-base-300 pt-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+            Connect EVM wallet
+          </h3>
+          <p className="text-xs text-base-content/60">
+            On Etherlink, your MetaMask wallet is the signer. Kiln never holds your key.
+            Connection happens automatically on the Build tab when you press Deploy.
+          </p>
+        </section>
+      )}
+
+      <section className="space-y-3 border-t border-base-300 pt-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+            Puppet wallets
+          </h3>
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost"
+            onClick={() => {
+              void fetchBalances();
+            }}
+            disabled={balancesStatus === 'loading'}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        {balancesStatus === 'unsupported' ? (
+          <div className="alert alert-warning text-xs">
+            <span>
+              Puppets (Bert/Ernie) are not available on {network.label}. Mainnet deploys must come
+              from a connected wallet.
+            </span>
+          </div>
+        ) : balancesStatus === 'error' && balancesError ? (
+          <div className="alert alert-error text-xs">
+            <span>{balancesError}</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(['A', 'B'] as const).map((wallet) => {
+              const data = wallet === 'A' ? balances?.walletA : balances?.walletB;
+              const label = puppetWalletLabels[wallet];
+              const addressLabel =
+                balancesStatus === 'ready' && data?.address
+                  ? data.address
+                  : balancesStatus === 'loading'
+                    ? 'Loading…'
+                    : 'Unavailable';
+              const balanceReady =
+                balancesStatus === 'ready' && typeof data?.balance === 'number';
+              return (
+                <div
+                  key={wallet}
+                  className="bg-base-100 p-4 rounded-xl border border-base-200 flex items-center gap-4"
+                >
+                  <div
+                    className={`p-3 rounded-lg ${
+                      wallet === 'A'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-secondary/10 text-secondary'
+                    }`}
+                  >
+                    <Wallet className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <h4 className="text-sm font-bold">{label}</h4>
+                    <p className="text-xs text-base-content/50 font-mono truncate">
+                      {addressLabel}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold font-mono">
+                      {balanceReady ? data?.balance.toFixed(2) : '—'}
+                    </div>
+                    <div className="text-[0.6rem] text-base-content/50 uppercase tracking-wider">
+                      {network.nativeSymbol}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {isEvm ? (
+        <div className="alert alert-info text-xs">
+          <span>
+            Etherlink uses Solidity. When you switch to the Build tab, Kiln will show a Solidity
+            editor and compile path. Deploys go through MetaMask.
+          </span>
+        </div>
+      ) : null}
+
+      {/* Swallow the unused t var in case we export it later. */}
+      <span className="hidden">{t('tabSetupLabel')}</span>
+    </div>
+  );
+}
+
+function BuildTab({
+  isTezos,
+  contractSourceType,
+  setContractSourceType,
+  michelsonCode,
+  setMichelsonCode,
+  solidityCode,
+  setSolidityCode,
+  initialStorage,
+  setInitialStorage,
+  contractUploadInputRef,
+  openContractFilePicker,
+  handleFileUpload,
+  onApplyGuidedDraft,
+  buildHeaders,
+  addLog,
+  onCompiled,
+  onDeployedEvm,
+}: {
+  isTezos: boolean;
+  contractSourceType: ContractSourceType;
+  setContractSourceType: (next: ContractSourceType) => void;
+  michelsonCode: string;
+  setMichelsonCode: (next: string) => void;
+  solidityCode: string;
+  setSolidityCode: (next: string) => void;
+  initialStorage: string;
+  setInitialStorage: (next: string) => void;
+  contractUploadInputRef: React.RefObject<HTMLInputElement | null>;
+  openContractFilePicker: () => void;
+  handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onApplyGuidedDraft: (code: string, storage: string) => void;
+  buildHeaders: (includeJson?: boolean) => HeadersInit;
+  addLog: (msg: string, type?: LogType) => void;
+  onCompiled: (result: SolidityCompileResult | null) => void;
+  onDeployedEvm: (info: { contractAddress: `0x${string}`; transactionHash: `0x${string}`; networkId: string }) => void;
+}) {
+  const { t, tip, mode } = useKilnView();
+  const { network } = useKilnNetwork();
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Hammer className="w-5 h-5 text-primary" />
+          <KilnCopy k="tabBuildLabel" />
+        </h2>
+        <KilnCopy k="tabBuildIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+      </div>
+
+      {isTezos ? (
+        <>
+          <GuidedContractBuilder
+            buildHeaders={buildHeaders}
+            onApplyMichelsonDraft={onApplyGuidedDraft}
+            onLog={addLog}
+          />
+          <div className="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
+            <div className="p-4 border-b border-base-300 flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="font-bold flex items-center gap-2">
+                <Upload className="w-4 h-4 text-primary" />
+                <KilnCopy k="contractInjectorTitle" />
+              </h3>
+              <div className="flex items-center gap-2">
+                <div className="join">
+                  <button
+                    title={tip('michelsonModeBtn')}
+                    className={`btn btn-xs join-item ${
+                      contractSourceType === 'michelson' ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => setContractSourceType('michelson')}
+                  >
+                    {t('michelsonModeBtn')}
+                  </button>
+                  <button
+                    title={tip('smartpyModeBtn')}
+                    className={`btn btn-xs join-item ${
+                      contractSourceType === 'smartpy' ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => setContractSourceType('smartpy')}
+                  >
+                    {t('smartpyModeBtn')}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline btn-primary"
+                  onClick={openContractFilePicker}
+                  title={tip('uploadSource')}
+                >
+                  {t('uploadSource')}
+                </button>
+                <input
+                  ref={contractUploadInputRef}
+                  type="file"
+                  accept=".tz,.json,.smartpy,.sp,.py,.txt,.md"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </div>
+            </div>
+            <div className="p-4 border-b border-base-300 space-y-2">
+              <label className="label py-0">
+                <span
+                  className={`label-text text-xs uppercase tracking-wider ${
+                    mode === 'eli5' && tip('initialStorageLabel')
+                      ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2'
+                      : ''
+                  }`}
+                  title={mode === 'eli5' ? tip('initialStorageLabel') : undefined}
+                >
+                  {t('initialStorageLabel')}
+                </span>
+              </label>
+              <input
+                className="input input-sm input-bordered w-full font-mono"
+                value={initialStorage}
+                onChange={(event) => setInitialStorage(event.target.value)}
+                placeholder='Ex: Unit or Pair "tz1..." 100'
+              />
+            </div>
+            <div className="p-4">
+              <textarea
+                className="textarea textarea-bordered w-full font-mono text-sm h-72 bg-base-300/50"
+                placeholder={
+                  contractSourceType === 'smartpy'
+                    ? t('placeholderSmartpy')
+                    : t('placeholderMichelson')
+                }
+                value={michelsonCode}
+                onChange={(event) => setMichelsonCode(event.target.value)}
+                onDoubleClick={openContractFilePicker}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <KilnCopy k="evmCompileHint" as="p" className="text-xs text-base-content/70" />
+          <SolidityPanel
+            source={solidityCode}
+            onSourceChange={setSolidityCode}
+            buildHeaders={buildHeaders}
+            onLog={addLog}
+            onDeployed={onDeployedEvm}
+          />
+          <div className="alert text-xs">
+            <span>
+              Solidity runs on <span className="font-semibold">{network.label}</span>.
+              Kiln compiles with solc-js, but the deploy transaction is signed by your
+              MetaMask wallet directly.
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* Bubble compile results up via a tiny effect hook */}
+      <CompileSync onCompiled={onCompiled} />
+    </div>
+  );
+}
+
+/**
+ * Solidity compile results are created inside SolidityPanel. Rather than
+ * drill props up + down, we listen for a lightweight custom event and forward
+ * the latest payload to the parent (keeps SolidityPanel dependency-free).
+ */
+function CompileSync({
+  onCompiled,
+}: {
+  onCompiled: (result: SolidityCompileResult | null) => void;
+}) {
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<SolidityCompileResult | null>).detail ?? null;
+      onCompiled(detail);
+    };
+    window.addEventListener('kiln:solidity:compiled', handler);
+    return () => window.removeEventListener('kiln:solidity:compiled', handler);
+  }, [onCompiled]);
+  return null;
+}
+
+function ValidateTab({
+  isTezos,
+  isRunningWorkflow,
+  hasSource,
+  runWorkflow,
+  workflow,
+  solidityResult,
+}: {
+  isTezos: boolean;
+  isRunningWorkflow: boolean;
+  hasSource: boolean;
+  runWorkflow: () => Promise<WorkflowRunResponse | null>;
+  workflow: WorkflowRunResponse | null;
+  solidityResult: SolidityCompileResult | null;
+}) {
+  if (!isTezos) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            <KilnCopy k="tabValidateLabel" />
+          </h2>
+          <KilnCopy k="tabValidateIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+        </div>
+        {solidityResult ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-base-300 bg-base-200/40 p-4 space-y-1 text-sm">
+              <div className="font-semibold">Compile</div>
+              <div className="text-xs text-base-content/70">
+                {solidityResult.success ? 'solc reported success.' : 'solc reported errors.'}
+              </div>
+              <div className="text-[0.65rem] text-base-content/60 font-mono">
+                {solidityResult.solcVersion}
+              </div>
+            </div>
+            <div className="rounded-xl border border-base-300 bg-base-200/40 p-4 space-y-1 text-sm">
+              <div className="font-semibold">Audit</div>
+              <div className="text-xs text-base-content/70">
+                {solidityResult.audit.findings.length} finding(s), score {solidityResult.audit.score}/100.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/60">
+            Compile Solidity in the Build tab to populate validation results.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            <KilnCopy k="tabValidateLabel" />
+          </h2>
+          <KilnCopy k="tabValidateIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-primary"
+          onClick={() => {
+            void runWorkflow();
+          }}
+          disabled={isRunningWorkflow || !hasSource}
+        >
+          {isRunningWorkflow ? 'Running…' : 'Run full workflow'}
+        </button>
+      </div>
+      <WorkflowResultsPanel summary={workflow} />
+    </div>
+  );
+}
+
+function DeployTab({
+  isTezos,
+  deployMode,
+  setDeployMode,
+  useConnectedWalletAsContractAdmin,
+  setUseConnectedWalletAsContractAdmin,
+  connectedWallet,
+  clearanceId,
+  lastWorkflow,
+  solidityResult,
+  contractAddress,
+  isDeploying,
+  isValidating,
+  onTezosDeploy,
+  canPuppet,
+  onReconnect,
+}: {
+  isTezos: boolean;
+  deployMode: DeployMode;
+  setDeployMode: (next: DeployMode) => void;
+  useConnectedWalletAsContractAdmin: boolean;
+  setUseConnectedWalletAsContractAdmin: (next: boolean) => void;
+  connectedWallet: ConnectedWalletState | null;
+  clearanceId: string | null;
+  lastWorkflow: WorkflowRunResponse | null;
+  solidityResult: SolidityCompileResult | null;
+  contractAddress: string;
+  isDeploying: boolean;
+  isValidating: boolean;
+  onTezosDeploy: () => Promise<void>;
+  canPuppet: boolean;
+  onReconnect: () => void;
+}) {
+  const { network } = useKilnNetwork();
+  const { t, tip } = useKilnView();
+
+  if (!isTezos) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-primary" />
+            <KilnCopy k="tabDeployLabel" />
+          </h2>
+          <KilnCopy k="tabDeployIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+        </div>
+        {solidityResult?.entry ? (
+          <div className="rounded-xl border border-success/40 bg-success/5 p-4 space-y-2 text-sm">
+            <div className="font-semibold">{solidityResult.entry.name}</div>
+            <p className="text-xs text-base-content/70">
+              Compile is ready. Use the Deploy button on the Build tab — it signs with MetaMask
+              directly.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-base-300 p-8 text-center text-sm text-base-content/60">
+            Compile Solidity in the Build tab to enable EVM deploy.
+          </div>
+        )}
+        {contractAddress ? (
+          <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm font-mono">
+            Deployed: {contractAddress}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  const deployReady =
+    Boolean(lastWorkflow) &&
+    Boolean(clearanceId) &&
+    (deployMode === 'puppet' ? canPuppet : Boolean(connectedWallet));
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Rocket className="w-5 h-5 text-primary" />
+          <KilnCopy k="tabDeployLabel" />
+        </h2>
+        <KilnCopy k="tabDeployIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setDeployMode('connected')}
+          className={`p-4 rounded-xl border text-left transition-colors ${
+            deployMode === 'connected'
+              ? 'border-primary bg-primary/5 ring-1 ring-primary'
+              : 'border-base-300 hover:border-primary/40'
+          }`}
+          title={tip('deployModeConnected')}
+        >
+          <div className="font-semibold text-sm">{t('deployModeConnected')}</div>
+          <p className="text-xs text-base-content/60 mt-1">
+            Beacon origination from your Temple/Kukai wallet. Required on mainnet.
+          </p>
+          {connectedWallet ? (
+            <div className="text-[0.65rem] font-mono mt-2 text-base-content/60">
+              {connectedWallet.address}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-xs btn-outline mt-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReconnect();
+              }}
+            >
+              Connect wallet →
+            </button>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setDeployMode('puppet')}
+          disabled={!canPuppet}
+          className={`p-4 rounded-xl border text-left transition-colors ${
+            deployMode === 'puppet'
+              ? 'border-primary bg-primary/5 ring-1 ring-primary'
+              : 'border-base-300 hover:border-primary/40'
+          } ${!canPuppet ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={tip('deployModePuppet')}
+        >
+          <div className="font-semibold text-sm">{t('deployModePuppet')}</div>
+          <p className="text-xs text-base-content/60 mt-1">
+            Fast path for sandboxes. Server-held key; never use with real funds.
+          </p>
+          {!canPuppet ? (
+            <p className="text-[0.65rem] text-error mt-2">
+              Disabled on {network.label}.
+            </p>
+          ) : null}
+        </button>
+      </div>
+
+      {deployMode === 'connected' ? (
+        <label className="label cursor-pointer items-start gap-3 py-1">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-sm mt-0.5"
+            checked={useConnectedWalletAsContractAdmin}
+            onChange={(event) => setUseConnectedWalletAsContractAdmin(event.target.checked)}
+          />
+          <span className="label-text text-xs block space-y-1">
+            <KilnCopy k="adminCheckboxTitle" as="span" className="font-semibold block" />
+            <span className="text-base-content/60 block">
+              Replaces <code className="bg-base-200 px-1 rounded">{BURN_PLACEHOLDER_ADDRESS}</code>{' '}
+              in initial storage with your connected wallet before origination.
+            </span>
+          </span>
+        </label>
+      ) : null}
+
+      <div className="rounded-xl border border-base-300 bg-base-200/40 p-3 text-xs space-y-1">
+        <div>
+          <span className="opacity-60">Clearance: </span>
+          <span className={clearanceId ? 'text-success font-mono' : 'text-warning'}>
+            {clearanceId ?? 'not granted'}
+          </span>
+        </div>
+        <div>
+          <span className="opacity-60">Network: </span>
+          {network.label}
+        </div>
+        {network.tier === 'mainnet' ? (
+          <div className="text-error">
+            Mainnet deploy — double-check admin address and storage before signing.
+          </div>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-primary w-full"
+        onClick={() => {
+          void onTezosDeploy();
+        }}
+        disabled={!deployReady || isDeploying || isValidating}
+      >
+        {isDeploying ? (
+          <span className="loading loading-spinner" />
+        ) : deployMode === 'connected' ? (
+          t('deployWithConnected')
+        ) : (
+          t('deployWithBert')
+        )}
+      </button>
+
+      {contractAddress ? (
+        <div className="rounded-xl border border-success/40 bg-success/5 p-3 text-sm font-mono">
+          Deployed: {contractAddress}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TestTab({
+  isTezos,
+  contractAddress,
+  abi,
+  onExecute,
+  e2eEntrypoint,
+  setE2EEntrypoint,
+  e2eArgs,
+  setE2EArgs,
+  runE2E,
+  isRunningE2E,
+  canPuppet,
+}: {
+  isTezos: boolean;
+  contractAddress: string;
+  abi: AbiEntrypoint[];
+  onExecute: (entrypoint: string, args: unknown[], wallet: WalletType) => Promise<void>;
+  e2eEntrypoint: string;
+  setE2EEntrypoint: (next: string) => void;
+  e2eArgs: string;
+  setE2EArgs: (next: string) => void;
+  runE2E: () => Promise<void>;
+  isRunningE2E: boolean;
+  canPuppet: boolean;
+}) {
+  const { t, tip } = useKilnView();
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <FlaskConical className="w-5 h-5 text-primary" />
+          <KilnCopy k="tabTestLabel" />
+        </h2>
+        <KilnCopy k="tabTestIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+      </div>
+      {!contractAddress ? (
+        <div className="rounded-2xl border border-dashed border-base-300 p-8 text-center text-sm text-base-content/60">
+          Deploy a contract first — the dynamic rig wakes up once there's an address to talk to.
+        </div>
+      ) : (
+        <>
+          {isTezos && canPuppet ? (
+            <div className="rounded-xl border border-base-300 bg-base-200/30 p-4 space-y-3">
+              <h3 className="text-sm font-semibold">Bert / Ernie E2E</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="label py-0">
+                    <span
+                      className="label-text text-xs uppercase tracking-wider"
+                      title={tip('e2eEntrypointLabel')}
+                    >
+                      {t('e2eEntrypointLabel')}
+                    </span>
+                  </label>
+                  <input
+                    className="input input-sm input-bordered w-full font-mono"
+                    value={e2eEntrypoint}
+                    onChange={(event) => setE2EEntrypoint(event.target.value)}
+                    placeholder="Ex: transfer"
+                  />
+                </div>
+                <div>
+                  <label className="label py-0">
+                    <span
+                      className="label-text text-xs uppercase tracking-wider"
+                      title={tip('e2eArgsLabel')}
+                    >
+                      {t('e2eArgsLabel')}
+                    </span>
+                  </label>
+                  <input
+                    className="input input-sm input-bordered w-full font-mono"
+                    value={e2eArgs}
+                    onChange={(event) => setE2EArgs(event.target.value)}
+                    placeholder='Ex: [] or ["tz1...", "1"]'
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary w-full"
+                onClick={() => {
+                  void runE2E();
+                }}
+                disabled={isRunningE2E || !contractAddress}
+              >
+                {isRunningE2E ? <span className="loading loading-spinner" /> : t('runBertErnieE2e')}
+              </button>
+            </div>
+          ) : null}
+          <DynamicRig contractAddress={contractAddress} abi={abi} onExecute={onExecute} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function HandoffTab({
+  isTezos,
+  hasTezosSource,
+  hasSoliditySource,
+  hasCompiledMichelson,
+  hasSolidityCompile,
+  isExportingBundle,
+  exportCurrentSource,
+  exportLatestMichelson,
+  exportSolidityBytecode,
+  exportMainnetBundle,
+  contractAddress,
+  networkLabel,
+}: {
+  isTezos: boolean;
+  hasTezosSource: boolean;
+  hasSoliditySource: boolean;
+  hasCompiledMichelson: boolean;
+  hasSolidityCompile: boolean;
+  isExportingBundle: boolean;
+  exportCurrentSource: () => void;
+  exportLatestMichelson: () => void;
+  exportSolidityBytecode: () => void;
+  exportMainnetBundle: () => Promise<void>;
+  contractAddress: string;
+  networkLabel: string;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Package className="w-5 h-5 text-primary" />
+          <KilnCopy k="tabHandoffLabel" />
+        </h2>
+        <KilnCopy k="tabHandoffIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <HandoffCard
+          title="Export source"
+          description="Download the current source buffer as-is."
+          disabled={isTezos ? !hasTezosSource : !hasSoliditySource}
+          onClick={exportCurrentSource}
+        />
+        {isTezos ? (
+          <HandoffCard
+            title="Export compiled Michelson"
+            description="Latest workflow artifact (.tz). Requires a workflow run."
+            disabled={!hasCompiledMichelson}
+            onClick={exportLatestMichelson}
+          />
+        ) : (
+          <HandoffCard
+            title="Export Solidity artifacts"
+            description="ABI + bytecode JSON, hardhat-compatible."
+            disabled={!hasSolidityCompile}
+            onClick={exportSolidityBytecode}
+          />
+        )}
+        {isTezos ? (
+          <HandoffCard
+            title={isExportingBundle ? 'Bundling…' : 'Mainnet-ready bundle'}
+            description="Zip including source, compiled output, validation, audit, and deploy metadata."
+            disabled={!hasCompiledMichelson || isExportingBundle}
+            onClick={() => {
+              void exportMainnetBundle();
+            }}
+            highlight
+          />
+        ) : null}
+      </div>
+
+      {contractAddress ? (
+        <div className="rounded-xl border border-base-300 bg-base-200/30 p-3 text-xs">
+          <div className="font-semibold mb-1">Deployment record</div>
+          <div className="font-mono">
+            {networkLabel} · {contractAddress}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function HandoffCard({
+  title,
+  description,
+  disabled,
+  onClick,
+  highlight,
+}: {
+  title: string;
+  description: string;
+  disabled: boolean;
+  onClick: () => void;
+  highlight?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`text-left p-4 rounded-xl border transition-colors flex items-start gap-3 ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed border-base-300'
+          : highlight
+            ? 'border-primary bg-primary/5 hover:bg-primary/10'
+            : 'border-base-300 hover:border-primary/40 hover:bg-base-200/30'
+      }`}
+    >
+      <div className={`p-2 rounded-lg ${highlight ? 'bg-primary/20 text-primary' : 'bg-base-200 text-base-content/60'}`}>
+        <Download className="w-4 h-4" />
+      </div>
+      <div>
+        <div className="text-sm font-semibold">{title}</div>
+        <p className="text-xs text-base-content/60 mt-1">{description}</p>
+      </div>
+    </button>
+  );
+}
+
+function TerminalDock({
+  open,
+  setOpen,
+  logs,
+  logsEndRef,
+  onClear,
+}: {
+  open: boolean;
+  setOpen: (next: boolean) => void;
+  logs: LogEntry[];
+  logsEndRef: React.RefObject<HTMLDivElement | null>;
+  onClear: () => void;
+}) {
+  const { t } = useKilnView();
+  return (
+    <div
+      className={`fixed bottom-0 inset-x-0 z-30 bg-neutral text-neutral-content border-t border-black/30 transition-all ${
+        open ? 'max-h-64' : 'max-h-10'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-wider text-neutral-content/80 hover:bg-neutral-focus"
+      >
+        {open ? <TerminalSquare className="w-4 h-4" /> : <Terminal className="w-4 h-4" />}
+        {t('kilnTerminalLabel')}
+        <span className="ml-auto opacity-60">{logs.length} lines</span>
+        {open ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+            }}
+          >
+            clear
+          </button>
+        ) : null}
+      </button>
+      {open ? (
+        <div className="max-w-7xl mx-auto px-4 pb-3 overflow-y-auto max-h-52 font-mono text-xs space-y-1">
+          {logs.length === 0 ? (
+            <div className="italic text-neutral-content/40">Waiting for operations...</div>
+          ) : null}
+          {logs.map((log, index) => (
+            <div key={`${log.time}-${index}`} className="flex gap-3">
+              <span className="text-neutral-content/40 shrink-0">[{log.time}]</span>
+              <span
+                className={
+                  log.type === 'error'
+                    ? 'text-error'
+                    : log.type === 'success'
+                      ? 'text-success'
+                      : 'text-info'
+                }
+              >
+                {log.msg}
+              </span>
+            </div>
+          ))}
+          <div ref={logsEndRef} />
+        </div>
+      ) : null}
     </div>
   );
 }
