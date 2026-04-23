@@ -40,10 +40,10 @@ SERVICE_FILE_DST="/etc/systemd/system/kiln.service"
 
 log() { printf '[kiln-provision] %s\n' "$*"; }
 
-log "Ensuring system packages (Node 22, python3-venv, zip, jq, git, curl, docker)..."
+log "Ensuring system packages (Node 22, python3-venv, zip, jq, git, curl)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y curl git zip jq python3 python3-venv python3-pip ca-certificates gnupg docker.io
+apt-get install -y curl git zip jq python3 python3-venv python3-pip ca-certificates gnupg
 
 if ! command -v node >/dev/null 2>&1 || ! node --version | grep -qE '^v22\.'; then
   log "Installing Node.js 22.x from nodesource..."
@@ -51,8 +51,21 @@ if ! command -v node >/dev/null 2>&1 || ! node --version | grep -qE '^v22\.'; th
   apt-get install -y nodejs
 fi
 
+if ! command -v docker >/dev/null 2>&1; then
+  log "Docker CLI missing; attempting install..."
+  if ! apt-get install -y docker.io; then
+    log "docker.io install failed, trying Docker CE package set..."
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  fi
+fi
+
 log "Node version: $(node --version), npm: $(npm --version)"
 log "Python version: $(python3 --version)"
+if command -v docker >/dev/null 2>&1; then
+  log "Docker version: $(docker --version)"
+else
+  log "WARN: Docker CLI still missing; shadowbox command provider will not work."
+fi
 
 log "Ensuring service user and directories..."
 if ! id -u "${SERVICE_USER}" >/dev/null 2>&1; then
