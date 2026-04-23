@@ -62,7 +62,31 @@ export function configureApiApp(
   app.use(
     helmet({
       contentSecurityPolicy:
-        services.env.NODE_ENV === 'production' ? undefined : false,
+        services.env.NODE_ENV === 'production'
+          ? {
+              useDefaults: true,
+              directives: {
+                // Tezos RPC + TzKT + Beacon wallet relay pool (matrix nodes
+                // are rotated/added without notice, so we can't enumerate
+                // them); using `https:` + `wss:` is the pragmatic allowlist
+                // for a dApp frontend that talks to an evolving chain stack.
+                'connect-src': ["'self'", 'https:', 'wss:'],
+                // Cloudflare's Web Analytics proxy auto-injects a beacon
+                // script on any Cloudflare-proxied site; allow it (and keep
+                // inline-script blocked via helmet's 'self' default).
+                'script-src': [
+                  "'self'",
+                  'https://static.cloudflareinsights.com',
+                ],
+                'script-src-elem': [
+                  "'self'",
+                  'https://static.cloudflareinsights.com',
+                ],
+                // Allow remote images for wallet icons / IPFS previews.
+                'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+              },
+            }
+          : false,
       crossOriginResourcePolicy:
         services.env.NODE_ENV === 'production'
           ? { policy: 'same-site' }
