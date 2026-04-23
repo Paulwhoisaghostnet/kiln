@@ -34,7 +34,7 @@ Commands:
 
 Environment:
   KILN_API_URL   Base URL (default: http://localhost:3000)
-  KILN_API_TOKEN Optional API token header (x-api-token)
+  KILN_API_TOKEN Optional API token header (x-kiln-token)
 `;
   console.log(usage.trim());
 }
@@ -150,7 +150,7 @@ async function apiRequest(
     headers['content-type'] = 'application/json';
   }
   if (token) {
-    headers['x-api-token'] = token;
+    headers['x-kiln-token'] = token;
   }
 
   const response = await fetch(`${baseUrl}${path}`, {

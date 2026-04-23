@@ -200,10 +200,13 @@ describe('createApiApp', () => {
     expect(response.body.active.id).toBe('tezos-shadownet');
     expect(response.body.supported).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'tezos-mainnet' }),
-        expect.objectContaining({ id: 'tezos-evm-support', label: 'Tezos EVM support' }),
+        expect.objectContaining({ id: 'tezos-mainnet', ecosystem: 'tezos' }),
+        expect.objectContaining({ id: 'etherlink-testnet', ecosystem: 'etherlink' }),
+        expect.objectContaining({ id: 'etherlink-mainnet', ecosystem: 'etherlink' }),
       ]),
     );
+    // `tezos-ghostnet` is defined but deliberately hidden from the UI picker
+    // until its capability matrix is finalised.
     expect(response.body.supported.some((row: { id: string }) => row.id === 'tezos-ghostnet')).toBe(
       false,
     );
@@ -593,6 +596,8 @@ describe('createApiApp', () => {
       createTezosService: mockTezosServiceFactory().factory,
     });
 
+    // Intentionally exercises the legacy `x-api-token` alias so renames don't
+    // silently drop backward-compat for existing curl/CLI users.
     const response = await request(app)
       .get('/api/kiln/activity/recent?limit=1')
       .set('x-api-token', 'log-token');
@@ -987,6 +992,9 @@ describe('createApiApp', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
+      networkId: 'tezos-shadownet',
+      ecosystem: 'tezos',
+      puppetsAvailable: true,
       walletA: { address: walletAAddress, balance: 10.5 },
       walletB: { address: walletBAddress, balance: 4.25 },
     });
@@ -1047,7 +1055,7 @@ describe('createApiApp', () => {
 
     const authorized = await request(app)
       .post('/api/kiln/upload')
-      .set('x-api-token', 'super-secret')
+      .set('x-kiln-token', 'super-secret')
       .send({
         code: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
         initialStorage: 'Unit',
@@ -1057,7 +1065,7 @@ describe('createApiApp', () => {
     expect(authorized.status).toBe(200);
     const authorizedBalances = await request(app)
       .get('/api/kiln/balances')
-      .set('x-api-token', 'super-secret');
+      .set('x-kiln-token', 'super-secret');
     expect(authorizedBalances.status).toBe(200);
   });
 });

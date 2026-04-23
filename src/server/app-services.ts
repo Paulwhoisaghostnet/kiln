@@ -123,7 +123,10 @@ export function createApiAppServices(
       return;
     }
 
-    const token = req.header('x-api-token');
+    // Custom header name — nothing to do with X/Twitter. Legacy `x-api-token`
+    // is still accepted as an alias so existing clients/curl scripts don't
+    // break mid-rollout; remove the alias once all callers are migrated.
+    const token = req.header('x-kiln-token') ?? req.header('x-api-token');
     if (token !== env.API_AUTH_TOKEN) {
       res.status(401).json({ error: 'Unauthorized' });
       return;

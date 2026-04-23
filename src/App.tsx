@@ -267,7 +267,7 @@ export default function App() {
       headers['Content-Type'] = 'application/json';
     }
     if (apiToken) {
-      headers['x-api-token'] = apiToken;
+      headers['x-kiln-token'] = apiToken;
     }
     return headers;
   };

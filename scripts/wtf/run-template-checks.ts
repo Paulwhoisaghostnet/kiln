@@ -300,7 +300,7 @@ async function apiFetch<T = unknown>(
     headers['content-type'] = 'application/json';
   }
   if (token) {
-    headers['x-api-token'] = token;
+    headers['x-kiln-token'] = token;
   }
   const res = await fetch(`${base}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
