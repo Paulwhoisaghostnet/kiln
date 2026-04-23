@@ -325,28 +325,40 @@ def main(argv: list[str]) -> int:
 
         run([config.docker_bin, "cp", str(tmp_file), f"{container_name}:/tmp/shadowbox-contract.tz"], timeout=15)
 
-        originate = docker_exec(
-            config,
-            container_name,
-            [
-                "octez-client",
-                "originate",
-                "contract",
-                "shadowbox",
-                "transferring",
-                "0",
-                "from",
-                "alice",
-                "running",
-                "/tmp/shadowbox-contract.tz",
-                "--init",
-                str(payload.get("initialStorage", "Unit")),
-                "--burn-cap",
-                "10",
-                "--force",
-            ],
-            timeout=75,
-        )
+        try:
+            originate = docker_exec(
+                config,
+                container_name,
+                [
+                    "octez-client",
+                    "-M",
+                    "client",
+                    "originate",
+                    "contract",
+                    "shadowbox",
+                    "transferring",
+                    "0",
+                    "from",
+                    "alice",
+                    "running",
+                    "/tmp/shadowbox-contract.tz",
+                    "--init",
+                    str(payload.get("initialStorage", "Unit")),
+                    "--burn-cap",
+                    "10",
+                    "--force",
+                ],
+                timeout=75,
+            )
+        except subprocess.CalledProcessError as error:
+            error_text = f"{error.stdout}\n{error.stderr}".strip()
+            warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
+            write_output(output_path, runner_output)
+            return 0
+        except subprocess.TimeoutExpired:
+            warnings.append("Origination timed out in shadowbox runtime.")
+            write_output(output_path, runner_output)
+            return 0
 
         originate_text = f"{originate.stdout}\n{originate.stderr}"
         contract_address = parse_contract_address(originate_text)
@@ -398,6 +410,8 @@ def main(argv: list[str]) -> int:
                     container_name,
                     [
                         "octez-client",
+                        "-M",
+                        "client",
                         "transfer",
                         "0",
                         "from",
