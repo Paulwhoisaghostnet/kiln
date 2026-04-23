@@ -108,6 +108,28 @@ def wait_for_rpc(port: int, timeout_seconds: int) -> bool:
     return False
 
 
+def wait_for_client_protocol(
+    config: RuntimeConfig,
+    container_name: str,
+    timeout_seconds: int,
+) -> bool:
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        try:
+            probe = docker_exec(
+                config,
+                container_name,
+                ["octez-client", "rpc", "get", "/chains/main/blocks/head/protocols"],
+                timeout=10,
+            )
+            if probe.stdout.strip():
+                return True
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            pass
+        time.sleep(1)
+    return False
+
+
 def escape_michelson_string(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -310,6 +332,11 @@ def main(argv: list[str]) -> int:
 
         if not wait_for_rpc(port, config.rpc_wait_seconds):
             warnings.append("Flextesa RPC did not become ready before timeout.")
+            write_output(output_path, runner_output)
+            return 0
+
+        if not wait_for_client_protocol(config, container_name, config.rpc_wait_seconds):
+            warnings.append("Flextesa client protocol RPC did not become ready before timeout.")
             write_output(output_path, runner_output)
             return 0
 
