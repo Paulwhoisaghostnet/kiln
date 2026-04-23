@@ -30,6 +30,10 @@ export function buildOpenApiSpec(runtimeNetwork: RuntimeNetworkConfig) {
       puppetWallets: ['bert', 'ernie'],
       deployWallets: ['A', 'B', 'connected'],
       clearanceRequiredByDefault: true,
+      shadowboxRuntime: {
+        endpoint: '/api/kiln/shadowbox/run',
+        mode: 'ephemeral_tezos_runtime',
+      },
     },
     paths: {
       '/api/health': {
@@ -74,6 +78,13 @@ export function buildOpenApiSpec(runtimeNetwork: RuntimeNetworkConfig) {
         post: {
           tags: ['workflow'],
           summary: 'Run simulation stage only and issue simulation clearance',
+        },
+      },
+      '/api/kiln/shadowbox/run': {
+        post: {
+          tags: ['workflow'],
+          summary:
+            'Run ephemeral shadowbox runtime stage (temporary origin + entrypoint interactions)',
         },
       },
       '/api/kiln/predeploy/validate': {

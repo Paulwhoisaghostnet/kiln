@@ -29,6 +29,7 @@ Commands:
   workflow --file ./contract.tz [--source-type michelson|smartpy|auto] [--storage 'Unit'] [--scenario default] [--step bert:mint:["10"]]
   audit --file ./contract.tz [--source-type michelson|smartpy|auto] [--scenario default]
   simulate --file ./contract.tz [--source-type michelson|smartpy|auto] [--step bert:mint:["10"]]
+  shadowbox --file ./contract.tz [--source-type michelson|smartpy|auto] [--storage 'Unit'] [--scenario default] [--step bert:mint:["10"]]
   deploy --file ./contract.tz --storage 'Unit' [--wallet A|B] [--clearance clr_xxx] [--auto-clearance]
   bundle --file ./contract.tz --storage 'Unit' [--project 'My Contract Family'] [--source-type michelson|smartpy|auto]
 
@@ -260,6 +261,24 @@ async function run(): Promise<void> {
           body: {
             sourceType: sourceInput.sourceType,
             source: sourceInput.source,
+            scenario: sourceInput.scenario,
+            simulationSteps,
+          },
+        }),
+      );
+      return;
+    }
+    case 'shadowbox': {
+      const sourceInput = await loadSource(flags);
+      const simulationSteps = getFlagValues(flags, 'step').map(parseStep);
+      const initialStorage = getFlag(flags, 'storage');
+      printJson(
+        await apiRequest('/api/kiln/shadowbox/run', {
+          method: 'POST',
+          body: {
+            sourceType: sourceInput.sourceType,
+            source: sourceInput.source,
+            initialStorage: initialStorage || undefined,
             scenario: sourceInput.scenario,
             simulationSteps,
           },

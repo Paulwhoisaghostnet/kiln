@@ -111,6 +111,14 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
               const tezos = services.createTezosService('A', network.id);
               return tezos.validateOrigination(code, initialStorage);
             },
+            runShadowbox: (shadowboxInput) =>
+              services.runShadowbox({
+                ...shadowboxInput,
+                requestId: res.locals.requestId as string | undefined,
+                remoteIp: req.ip,
+              }),
+            shadowboxRequiredForClearance:
+              services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
             clearanceStore: services.clearanceStore,
           },
         );
@@ -124,6 +132,9 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           validatePassed: result.validate.passed,
           auditPassed: result.audit.passed,
           simulationPassed: result.simulation.success,
+          shadowboxPassed: result.shadowbox.passed,
+          shadowboxExecuted: result.shadowbox.executed,
+          shadowboxProvider: result.shadowbox.provider,
           score: result.audit.score,
         });
 
@@ -206,7 +217,9 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           steps: mapSimulationSteps(payload.data.simulationSteps),
         });
         const codeHash = hashContractCode(source.michelson);
-        const clearance = simulation.success
+        const clearance =
+          simulation.success &&
+          !services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE
           ? services.clearanceStore.create({
               codeHash,
               auditPassed: true,
@@ -221,7 +234,84 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           clearance: {
             approved: Boolean(clearance),
             record: clearance,
+            reason:
+              !clearance && services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE
+                ? 'Shadowbox runtime is required for deploy clearance. Use /api/kiln/workflow/run.'
+                : undefined,
           },
+        });
+      } catch (error) {
+        res.status(500).json({ error: asMessage(error) });
+      }
+    },
+  );
+
+  router.post(
+    '/api/kiln/shadowbox/run',
+    services.requireApiToken,
+    services.mutationLimiter,
+    async (req, res) => {
+      const payload = workflowRunPayloadSchema.safeParse(req.body);
+      if (!payload.success) {
+        res.status(400).json({
+          error: validationErrorMessage(payload.error),
+        });
+        return;
+      }
+
+      try {
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM. Shadowbox runtime currently supports Tezos contract flows.`,
+          });
+          return;
+        }
+
+        const source = await materializeContractSource({
+          sourceType: payload.data.sourceType,
+          source: payload.data.source,
+          scenario: payload.data.scenario,
+          compileSmartPy: services.compileSmartPy,
+        });
+        const initialStorage =
+          payload.data.initialStorage?.trim() ||
+          source.compiled?.initialStorage ||
+          'Unit';
+        const injectedCode = injectKilnTokens(source.michelson, services.env);
+        const entrypoints = parseEntrypointsFromMichelson(injectedCode).map(
+          (entry) => entry.name,
+        );
+        const codeHash = hashContractCode(injectedCode);
+        const shadowbox = await services.runShadowbox({
+          sourceType: source.sourceType,
+          michelson: injectedCode,
+          initialStorage,
+          entrypoints,
+          steps: mapSimulationSteps(payload.data.simulationSteps),
+          codeHash,
+          requestId: res.locals.requestId as string | undefined,
+          remoteIp: req.ip,
+        });
+
+        services.activityLogger.log({
+          timestamp: new Date().toISOString(),
+          requestId: res.locals.requestId as string | undefined,
+          event: 'shadowbox_run',
+          networkId: network.id,
+          passed: shadowbox.passed,
+          executed: shadowbox.executed,
+          provider: shadowbox.provider,
+          summary: shadowbox.summary,
+        });
+
+        res.json({
+          success: shadowbox.passed,
+          networkId: network.id,
+          ecosystem: network.ecosystem,
+          sourceType: source.sourceType,
+          codeHash,
+          shadowbox,
         });
       } catch (error) {
         res.status(500).json({ error: asMessage(error) });

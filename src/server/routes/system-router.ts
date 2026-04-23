@@ -57,6 +57,7 @@ export function createSystemRouter(services: ApiAppServices): Router {
       runtime: {
         network: services.runtimeNetwork,
         clearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
+        shadowbox: services.shadowbox,
       },
       sources: {
         supported: ['auto', 'smartpy', 'michelson'],
@@ -68,6 +69,7 @@ export function createSystemRouter(services: ApiAppServices): Router {
         'validate',
         'audit',
         'simulate',
+        'shadowbox_runtime',
         'clearance',
         'deploy',
         'post_deploy_e2e',
@@ -81,6 +83,7 @@ export function createSystemRouter(services: ApiAppServices): Router {
         guidedElements: '/api/kiln/contracts/guided/elements',
         audit: '/api/kiln/audit/run',
         simulate: '/api/kiln/simulate/run',
+        shadowbox: '/api/kiln/shadowbox/run',
         workflow: '/api/kiln/workflow/run',
         deploy: '/api/kiln/upload',
         execute: '/api/kiln/execute',

@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=simple
 User=kiln
 Group=kiln
+SupplementaryGroups=docker
 WorkingDirectory=/opt/platform/repos/shadownet-kiln
 EnvironmentFile=/opt/platform/repos/shadownet-kiln/.env
 # Runtime paths (also echoed in .env.example; systemd is the source of truth
@@ -26,7 +27,7 @@ RestartSec=5
 # repo checkout stays read-only from the service user's perspective so a
 # compromised process can't rewrite deployed artifacts.
 ProtectSystem=strict
-ReadWritePaths=/var/log/kiln /var/lib/kiln
+ReadWritePaths=/var/log/kiln /var/lib/kiln /var/run/docker.sock
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes

@@ -73,10 +73,10 @@ const C = {
   workflowGateTitle: {
     b: 'Workflow Gate',
     e: 'Safety checklist before deploy',
-    tip: 'Think of this as a factory quality line: compile (if SmartPy), shape-check Michelson, static audit, pretend wallet simulation, then a “clearance ticket” you need before the big Deploy button unlocks.',
+    tip: 'Think of this as a factory quality line: compile (if SmartPy), shape-check Michelson, static audit, pretend wallet simulation, shadowbox runtime checks, then a “clearance ticket” you need before the big Deploy button unlocks.',
   },
   workflowGateLine1: {
-    b: 'Deployment is gated by compile, validation, audit, and simulation clearance.',
+    b: 'Deployment is gated by compile, validation, audit, simulation, and shadowbox runtime clearance.',
     e: 'You cannot use the main Deploy button until Kiln has run its checks and given you a green clearance.',
     tip: 'This reduces “oops I pasted garbage Michelson” and catches some foot-guns. It is not a formal security audit of your business logic.',
   },
@@ -128,7 +128,7 @@ const C = {
   runFullWorkflow: {
     b: 'Run Full Workflow',
     e: 'Run every safety check once',
-    tip: 'Compile (if SmartPy), validate Michelson shape, audit, simulate with Bert/Ernie, then mint a clearance ID if all gates pass.',
+    tip: 'Compile (if SmartPy), validate Michelson shape, audit, simulate with Bert/Ernie, run shadowbox runtime checks, then mint a clearance ID if all required gates pass.',
   },
   runWorkflowTests: {
     b: 'Run Workflow Tests',

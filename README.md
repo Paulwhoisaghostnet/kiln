@@ -19,7 +19,7 @@ flows until the user acknowledges risk.
 
 - Michelson token-address injection
 - Pre-deployment contract validation (structure + RPC origination estimate)
-- Staged workflow gate: compile -> validate -> audit -> simulate -> clearance
+- Staged workflow gate: compile -> validate -> audit -> simulate -> shadowbox runtime -> clearance
 - Contract origination on Shadownet or Tezos Mainnet
 - Connected-wallet deployment via Beacon (Temple + Kukai)
 - Dynamic entrypoint execution
@@ -90,7 +90,7 @@ visible but disabled, which makes the dependency chain legible at a glance.
 2. **Build** — write or upload source. The panel swaps between a Michelson
    + SmartPy editor (Tezos) and a Solidity editor backed by the
    `SolidityPanel` (Etherlink) depending on the active ecosystem.
-3. **Validate** — compile → validate → audit → simulate → clearance.
+3. **Validate** — compile → validate → audit → simulate → shadowbox runtime → clearance.
    Results render in `WorkflowResultsPanel` with uniform stats regardless of
    ecosystem. No clearance, no deploy.
 4. **Deploy** — connected-wallet or Bert deploy on Tezos, connected-MetaMask
@@ -131,7 +131,7 @@ npm run dev
 
 ### Testing phases
 
-- `Run Full Workflow`: compiles SmartPy (when needed), validates Michelson shape (`parameter`/`storage`/`code`), parses entrypoints, runs static audit, runs simulated entrypoint activity, and issues deployment clearance when all gates pass.
+- `Run Full Workflow`: compiles SmartPy (when needed), validates Michelson shape (`parameter`/`storage`/`code`), parses entrypoints, runs static audit, runs simulated entrypoint activity, runs optional shadowbox runtime checks, and issues deployment clearance when all required gates pass.
 - `Deploy with Connected Wallet`: deploys from the user’s connected shadownet wallet (with optional burn-placeholder admin replacement).
 - `Deploy with Bert`: deploys via server signer (`wallet A`) and enforces workflow clearance by default.
 - `Run Bert + Ernie E2E`: executes post-deploy calls from puppet wallets controlled by the suite.
@@ -261,9 +261,10 @@ Primary machine endpoints:
 - `GET /api/kiln/capabilities` (runtime/stage/export metadata)
 - `GET /api/kiln/openapi.json` (OpenAPI-style endpoint map)
 - `GET /api/networks` (network catalog + capability matrix; `{ active, networks }`)
-- `POST /api/kiln/workflow/run` (compile/validate/audit/simulate/clearance — ecosystem-aware)
+- `POST /api/kiln/workflow/run` (compile/validate/audit/simulate/shadowbox/clearance — ecosystem-aware)
 - `POST /api/kiln/audit/run`
 - `POST /api/kiln/simulate/run`
+- `POST /api/kiln/shadowbox/run` (ephemeral runtime stage only)
 - `POST /api/kiln/upload` (Tezos deploy; clearance + `puppetWallets` enforced)
 - `GET /api/kiln/activity/recent?limit=100` (ops/audit tail)
 - `GET /api/kiln/reference/contracts` (reference corpus introspection)
@@ -281,6 +282,39 @@ EVM-only endpoints (Etherlink testnet + mainnet):
 
 Every route accepts `networkId` in the body (POST) or query string (GET) and
 falls back to `KILN_NETWORK` from the env if omitted.
+
+### Shadowbox command provider contract
+
+When `KILN_SHADOWBOX_PROVIDER=command`, Kiln executes:
+
+```bash
+$KILN_SHADOWBOX_COMMAND <input.json> <output.json>
+```
+
+Recommended Hetzner setting (real ephemeral runtime):
+
+```bash
+KILN_SHADOWBOX_ENABLED=true
+KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE=true
+KILN_SHADOWBOX_PROVIDER=command
+KILN_SHADOWBOX_COMMAND=bash /opt/platform/repos/shadownet-kiln/scripts/shadowbox/run-flextesa.sh
+```
+
+The command must write `output.json` with:
+- `passed` (boolean)
+- `contractAddress` (optional string)
+- `warnings` (optional string[])
+- `steps` (optional array of `{ label, wallet, entrypoint, status, note, operationHash?, level? }`)
+
+This allows a Hetzner-hosted Flextesa/Octez runner to plug in without changing
+the API surface.
+
+Built-in command runner:
+- `scripts/shadowbox/run-flextesa.sh`
+- Uses Docker image `oxheadalpha/flextesa:latest` by default
+- One disposable container per job, auto-cleaned after completion
+- Tunables: `KILN_SHADOWBOX_FLEXTESA_IMAGE`, `KILN_SHADOWBOX_FLEXTESA_BOX_SCRIPT`,
+  `KILN_SHADOWBOX_FLEXTESA_RPC_WAIT_SECONDS`, `KILN_SHADOWBOX_FLEXTESA_START_TIMEOUT_SECONDS`
 
 ## CLI (Human + Agent Friendly)
 
@@ -355,10 +389,11 @@ To avoid monolithic drift, concerns are now split:
 - `src/lib/networks.ts`: network registry + runtime resolution (active + planned networks)
 - `src/lib/guided-contracts.ts`: guided contract-template generation logic
 - `src/components/GuidedContractBuilder.tsx`: layman-first contract creation UI
-- `src/lib/workflow-runner.ts`: compile/validate/audit/simulate orchestration + clearance
+- `src/lib/workflow-runner.ts`: compile/validate/audit/simulate/shadowbox orchestration + clearance
 - `src/lib/reference-guided-elements.ts`: reference corpus -> guided element catalog
 - `src/lib/contract-audit.ts`: static Michelson quality and risk findings
 - `src/lib/contract-simulation.ts`: deterministic predeploy simulation and clearance records
+- `src/lib/shadowbox-runtime.ts`: ephemeral runtime runner + provider limits
 - `src/lib/activity-logger.ts`: request/workflow/audit activity logging and log-tail support
 - `src/lib/reference-contracts.ts`: reference corpus indexing + entrypoint extraction
 - `src/lib/bundle-export.ts`: mainnet-readiness artifact packaging + zip export

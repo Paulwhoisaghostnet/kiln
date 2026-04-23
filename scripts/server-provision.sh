@@ -40,10 +40,10 @@ SERVICE_FILE_DST="/etc/systemd/system/kiln.service"
 
 log() { printf '[kiln-provision] %s\n' "$*"; }
 
-log "Ensuring system packages (Node 22, python3-venv, zip, jq, git, curl)..."
+log "Ensuring system packages (Node 22, python3-venv, zip, jq, git, curl, docker)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y curl git zip jq python3 python3-venv python3-pip ca-certificates gnupg
+apt-get install -y curl git zip jq python3 python3-venv python3-pip ca-certificates gnupg docker.io
 
 if ! command -v node >/dev/null 2>&1 || ! node --version | grep -qE '^v22\.'; then
   log "Installing Node.js 22.x from nodesource..."
@@ -57,6 +57,15 @@ log "Python version: $(python3 --version)"
 log "Ensuring service user and directories..."
 if ! id -u "${SERVICE_USER}" >/dev/null 2>&1; then
   useradd --system --home-dir "${REPO_ROOT}" --shell /usr/sbin/nologin "${SERVICE_USER}"
+fi
+
+log "Ensuring Docker daemon + access for ${SERVICE_USER}..."
+systemctl enable docker >/dev/null 2>&1 || true
+systemctl start docker >/dev/null 2>&1 || true
+if getent group docker >/dev/null 2>&1; then
+  usermod -aG docker "${SERVICE_USER}" || true
+else
+  log "WARN: docker group missing; shadowbox command provider may fail."
 fi
 
 mkdir -p "${REPO_ROOT%/*}" "${VENV_ROOT%/*}" "${LOG_ROOT}" "${DATA_ROOT}/exports" "${DATA_ROOT}/reference"

@@ -21,6 +21,11 @@ import {
   type RuntimeNetworkConfig,
 } from '../lib/networks.js';
 import {
+  createShadowboxRuntimeRunner,
+  type ShadowboxRunInput,
+  type ShadowboxRunResult,
+} from '../lib/shadowbox-runtime.js';
+import {
   compileSmartPySource,
   type SmartPyCompilationResult,
 } from '../lib/smartpy-compiler.js';
@@ -47,6 +52,7 @@ export interface ApiAppOptions {
   runWorkflow?: (
     payload: Parameters<typeof runContractWorkflow>[0],
   ) => Promise<WorkflowRunResult>;
+  runShadowbox?: (payload: ShadowboxRunInput) => Promise<ShadowboxRunResult>;
   exportBundle?: (
     payload: BundleExportInput,
   ) => Promise<BundleExportResult>;
@@ -73,6 +79,19 @@ export interface ApiAppServices {
   runWorkflow: (
     payload: Parameters<typeof runContractWorkflow>[0],
   ) => Promise<WorkflowRunResult>;
+  runShadowbox: (payload: ShadowboxRunInput) => Promise<ShadowboxRunResult>;
+  shadowbox: {
+    enabled: boolean;
+    requiredForClearance: boolean;
+    provider: 'disabled' | 'mock' | 'command';
+    limits: {
+      timeoutMs: number;
+      maxActiveJobs: number;
+      maxActiveJobsPerIp: number;
+      maxSourceBytes: number;
+      maxSteps: number;
+    };
+  };
   exportBundle: (payload: BundleExportInput) => Promise<BundleExportResult>;
 }
 
@@ -100,6 +119,20 @@ export function createApiAppServices(
   const compileSmartPy = options.compileSmartPy ?? compileSmartPySource;
   const clearanceStore =
     options.clearanceStore ?? new DeploymentClearanceStore();
+  const shadowboxRunner = createShadowboxRuntimeRunner({
+    enabled: env.KILN_SHADOWBOX_ENABLED,
+    requiredForClearance: env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
+    provider: env.KILN_SHADOWBOX_PROVIDER,
+    command: env.KILN_SHADOWBOX_COMMAND,
+    timeoutMs: env.KILN_SHADOWBOX_TIMEOUT_MS,
+    maxActiveJobs: env.KILN_SHADOWBOX_MAX_ACTIVE,
+    maxActiveJobsPerIp: env.KILN_SHADOWBOX_MAX_ACTIVE_PER_IP,
+    maxSourceBytes: env.KILN_SHADOWBOX_MAX_SOURCE_BYTES,
+    maxSteps: env.KILN_SHADOWBOX_MAX_STEPS,
+    workDir: env.KILN_SHADOWBOX_WORKDIR,
+  });
+  const runShadowbox =
+    options.runShadowbox ?? ((payload: ShadowboxRunInput) => shadowboxRunner.run(payload));
   const runWorkflow =
     options.runWorkflow ??
     ((payload) =>
@@ -111,6 +144,8 @@ export function createApiAppServices(
           const tezosService = createTezosService('A', env.KILN_NETWORK);
           return tezosService.validateOrigination(code, initialStorage);
         },
+        runShadowbox,
+        shadowboxRequiredForClearance: env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
         clearanceStore,
       }));
   const exportBundle = options.exportBundle ?? createMainnetReadyBundle;
@@ -155,6 +190,8 @@ export function createApiAppServices(
     compileSmartPy,
     clearanceStore,
     runWorkflow,
+    runShadowbox,
+    shadowbox: shadowboxRunner.describe(),
     exportBundle,
   };
 }

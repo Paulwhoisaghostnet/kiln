@@ -42,6 +42,7 @@ export interface DeploymentClearanceRecord {
   expiresAt: string;
   auditPassed: boolean;
   simulationPassed: boolean;
+  shadowboxPassed?: boolean;
 }
 
 function asNumber(value: unknown): number | null {
@@ -350,6 +351,7 @@ export class DeploymentClearanceStore {
     codeHash: string;
     auditPassed: boolean;
     simulationPassed: boolean;
+    shadowboxPassed?: boolean;
   }): DeploymentClearanceRecord {
     const id = `clr_${randomUUID()}`;
     const createdAtDate = new Date();
@@ -361,6 +363,7 @@ export class DeploymentClearanceStore {
       expiresAt: expiresAtDate.toISOString(),
       auditPassed: input.auditPassed,
       simulationPassed: input.simulationPassed,
+      shadowboxPassed: input.shadowboxPassed,
     };
     this.records.set(id, record);
     this.gc();
@@ -383,7 +386,11 @@ export class DeploymentClearanceStore {
     if (record.codeHash !== codeHash) {
       return { ok: false, reason: 'Clearance does not match current contract code hash.' };
     }
-    if (!record.auditPassed || !record.simulationPassed) {
+    if (
+      !record.auditPassed ||
+      !record.simulationPassed ||
+      record.shadowboxPassed === false
+    ) {
       return { ok: false, reason: 'Clearance record is not fully approved.' };
     }
     return { ok: true, record };

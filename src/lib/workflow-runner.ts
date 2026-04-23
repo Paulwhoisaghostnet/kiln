@@ -7,6 +7,7 @@ import {
   type SimulationStepInput,
 } from './contract-simulation.js';
 import { parseEntrypointsFromMichelson } from './michelson-parser.js';
+import type { ShadowboxRunResult } from './shadowbox-runtime.js';
 import type { SmartPyCompilationResult } from './smartpy-compiler.js';
 
 export type WorkflowSourceType = 'auto' | 'michelson' | 'smartpy';
@@ -45,6 +46,7 @@ export interface WorkflowRunResult {
   };
   audit: ReturnType<typeof auditMichelsonContract>;
   simulation: ReturnType<typeof runContractSimulation>;
+  shadowbox: ShadowboxRunResult;
   clearance: {
     approved: boolean;
     record?: DeploymentClearanceRecord;
@@ -93,6 +95,17 @@ export async function runContractWorkflow(
       suggestedFeeMutez: number;
       minimalFeeMutez: number;
     }>;
+    runShadowbox?: (input: {
+      sourceType: 'michelson' | 'smartpy';
+      michelson: string;
+      initialStorage: string;
+      entrypoints: string[];
+      steps: SimulationStepInput[];
+      codeHash: string;
+      requestId?: string;
+      remoteIp?: string;
+    }) => Promise<ShadowboxRunResult>;
+    shadowboxRequiredForClearance?: boolean;
     clearanceStore: DeploymentClearanceStore;
   },
 ): Promise<WorkflowRunResult> {
@@ -154,14 +167,50 @@ export async function runContractWorkflow(
     steps: input.simulationSteps,
   });
   const codeHash = hashContractCode(injectedCode);
+  const shadowbox =
+    deps.runShadowbox === undefined
+      ? {
+          enabled: false,
+          requiredForClearance: Boolean(deps.shadowboxRequiredForClearance),
+          provider: 'disabled' as const,
+          executed: false,
+          passed: true,
+          jobId: null,
+          reason: 'Shadowbox runtime not configured.',
+          summary: {
+            total: 0,
+            passed: 0,
+            failed: 0,
+          },
+          steps: [],
+          warnings: [],
+        }
+      : await deps.runShadowbox({
+          sourceType: effectiveSourceType,
+          michelson: injectedCode,
+          initialStorage,
+          entrypoints,
+          steps: input.simulationSteps,
+          codeHash,
+        });
+  const shadowboxGatePassed = deps.shadowboxRequiredForClearance
+    ? shadowbox.passed
+    : true;
+  if (deps.shadowboxRequiredForClearance && !shadowbox.passed) {
+    warnings.push(
+      `Shadowbox runtime gate failed: ${shadowbox.reason ?? 'runtime execution did not pass.'}`,
+    );
+  }
 
   const validatePassed = issues.length === 0;
-  const approved = validatePassed && audit.passed && simulation.success;
+  const approved =
+    validatePassed && audit.passed && simulation.success && shadowboxGatePassed;
   const clearanceRecord = approved
     ? deps.clearanceStore.create({
         codeHash,
         auditPassed: audit.passed,
         simulationPassed: simulation.success,
+        shadowboxPassed: shadowbox.passed,
       })
     : undefined;
 
@@ -186,6 +235,7 @@ export async function runContractWorkflow(
     },
     audit,
     simulation,
+    shadowbox,
     clearance: {
       approved,
       record: clearanceRecord,

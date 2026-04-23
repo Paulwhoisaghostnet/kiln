@@ -1,4 +1,11 @@
-import { AlertTriangle, CheckCircle2, Shield, TrendingUp, XCircle } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FlaskConical,
+  Shield,
+  TrendingUp,
+  XCircle,
+} from 'lucide-react';
 
 export interface WorkflowFinding {
   id: string;
@@ -33,6 +40,15 @@ export interface WorkflowSummary {
   };
   simulation?: {
     success: boolean;
+    summary: { total: number; passed: number; failed: number };
+    warnings: string[];
+  };
+  shadowbox?: {
+    enabled: boolean;
+    executed: boolean;
+    passed: boolean;
+    provider: 'disabled' | 'mock' | 'command';
+    reason?: string;
     summary: { total: number; passed: number; failed: number };
     warnings: string[];
   };
@@ -105,7 +121,7 @@ export function WorkflowResultsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatBlock
           label="Validation"
           value={summary.validate.passed ? 'Passed' : 'Failed'}
@@ -129,6 +145,25 @@ export function WorkflowResultsPanel({
             hint="Puppet-wallet scenario coverage."
           />
         ) : null}
+        {summary.shadowbox?.enabled ? (
+          <StatBlock
+            label="Shadowbox"
+            value={
+              summary.shadowbox.executed
+                ? `${summary.shadowbox.summary.passed}/${summary.shadowbox.summary.total}`
+                : 'Not run'
+            }
+            tone={
+              summary.shadowbox.executed
+                ? summary.shadowbox.passed
+                  ? 'success'
+                  : 'error'
+                : 'warning'
+            }
+            icon={<FlaskConical className="w-3.5 h-3.5" />}
+            hint={`Ephemeral runtime (${summary.shadowbox.provider})`}
+          />
+        ) : null}
         <StatBlock
           label="Clearance"
           value={summary.clearance.approved ? 'Granted' : 'Withheld'}
@@ -147,6 +182,20 @@ export function WorkflowResultsPanel({
           <span className="opacity-60">
             expires {new Date(summary.clearance.record.expiresAt).toLocaleString()}
           </span>
+        </div>
+      ) : null}
+
+      {summary.shadowbox?.enabled && summary.shadowbox.warnings.length > 0 ? (
+        <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 space-y-1">
+          <div className="text-xs font-semibold text-warning flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Shadowbox warnings ({summary.shadowbox.warnings.length})
+          </div>
+          <ul className="text-xs list-disc ml-5 space-y-0.5">
+            {summary.shadowbox.warnings.map((warning, idx) => (
+              <li key={idx}>{warning}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
 

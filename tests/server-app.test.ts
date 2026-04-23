@@ -50,6 +50,16 @@ function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
     API_RATE_LIMIT_MAX: 100,
     API_JSON_LIMIT: '10mb',
     CORS_ORIGINS: undefined,
+    KILN_SHADOWBOX_ENABLED: false,
+    KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE: false,
+    KILN_SHADOWBOX_PROVIDER: 'mock',
+    KILN_SHADOWBOX_COMMAND: undefined,
+    KILN_SHADOWBOX_TIMEOUT_MS: 90_000,
+    KILN_SHADOWBOX_MAX_ACTIVE: 2,
+    KILN_SHADOWBOX_MAX_ACTIVE_PER_IP: 1,
+    KILN_SHADOWBOX_MAX_SOURCE_BYTES: 250_000,
+    KILN_SHADOWBOX_MAX_STEPS: 24,
+    KILN_SHADOWBOX_WORKDIR: undefined,
     KILN_REFERENCE_MAX_FILES: 200,
     KILN_REFERENCE_MAX_BYTES: 200 * 1024 * 1024,
     ...overrides,
@@ -224,8 +234,14 @@ describe('createApiApp', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.runtime.network.id).toBe('tezos-shadownet');
     expect(response.body.workflowStages).toEqual(
-      expect.arrayContaining(['compile_if_needed', 'simulate', 'deploy']),
+      expect.arrayContaining([
+        'compile_if_needed',
+        'simulate',
+        'shadowbox_runtime',
+        'deploy',
+      ]),
     );
+    expect(response.body.entrypoints.shadowbox).toBe('/api/kiln/shadowbox/run');
   });
 
   it('serves OpenAPI metadata for agent/tool integrations', async () => {
@@ -240,6 +256,7 @@ describe('createApiApp', () => {
     expect(response.body.openapi).toBe('3.1.0');
     expect(response.body.paths['/api/kiln/workflow/run']).toBeDefined();
     expect(response.body.paths['/api/kiln/upload']).toBeDefined();
+    expect(response.body.paths['/api/kiln/shadowbox/run']).toBeDefined();
   });
 
   it('lists reference contracts with discovered entrypoints', async () => {
@@ -424,6 +441,59 @@ describe('createApiApp', () => {
     expect(response.body.clearance.record.id).toMatch(/^clr_/);
   });
 
+  it('withholds workflow clearance when required shadowbox gate fails', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        KILN_SHADOWBOX_ENABLED: true,
+        KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE: true,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+      runShadowbox: async () => ({
+        enabled: true,
+        requiredForClearance: true,
+        provider: 'command',
+        executed: true,
+        passed: false,
+        jobId: 'sbox_forced_fail',
+        reason: 'Entrypoint mint reverted in ephemeral runtime.',
+        summary: { total: 1, passed: 0, failed: 1 },
+        steps: [
+          {
+            label: 'Mint should fail',
+            wallet: 'bert',
+            entrypoint: 'mint',
+            status: 'failed',
+            note: 'FAILWITH: paused',
+          },
+        ],
+        warnings: [],
+      }),
+    });
+
+    const response = await request(app).post('/api/kiln/workflow/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      initialStorage: 'Unit',
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['5'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.shadowbox.passed).toBe(false);
+    expect(response.body.clearance.approved).toBe(false);
+    expect(response.body.validate.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Shadowbox runtime gate failed'),
+      ]),
+    );
+  });
+
   it('compiles SmartPy source during workflow execution', async () => {
     const app = createApiApp({
       env: baseEnv(),
@@ -492,6 +562,93 @@ describe('createApiApp', () => {
     expect(response.body.simulation.success).toBe(true);
     expect(response.body.clearance.approved).toBe(true);
     expect(response.body.clearance.record.id).toMatch(/^clr_/);
+  });
+
+  it('withholds standalone simulation clearance when shadowbox is required', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE: true,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/simulate/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['10'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.simulation.success).toBe(true);
+    expect(response.body.clearance.approved).toBe(false);
+    expect(response.body.clearance.reason).toContain('Shadowbox runtime is required');
+  });
+
+  it('runs standalone shadowbox runtime endpoint', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        KILN_SHADOWBOX_ENABLED: true,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+      runShadowbox: async () => ({
+        enabled: true,
+        requiredForClearance: false,
+        provider: 'command',
+        executed: true,
+        passed: true,
+        jobId: 'sbox_123',
+        contractAddress: contractAddress,
+        startedAt: '2026-04-22T00:00:00.000Z',
+        endedAt: '2026-04-22T00:00:01.000Z',
+        durationMs: 1000,
+        summary: { total: 2, passed: 2, failed: 0 },
+        steps: [
+          {
+            label: 'Originate',
+            wallet: 'bert',
+            entrypoint: 'originate',
+            status: 'passed',
+            note: 'Contract originated.',
+            operationHash: 'opOriginate',
+          },
+          {
+            label: 'Mint',
+            wallet: 'bert',
+            entrypoint: 'mint',
+            status: 'passed',
+            note: 'Minted in runtime.',
+            operationHash: 'opMint',
+          },
+        ],
+        warnings: [],
+      }),
+    });
+
+    const response = await request(app).post('/api/kiln/shadowbox/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      initialStorage: 'Unit',
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['10'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.codeHash).toMatch(/[a-f0-9]{64}/);
+    expect(response.body.shadowbox.jobId).toBe('sbox_123');
+    expect(response.body.shadowbox.passed).toBe(true);
   });
 
   it('blocks deployment when workflow clearance is required and missing', async () => {

@@ -24,6 +24,7 @@ SERVICE_USER="kiln"
 DEPLOY_BRANCH="${KILN_DEPLOY_BRANCH:-main}"
 REFERENCE_ROOT="${KILN_REFERENCE_ROOT:-/var/lib/kiln/reference}"
 HEALTHCHECK_URL="${KILN_HEALTHCHECK_URL:-http://127.0.0.1:3001/api/health}"
+ENV_FILE="${REPO_ROOT}/.env"
 
 log() { printf '[kiln-deploy] %s\n' "$*"; }
 
@@ -42,6 +43,25 @@ run_as_kiln() {
   sudo -u "${SERVICE_USER}" --preserve-env=PATH bash -lc "$1"
 }
 
+read_env_value() {
+  local key="$1"
+  awk -F= -v k="$key" '
+    $0 ~ "^[[:space:]]*#" { next }
+    $1 == k {
+      value=$0
+      sub("^[^=]*=", "", value)
+      gsub(/\r$/, "", value)
+      print value
+      exit
+    }
+  ' "${ENV_FILE}"
+}
+
+is_truthy() {
+  local raw="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | xargs)"
+  [[ "${raw}" == "1" || "${raw}" == "true" || "${raw}" == "yes" || "${raw}" == "on" ]]
+}
+
 log "Fetching latest on ${DEPLOY_BRANCH}..."
 run_as_kiln "cd '${REPO_ROOT}' && git fetch origin && git reset --hard 'origin/${DEPLOY_BRANCH}'"
 
@@ -54,6 +74,18 @@ run_as_kiln "cd '${REPO_ROOT}' && npm run build"
 
 log "Pruning dev dependencies for production runtime..."
 run_as_kiln "cd '${REPO_ROOT}' && npm prune --omit=dev"
+
+shadowbox_enabled="$(read_env_value KILN_SHADOWBOX_ENABLED)"
+shadowbox_provider="$(read_env_value KILN_SHADOWBOX_PROVIDER)"
+shadowbox_command="$(read_env_value KILN_SHADOWBOX_COMMAND)"
+if is_truthy "${shadowbox_enabled}" && [[ "${shadowbox_provider}" == "command" ]]; then
+  log "Shadowbox command-provider enabled; validating runtime prerequisites..."
+  if [[ -z "${shadowbox_command}" ]]; then
+    echo "ERROR: KILN_SHADOWBOX_COMMAND is required when provider=command." >&2
+    exit 1
+  fi
+  run_as_kiln "docker version >/dev/null"
+fi
 
 if [[ ! -f "${REFERENCE_ROOT}/INDEX.json" ]]; then
   log "Reference corpus missing — bootstrapping from mainnet RPC/TzKT..."

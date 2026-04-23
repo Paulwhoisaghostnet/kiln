@@ -10,6 +10,7 @@ const networkSchema = z.enum([
   'etherlink-testnet',
   'etherlink-mainnet',
 ]);
+const shadowboxProviderSchema = z.enum(['mock', 'command']);
 const optionalNonEmptyString = z.preprocess(
   (value) => {
     if (typeof value === 'string' && value.trim() === '') {
@@ -61,6 +62,16 @@ const envSchema = z.object({
   API_JSON_LIMIT: z.string().trim().min(1).default('10mb'),
   CORS_ORIGINS: optionalNonEmptyString,
   KILN_REQUIRE_SIM_CLEARANCE: envBoolean.default(true),
+  KILN_SHADOWBOX_ENABLED: envBoolean.default(false),
+  KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE: envBoolean.default(false),
+  KILN_SHADOWBOX_PROVIDER: shadowboxProviderSchema.default('mock'),
+  KILN_SHADOWBOX_COMMAND: optionalNonEmptyString,
+  KILN_SHADOWBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
+  KILN_SHADOWBOX_MAX_ACTIVE: z.coerce.number().int().positive().default(2),
+  KILN_SHADOWBOX_MAX_ACTIVE_PER_IP: z.coerce.number().int().positive().default(1),
+  KILN_SHADOWBOX_MAX_SOURCE_BYTES: z.coerce.number().int().positive().default(250_000),
+  KILN_SHADOWBOX_MAX_STEPS: z.coerce.number().int().positive().default(24),
+  KILN_SHADOWBOX_WORKDIR: optionalNonEmptyString,
   KILN_ACTIVITY_LOG_PATH: optionalNonEmptyString,
   // Native hosting paths (Phase 1 of Hetzner migration). All optional so dev
   // retains repo-relative defaults; production systemd unit pins absolute paths.
