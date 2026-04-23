@@ -458,7 +458,6 @@ def main(argv: list[str]) -> int:
                         arg_expr,
                         "--burn-cap",
                         "2",
-                        "--force",
                     ],
                     timeout=75,
                 )
