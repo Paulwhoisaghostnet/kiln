@@ -108,7 +108,7 @@ def wait_for_rpc(port: int, timeout_seconds: int) -> bool:
     return False
 
 
-def wait_for_client_protocol(
+def wait_for_client_operations(
     config: RuntimeConfig,
     container_name: str,
     timeout_seconds: int,
@@ -116,21 +116,21 @@ def wait_for_client_protocol(
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         try:
-            probe = docker_exec(
+            docker_exec(
                 config,
                 container_name,
                 [
                     "octez-client",
-                    "-E",
-                    "http://127.0.0.1:20000",
-                    "rpc",
+                    "-M",
+                    "client",
                     "get",
-                    "/chains/main/blocks/head/protocols",
+                    "balance",
+                    "for",
+                    "alice",
                 ],
                 timeout=10,
             )
-            if probe.stdout.strip():
-                return True
+            return True
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             pass
         time.sleep(1)
@@ -342,8 +342,8 @@ def main(argv: list[str]) -> int:
             write_output(output_path, runner_output)
             return 0
 
-        if not wait_for_client_protocol(config, container_name, config.rpc_wait_seconds):
-            warnings.append("Flextesa client protocol RPC did not become ready before timeout.")
+        if not wait_for_client_operations(config, container_name, config.rpc_wait_seconds):
+            warnings.append("Flextesa client operation commands did not become ready before timeout.")
             write_output(output_path, runner_output)
             return 0
 
@@ -365,8 +365,6 @@ def main(argv: list[str]) -> int:
                 container_name,
                 [
                     "octez-client",
-                    "-E",
-                    "http://127.0.0.1:20000",
                     "-M",
                     "client",
                     "originate",
@@ -446,8 +444,6 @@ def main(argv: list[str]) -> int:
                     container_name,
                     [
                         "octez-client",
-                        "-E",
-                        "http://127.0.0.1:20000",
                         "-M",
                         "client",
                         "transfer",
