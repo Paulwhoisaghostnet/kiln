@@ -102,7 +102,7 @@ def wait_for_rpc(port: int, timeout_seconds: int) -> bool:
             with urlopen(url, timeout=2) as response:
                 if response.status == 200:
                     return True
-        except (URLError, TimeoutError):
+        except (URLError, TimeoutError, OSError):
             pass
         time.sleep(1)
     return False
