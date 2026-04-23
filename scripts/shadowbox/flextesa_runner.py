@@ -119,7 +119,14 @@ def wait_for_client_protocol(
             probe = docker_exec(
                 config,
                 container_name,
-                ["octez-client", "rpc", "get", "/chains/main/blocks/head/protocols"],
+                [
+                    "octez-client",
+                    "-E",
+                    "http://127.0.0.1:20000",
+                    "rpc",
+                    "get",
+                    "/chains/main/blocks/head/protocols",
+                ],
                 timeout=10,
             )
             if probe.stdout.strip():
@@ -358,6 +365,8 @@ def main(argv: list[str]) -> int:
                 container_name,
                 [
                     "octez-client",
+                    "-E",
+                    "http://127.0.0.1:20000",
                     "-M",
                     "client",
                     "originate",
@@ -437,6 +446,8 @@ def main(argv: list[str]) -> int:
                     container_name,
                     [
                         "octez-client",
+                        "-E",
+                        "http://127.0.0.1:20000",
                         "-M",
                         "client",
                         "transfer",
