@@ -172,11 +172,7 @@ function buildMichelsonStub(
 
   const code = `parameter ${parameter};
 storage ${storage};
-code {
-  CDR;
-  NIL operation;
-  PAIR
-};`;
+code { CDR; NIL operation; PAIR };`;
 
   return {
     code,

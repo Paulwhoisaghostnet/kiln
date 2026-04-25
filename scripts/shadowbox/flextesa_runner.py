@@ -289,6 +289,18 @@ def write_output(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def flatten_michelson_source(source: str) -> str:
+    tokens: list[str] = []
+    for line in source.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            continue
+        tokens.append(stripped)
+    return " ".join(tokens)
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 3:
         print("Usage: flextesa_runner.py <input.json> <output.json>", file=sys.stderr)
@@ -359,6 +371,7 @@ def main(argv: list[str]) -> int:
 
         run([config.docker_bin, "cp", str(tmp_file), f"{container_name}:/tmp/shadowbox-contract.tz"], timeout=15)
 
+        contract_source = str(payload.get("michelson", ""))
         try:
             originate = docker_exec(
                 config,
@@ -386,16 +399,82 @@ def main(argv: list[str]) -> int:
             )
         except subprocess.CalledProcessError as error:
             error_text = f"{error.stdout}\n{error.stderr}".strip()
-            warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
-            if (
-                "misaligned expression" in error_text.lower()
-                and "UNPAIR;" in str(payload.get("michelson", ""))
-            ):
-                warnings.append(
-                    "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is not accepted by this parser. Use `CDR; NIL operation; PAIR`.",
-                )
-            write_output(output_path, runner_output)
-            return 0
+            lower_error = error_text.lower()
+            if "misaligned expression" in lower_error:
+                flattened = flatten_michelson_source(contract_source)
+                if flattened and flattened != contract_source:
+                    try:
+                        if tmp_file is None:
+                            raise RuntimeError("temporary contract path unavailable")
+                        tmp_file.write_text(flattened, encoding="utf-8")
+                        run(
+                            [
+                                config.docker_bin,
+                                "cp",
+                                str(tmp_file),
+                                f"{container_name}:/tmp/shadowbox-contract.tz",
+                            ],
+                            timeout=15,
+                        )
+                        originate = docker_exec(
+                            config,
+                            container_name,
+                            [
+                                "octez-client",
+                                "-M",
+                                "client",
+                                "originate",
+                                "contract",
+                                "shadowbox",
+                                "transferring",
+                                "0",
+                                "from",
+                                "alice",
+                                "running",
+                                "/tmp/shadowbox-contract.tz",
+                                "--init",
+                                str(payload.get("initialStorage", "Unit")),
+                                "--burn-cap",
+                                "10",
+                                "--force",
+                            ],
+                            timeout=75,
+                        )
+                        warnings.append(
+                            "Shadowbox retried origination with normalized Michelson formatting.",
+                        )
+                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as retry_error:
+                        retry_text = (
+                            f"{getattr(retry_error, 'stdout', '')}\n{getattr(retry_error, 'stderr', '')}"
+                        ).strip()
+                        warnings.append(
+                            f"Origination failed: {error_text or 'Unknown error.'}",
+                        )
+                        warnings.append(
+                            f"Retry after formatting normalization failed: {retry_text or 'Unknown error.'}",
+                        )
+                        if "UNPAIR;" in contract_source:
+                            warnings.append(
+                                "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is ill-typed for pair-based storage. Use `CDR; NIL operation; PAIR`.",
+                            )
+                        write_output(output_path, runner_output)
+                        return 0
+                else:
+                    warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
+                    if "UNPAIR;" in contract_source:
+                        warnings.append(
+                            "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is ill-typed for pair-based storage. Use `CDR; NIL operation; PAIR`.",
+                        )
+                    write_output(output_path, runner_output)
+                    return 0
+            else:
+                warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
+                if "UNPAIR;" in contract_source:
+                    warnings.append(
+                        "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is ill-typed for pair-based storage. Use `CDR; NIL operation; PAIR`.",
+                    )
+                write_output(output_path, runner_output)
+                return 0
         except subprocess.TimeoutExpired:
             warnings.append("Origination timed out in shadowbox runtime.")
             write_output(output_path, runner_output)
