@@ -173,9 +173,7 @@ function buildMichelsonStub(
   const code = `parameter ${parameter};
 storage ${storage};
 code {
-  UNPAIR;
-  SWAP;
-  DROP;
+  CDR;
   NIL operation;
   PAIR
 };`;

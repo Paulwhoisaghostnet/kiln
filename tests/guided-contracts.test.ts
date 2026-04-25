@@ -42,6 +42,8 @@ describe('buildGuidedContractDraft', () => {
     expect(draft.code).toContain('parameter');
     expect(draft.code).toContain('%list_item');
     expect(draft.code).toContain('%buy_item');
+    expect(draft.code).toContain('code {\n  CDR;');
+    expect(draft.code).not.toContain('UNPAIR;');
     expect(draft.initialStorage).toContain('350');
     expect(draft.warnings[0]).toContain('pipeline testing only');
   });
@@ -87,6 +89,8 @@ describe('buildGuidedContractDraft', () => {
     expect(draft.entrypoints).toEqual(['transfer', 'balance_of']);
     expect(draft.code).toContain('%transfer');
     expect(draft.code).toContain('%balance_of');
+    expect(draft.code).toContain('code {\n  CDR;');
+    expect(draft.code).not.toContain('UNPAIR;');
     expect(draft.initialStorage).toContain('tz1burnburnburnburnburnburnburjAYjjX');
   });
 

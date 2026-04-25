@@ -387,6 +387,13 @@ def main(argv: list[str]) -> int:
         except subprocess.CalledProcessError as error:
             error_text = f"{error.stdout}\n{error.stderr}".strip()
             warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
+            if (
+                "misaligned expression" in error_text.lower()
+                and "UNPAIR;" in str(payload.get("michelson", ""))
+            ):
+                warnings.append(
+                    "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is not accepted by this parser. Use `CDR; NIL operation; PAIR`.",
+                )
             write_output(output_path, runner_output)
             return 0
         except subprocess.TimeoutExpired:

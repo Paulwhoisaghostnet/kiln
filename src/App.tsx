@@ -1199,7 +1199,10 @@ export default function App() {
       />
 
       {/* Persistent header pill/switcher row is embedded in <Header />. */}
-      <Spacer requestNetworkChange={requestNetworkChange} />
+      <Spacer
+        terminalOpen={terminalOpen}
+        requestNetworkChange={requestNetworkChange}
+      />
     </div>
   );
 }
@@ -1209,9 +1212,20 @@ function isTabKey(value: string): value is TabKey {
 }
 
 /** Bottom spacer so the terminal dock never covers the tab nav. */
-function Spacer({ requestNetworkChange }: { requestNetworkChange: (id: never) => void }) {
+function Spacer({
+  terminalOpen,
+  requestNetworkChange,
+}: {
+  terminalOpen: boolean;
+  requestNetworkChange: (id: never) => void;
+}) {
   void requestNetworkChange;
-  return <div className="h-24" aria-hidden />;
+  return (
+    <div
+      className={terminalOpen ? 'h-72 md:h-64' : 'h-16'}
+      aria-hidden
+    />
+  );
 }
 
 function Header({
