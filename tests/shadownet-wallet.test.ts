@@ -200,6 +200,7 @@ describe('shadownet-wallet', () => {
     expect(connected).toEqual({
       address: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
       networkName: 'shadownet',
+      networkId: 'tezos-shadownet',
       rpcUrl: 'https://rpc.shadownet.teztnets.com',
     });
     expect(mocks.state.open).toHaveBeenCalledWith(
@@ -239,7 +240,7 @@ describe('shadownet-wallet', () => {
     const walletModule = await import('../src/lib/shadownet-wallet.js');
 
     await expect(walletModule.connectShadownetWallet('temple')).rejects.toThrow(
-      /Chain mismatch detected/,
+      /Chain mismatch: expected NetXsqzbfFenSTS \(Tezos Shadownet\), got NetWrongChain\./,
     );
   });
 

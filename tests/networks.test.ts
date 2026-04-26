@@ -16,17 +16,18 @@ describe('networks', () => {
     expect(getNetworkProfile('tezos-shadownet').status).toBe('active');
   });
 
-  it('lists UI catalog without ghostnet and with grouped Tezos EVM support', () => {
+  it('lists UI catalog without ghostnet and with concrete Etherlink support', () => {
     const catalog = listNetworkCatalog();
-    expect(catalog).toHaveLength(3);
+    expect(catalog).toHaveLength(4);
     expect(catalog.map((row) => row.id)).toEqual([
       'tezos-shadownet',
+      'etherlink-testnet',
       'tezos-mainnet',
-      'tezos-evm-support',
+      'etherlink-mainnet',
     ]);
     expect(catalog.some((row) => row.id === 'tezos-ghostnet')).toBe(false);
-    expect(catalog.find((row) => row.id === 'tezos-evm-support')?.label).toBe('Tezos EVM support');
-    expect(catalog.find((row) => row.id === 'tezos-evm-support')?.status).toBe('planned');
+    expect(catalog.find((row) => row.id === 'etherlink-testnet')?.label).toBe('Etherlink Testnet');
+    expect(catalog.find((row) => row.id === 'etherlink-testnet')?.status).toBe('active');
   });
 
   it('resolves runtime network with env overrides', () => {
