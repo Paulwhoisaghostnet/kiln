@@ -1,0 +1,45 @@
+export const requiredNetworks = [
+  'tezos-shadownet',
+  'etherlink-testnet',
+  'tezos-mainnet',
+  'etherlink-mainnet',
+];
+
+export const requiredOpenApiPaths = [
+  '/api/health',
+  '/api/networks',
+  '/api/kiln/capabilities',
+  '/api/kiln/workflow/run',
+  '/api/kiln/contracts/guided/elements',
+  '/api/kiln/audit/run',
+  '/api/kiln/simulate/run',
+  '/api/kiln/shadowbox/run',
+  '/api/kiln/predeploy/validate',
+  '/api/kiln/upload',
+  '/api/kiln/execute',
+  '/api/kiln/e2e/run',
+  '/api/kiln/balances',
+  '/api/kiln/activity/recent',
+  '/api/kiln/export/bundle',
+  '/api/kiln/export/download/{fileName}',
+  '/api/kiln/reference/contracts',
+];
+
+export const protectedPostPaths = [
+  '/api/kiln/workflow/run',
+  '/api/kiln/contracts/guided/elements',
+  '/api/kiln/audit/run',
+  '/api/kiln/simulate/run',
+  '/api/kiln/shadowbox/run',
+  '/api/kiln/predeploy/validate',
+  '/api/kiln/upload',
+  '/api/kiln/execute',
+  '/api/kiln/e2e/run',
+  '/api/kiln/balances',
+  '/api/kiln/activity/recent',
+  '/api/kiln/export/bundle',
+  '/api/kiln/reference/contracts',
+  '/api/kiln/evm/compile',
+  '/api/kiln/evm/estimate',
+  '/api/kiln/evm/dry-run',
+];

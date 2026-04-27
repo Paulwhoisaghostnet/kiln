@@ -1,6 +1,16 @@
 import type { RuntimeNetworkConfig } from './networks.js';
 
-export function buildOpenApiSpec(runtimeNetwork: RuntimeNetworkConfig) {
+export function buildOpenApiSpec(
+  runtimeNetwork: RuntimeNetworkConfig,
+  options?: {
+    deployClearanceRequired?: boolean;
+    shadowboxRequiredForClearance?: boolean;
+  },
+) {
+  const deployClearanceRequired = options?.deployClearanceRequired ?? true;
+  const shadowboxRequiredForClearance =
+    options?.shadowboxRequiredForClearance ?? false;
+
   return {
     openapi: '3.1.0',
     info: {
@@ -29,7 +39,9 @@ export function buildOpenApiSpec(runtimeNetwork: RuntimeNetworkConfig) {
       sourceTypes: ['auto', 'smartpy', 'michelson'],
       puppetWallets: ['bert', 'ernie'],
       deployWallets: ['A', 'B', 'connected'],
-      clearanceRequiredByDefault: true,
+      clearanceRequiredByDefault: deployClearanceRequired,
+      deployClearanceRequired,
+      shadowboxRequiredForClearance,
       shadowboxRuntime: {
         endpoint: '/api/kiln/shadowbox/run',
         mode: 'ephemeral_tezos_runtime',
@@ -58,7 +70,7 @@ export function buildOpenApiSpec(runtimeNetwork: RuntimeNetworkConfig) {
         post: {
           tags: ['workflow'],
           summary:
-            'Run compile -> validation -> audit -> simulation and issue deployment clearance',
+            'Run compile -> validation -> audit -> simulation -> shadowbox and issue deployment clearance when required gates pass',
         },
       },
       '/api/kiln/contracts/guided/elements': {
@@ -77,14 +89,15 @@ export function buildOpenApiSpec(runtimeNetwork: RuntimeNetworkConfig) {
       '/api/kiln/simulate/run': {
         post: {
           tags: ['workflow'],
-          summary: 'Run simulation stage only and issue simulation clearance',
+          summary:
+            'Run simulation stage only; simulation clearance is withheld when shadowbox is required',
         },
       },
       '/api/kiln/shadowbox/run': {
         post: {
           tags: ['workflow'],
           summary:
-            'Run ephemeral shadowbox runtime stage (temporary origin + entrypoint interactions)',
+            'Run ephemeral shadowbox runtime stage (temporary origin + entrypoint interactions); returns success only when runtime executes and passes',
         },
       },
       '/api/kiln/predeploy/validate': {

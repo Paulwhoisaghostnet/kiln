@@ -57,6 +57,9 @@ export function createSystemRouter(services: ApiAppServices): Router {
       runtime: {
         network: services.runtimeNetwork,
         clearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
+        deployClearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
+        shadowboxRequiredForClearance:
+          services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
         shadowbox: services.shadowbox,
       },
       sources: {
@@ -99,7 +102,13 @@ export function createSystemRouter(services: ApiAppServices): Router {
   });
 
   router.get('/api/kiln/openapi.json', (_req, res) => {
-    res.json(buildOpenApiSpec(services.runtimeNetwork));
+    res.json(
+      buildOpenApiSpec(services.runtimeNetwork, {
+        deployClearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
+        shadowboxRequiredForClearance:
+          services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
+      }),
+    );
   });
 
   router.get(

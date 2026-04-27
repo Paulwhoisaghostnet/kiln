@@ -16,3 +16,8 @@ vendor/kiln-python
 
 # One line: root@<hetzner-ipv4> (never commit)
 .kiln-deploy-host
+
+artifacts/kiln-e2e/
+test-results/
+playwright-report/
+.lighthouseci/

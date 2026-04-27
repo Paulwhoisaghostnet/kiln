@@ -306,7 +306,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
         });
 
         res.json({
-          success: shadowbox.passed,
+          success: shadowbox.executed && shadowbox.passed,
           networkId: network.id,
           ecosystem: network.ecosystem,
           sourceType: source.sourceType,

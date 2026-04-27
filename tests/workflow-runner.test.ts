@@ -104,4 +104,50 @@ describe('runContractWorkflow', () => {
     expect(result.clearance.approved).toBe(false);
     expect(result.clearance.record).toBeUndefined();
   });
+
+  it('denies clearance when shadowbox is required but runtime is not configured', async () => {
+    const result = await runContractWorkflow(
+      {
+        sourceType: 'michelson',
+        source: `
+          parameter (or (pair %mint address nat) (pair %transfer address nat));
+          storage unit;
+          code { CAR ; NIL operation ; PAIR };
+        `,
+        initialStorage: 'Unit',
+        simulationSteps: [
+          {
+            wallet: 'bert',
+            entrypoint: 'mint',
+            args: ['10'],
+          },
+        ],
+      },
+      {
+        compileSmartPy: async () => ({
+          scenario: 'unused',
+          michelson: '',
+          initialStorage: 'Unit',
+        }),
+        injectKilnTokens: (code) => code,
+        estimateOrigination: async () => ({
+          gasLimit: 200_000,
+          storageLimit: 10_000,
+          suggestedFeeMutez: 40_000,
+          minimalFeeMutez: 30_000,
+        }),
+        shadowboxRequiredForClearance: true,
+        clearanceStore: new DeploymentClearanceStore(),
+      },
+    );
+
+    expect(result.shadowbox.executed).toBe(false);
+    expect(result.shadowbox.passed).toBe(false);
+    expect(result.clearance.approved).toBe(false);
+    expect(result.validate.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Shadowbox runtime gate failed'),
+      ]),
+    );
+  });
 });

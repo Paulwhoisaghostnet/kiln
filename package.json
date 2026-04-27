@@ -28,6 +28,13 @@
     "netlify:dev": "npx netlify dev",
     "netlify:deploy:preview": "npx netlify deploy",
     "netlify:deploy:prod": "npx netlify deploy --prod",
+    "e2e": "playwright test",
+    "e2e:live": "cross-env KILN_E2E_MODE=passive-live playwright test tests/e2e",
+    "e2e:auth": "cross-env KILN_E2E_MODE=auth-live playwright test tests/e2e/00-live-api-contract.spec.ts tests/e2e/02-a11y.spec.ts tests/e2e/03-method-and-guardrails.spec.ts",
+    "e2e:report": "node scripts/e2e/generate-kiln-report.mjs",
+    "e2e:report:audit": "node scripts/e2e/audit-kiln-report.mjs",
+    "e2e:lighthouse": "node scripts/e2e/run-lighthouse.mjs",
+    "e2e:all": "node scripts/e2e/run-kiln-live-suite.mjs",
     "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
@@ -74,6 +81,11 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vite-plugin-node-polyfills": "^0.26.0",
+    "@axe-core/playwright": "^4.11.2",
+    "@playwright/test": "^1.54.0",
+    "axe-core": "^4.11.2",
+    "lighthouse": "^12.8.2",
+    "wait-on": "^8.0.0",
     "vitest": "^3.2.4"
   }
 }

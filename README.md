@@ -263,8 +263,8 @@ Primary machine endpoints:
 - `GET /api/networks` (network catalog + capability matrix; `{ active, networks }`)
 - `POST /api/kiln/workflow/run` (compile/validate/audit/simulate/shadowbox/clearance — ecosystem-aware)
 - `POST /api/kiln/audit/run`
-- `POST /api/kiln/simulate/run`
-- `POST /api/kiln/shadowbox/run` (ephemeral runtime stage only)
+- `POST /api/kiln/simulate/run` (simulation stage only; standalone clearance withheld when shadowbox gate is required)
+- `POST /api/kiln/shadowbox/run` (ephemeral runtime stage only; `success=true` only when runtime executes and passes)
 - `POST /api/kiln/upload` (Tezos deploy; clearance + `puppetWallets` enforced)
 - `GET /api/kiln/activity/recent?limit=100` (ops/audit tail)
 - `GET /api/kiln/reference/contracts` (reference corpus introspection)
@@ -308,6 +308,11 @@ The command must write `output.json` with:
 
 This allows a Hetzner-hosted Flextesa/Octez runner to plug in without changing
 the API surface.
+
+Clearance gate behavior:
+- When `KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE=true`, workflow clearance is fail-safe.
+- Shadowbox must both execute and pass (`executed=true` and `passed=true`), or clearance is withheld.
+- If shadowbox is disabled/misconfigured in required mode, clearance is withheld (not bypassed).
 
 Built-in command runner:
 - `scripts/shadowbox/run-flextesa.sh`
@@ -407,3 +412,16 @@ Use the [`agents/`](./agents) directory when connecting external AI agents to Ki
 - 10 common agent profile files (`.codex`, `.claude`, `.gemini`, `.chatgpt`, `.copilot`, `.cursor`, `.cline`, `.aider`, `.continue`, `.windsurf`)
 
 These files tell agents to use Kiln’s staged workflow, keep humans in control, and produce shadownet-tested + bundled deliverables for mainnet readiness.
+
+## E2E Browser/Live Testing
+
+Use the Playwright + Lighthouse harness for mode-aware production smoke testing:
+
+- `npm run e2e:live` for passive live smoke.
+- `npm run e2e:auth` for protected-route and token-path checks.
+- `npm run e2e:all` for automated run, report generation, and report audit.
+- `npm run e2e:lighthouse` for a single web performance/accessibility capture.
+- `npm run e2e:report` for markdown/json artifact creation.
+- `npm run e2e:report:audit` for report integrity enforcement.
+
+All long-lived artifacts are written under `artifacts/kiln-e2e/<run-id>/...` and ignored by git.

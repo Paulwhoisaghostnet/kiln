@@ -42,6 +42,25 @@ describe('ShadowboxRuntimeRunner', () => {
     expect(result.provider).toBe('disabled');
   });
 
+  it('fails disabled mode when runtime gate is required for clearance', async () => {
+    const runner = createShadowboxRuntimeRunner({
+      enabled: false,
+      requiredForClearance: true,
+      provider: 'mock',
+      timeoutMs: 5_000,
+      maxActiveJobs: 2,
+      maxActiveJobsPerIp: 1,
+      maxSourceBytes: 1024,
+      maxSteps: 10,
+    });
+
+    const result = await runner.run(sampleInput);
+    expect(result.enabled).toBe(false);
+    expect(result.executed).toBe(false);
+    expect(result.passed).toBe(false);
+    expect(result.provider).toBe('disabled');
+  });
+
   it('enforces payload size limits', async () => {
     const runner = createShadowboxRuntimeRunner({
       enabled: true,

@@ -174,7 +174,7 @@ export async function runContractWorkflow(
           requiredForClearance: Boolean(deps.shadowboxRequiredForClearance),
           provider: 'disabled' as const,
           executed: false,
-          passed: true,
+          passed: !Boolean(deps.shadowboxRequiredForClearance),
           jobId: null,
           reason: 'Shadowbox runtime not configured.',
           summary: {
@@ -194,11 +194,13 @@ export async function runContractWorkflow(
           codeHash,
         });
   const shadowboxGatePassed = deps.shadowboxRequiredForClearance
-    ? shadowbox.passed
+    ? shadowbox.executed && shadowbox.passed
     : true;
-  if (deps.shadowboxRequiredForClearance && !shadowbox.passed) {
+  if (deps.shadowboxRequiredForClearance && !shadowboxGatePassed) {
     warnings.push(
-      `Shadowbox runtime gate failed: ${shadowbox.reason ?? 'runtime execution did not pass.'}`,
+      `Shadowbox runtime gate failed: ${
+        shadowbox.reason ?? 'runtime execution did not pass or did not execute.'
+      }`,
     );
   }
 

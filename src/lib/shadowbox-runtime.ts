@@ -286,7 +286,7 @@ function disabledResult(
     requiredForClearance,
     provider: 'disabled',
     executed: false,
-    passed: true,
+    passed: !requiredForClearance,
     jobId: null,
     reason,
     summary: {

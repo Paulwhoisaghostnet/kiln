@@ -233,6 +233,8 @@ describe('createApiApp', () => {
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.runtime.network.id).toBe('tezos-shadownet');
+    expect(response.body.runtime.deployClearanceRequired).toBe(false);
+    expect(response.body.runtime.shadowboxRequiredForClearance).toBe(false);
     expect(response.body.workflowStages).toEqual(
       expect.arrayContaining([
         'compile_if_needed',
@@ -649,6 +651,33 @@ describe('createApiApp', () => {
     expect(response.body.codeHash).toMatch(/[a-f0-9]{64}/);
     expect(response.body.shadowbox.jobId).toBe('sbox_123');
     expect(response.body.shadowbox.passed).toBe(true);
+  });
+
+  it('reports shadowbox runtime endpoint as unsuccessful when runtime is disabled', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        KILN_SHADOWBOX_ENABLED: false,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/shadowbox/run').send({
+      sourceType: 'michelson',
+      source: sampleMichelson,
+      initialStorage: 'Unit',
+      simulationSteps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['10'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(false);
+    expect(response.body.shadowbox.executed).toBe(false);
+    expect(response.body.shadowbox.provider).toBe('disabled');
   });
 
   it('blocks deployment when workflow clearance is required and missing', async () => {
