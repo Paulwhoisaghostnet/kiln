@@ -83,6 +83,7 @@ export async function executeContractCall(
     payload.contractAddress,
     payload.entrypoint,
     payload.args,
+    { amountMutez: payload.amountMutez },
   );
 
   return {
@@ -105,6 +106,7 @@ export async function runContractE2E(
   results: Array<{
     label: string;
     wallet: WalletType;
+    contractAddress: string;
     entrypoint: string;
     status: 'passed' | 'failed';
     hash?: string;
@@ -115,6 +117,7 @@ export async function runContractE2E(
   const results: Array<{
     label: string;
     wallet: WalletType;
+    contractAddress: string;
     entrypoint: string;
     status: 'passed' | 'failed';
     hash?: string;
@@ -124,16 +127,57 @@ export async function runContractE2E(
 
   for (const [index, step] of payload.steps.entries()) {
     const label = step.label?.trim() || `Step ${index + 1}`;
-    try {
-      const tezosService = createTezosService(step.wallet);
-      const result = await tezosService.callContract(
-        payload.contractAddress,
-        step.entrypoint,
-        step.args,
-      );
+    const targetAddress = step.targetContractAddress ?? payload.contractAddress;
+    if (!targetAddress) {
       results.push({
         label,
         wallet: step.wallet,
+        contractAddress: '',
+        entrypoint: step.entrypoint,
+        status: step.expectFailure ? 'passed' : 'failed',
+        error: 'No contract target was provided for this E2E step.',
+      });
+      continue;
+    }
+    try {
+      const tezosService = createTezosService(step.wallet);
+      const result = await tezosService.callContract(
+        targetAddress,
+        step.entrypoint,
+        step.args,
+        { amountMutez: step.amountMutez },
+      );
+      if (step.expectFailure) {
+        results.push({
+          label,
+          wallet: step.wallet,
+          contractAddress: targetAddress,
+          entrypoint: step.entrypoint,
+          status: 'failed',
+          hash: result.hash,
+          level: result.level,
+          error: 'Step succeeded but was marked expectFailure=true.',
+        });
+        continue;
+      }
+      if (step.assertions.length > 0) {
+        results.push({
+          label,
+          wallet: step.wallet,
+          contractAddress: targetAddress,
+          entrypoint: step.entrypoint,
+          status: 'failed',
+          hash: result.hash,
+          level: result.level,
+          error:
+            'Live Tezos E2E assertions are not implemented yet; no-stub policy blocks treating this step as passed.',
+        });
+        continue;
+      }
+      results.push({
+        label,
+        wallet: step.wallet,
+        contractAddress: targetAddress,
         entrypoint: step.entrypoint,
         status: 'passed',
         hash: result.hash,
@@ -143,8 +187,9 @@ export async function runContractE2E(
       results.push({
         label,
         wallet: step.wallet,
+        contractAddress: targetAddress,
         entrypoint: step.entrypoint,
-        status: 'failed',
+        status: step.expectFailure ? 'passed' : 'failed',
         error: asMessage(error),
       });
     }
@@ -155,7 +200,7 @@ export async function runContractE2E(
 
   return {
     success: failed === 0,
-    contractAddress: payload.contractAddress,
+    contractAddress: payload.contractAddress ?? '',
     summary: {
       total: results.length,
       passed,

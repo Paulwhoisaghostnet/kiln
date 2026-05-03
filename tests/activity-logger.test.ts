@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createActivityLogger,
   readRecentActivityLog,
@@ -51,5 +51,24 @@ describe('activity logger', () => {
     expect(tail[0]).toContain('"event":"');
 
     await fs.rm(filePath, { force: true });
+  });
+
+  it('warns once per distinct write failure instead of spamming request logs', async () => {
+    const blockingPath = join(tmpdir(), `kiln-activity-blocker-${randomUUID()}`);
+    await fs.writeFile(blockingPath, 'not a directory', 'utf8');
+    const logger = createActivityLogger(join(blockingPath, 'activity.log'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      logger.log({ timestamp: new Date().toISOString(), event: 'first_failure' });
+      logger.log({ timestamp: new Date().toISOString(), event: 'second_failure' });
+      await new Promise((resolve) => setTimeout(resolve, 25));
+
+      expect(consoleError).toHaveBeenCalledTimes(1);
+      expect(consoleError.mock.calls[0]?.[0]).toBe('Failed to persist activity log:');
+    } finally {
+      consoleError.mockRestore();
+      await fs.rm(blockingPath, { force: true });
+    }
   });
 });

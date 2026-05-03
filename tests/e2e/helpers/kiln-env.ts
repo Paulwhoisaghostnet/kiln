@@ -48,7 +48,7 @@ if (isAuthMode && !apiToken) {
   throw new Error('KILN_E2E_MODE=auth-live requires KILN_E2E_API_TOKEN');
 }
 
-export const requiredHeaders = apiToken
+export const requiredHeaders: Record<string, string> = apiToken
   ? {
       'x-kiln-token': apiToken,
       'x-api-token': apiToken,

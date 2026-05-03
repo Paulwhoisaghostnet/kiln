@@ -15,7 +15,7 @@ const DEFAULT_ORIGINATION_FEE_MUTEZ = 220_000;
 const MAX_ORIGINATION_ATTEMPTS = 4;
 
 interface SendableMethod {
-  send(): Promise<{
+  send(options?: { amount?: number; mutez?: boolean }): Promise<{
     hash: string;
     status?: string;
     confirmation(confirmations: number): Promise<{
@@ -59,7 +59,12 @@ export interface TezosServiceLike {
     contractAddress: string,
     entrypoint: string,
     args?: unknown[],
+    options?: TezosCallOptions,
   ): Promise<ContractCallResult>;
+}
+
+export interface TezosCallOptions {
+  amountMutez?: number;
 }
 
 /**
@@ -81,10 +86,14 @@ function resolveRpcUrlForNetwork(
       return env.TEZOS_GHOSTNET_RPC_URL;
     case 'tezos-mainnet':
       return env.TEZOS_MAINNET_RPC_URL;
+    case 'etherlink-shadownet':
+      return env.ETHERLINK_SHADOWNET_RPC_URL ?? env.ETHERLINK_TESTNET_RPC_URL;
     case 'etherlink-testnet':
       return env.ETHERLINK_TESTNET_RPC_URL;
     case 'etherlink-mainnet':
       return env.ETHERLINK_MAINNET_RPC_URL;
+    case 'jstz-local':
+      return undefined;
     default:
       return undefined;
   }
@@ -403,6 +412,7 @@ export class TezosService implements TezosServiceLike {
     contractAddress: string,
     entrypoint: string,
     args: unknown[] = [],
+    options: TezosCallOptions = {},
   ): Promise<ContractCallResult> {
     try {
       await this.ensureExpectedChainId();
@@ -416,7 +426,11 @@ export class TezosService implements TezosServiceLike {
         throw new Error(`Entrypoint ${entrypoint} not found on contract ${contractAddress}`);
       }
 
-      const op = await method(...args).send();
+      const sendOptions =
+        options.amountMutez !== undefined
+          ? { amount: options.amountMutez, mutez: true }
+          : undefined;
+      const op = await method(...args).send(sendOptions);
       console.log(`Waiting for confirmation of call... Hash: ${op.hash}`);
       
       const result = await op.confirmation(1);

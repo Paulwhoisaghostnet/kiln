@@ -38,8 +38,8 @@ describe('evm-wallet', () => {
     );
 
     expect(hasInjectedEvmProvider()).toBe(false);
-    await expect(getConnectedEvmWallet('etherlink-testnet')).resolves.toBeNull();
-    await expect(connectEvmWallet('etherlink-testnet')).rejects.toThrow(/No EVM wallet detected/);
+    await expect(getConnectedEvmWallet('etherlink-shadownet')).resolves.toBeNull();
+    await expect(connectEvmWallet('etherlink-shadownet')).rejects.toThrow(/No EVM wallet detected/);
   });
 
   it('rejects active connection when wallet returns no accounts', async () => {
@@ -47,19 +47,19 @@ describe('evm-wallet', () => {
     installProvider(request);
     const { connectEvmWallet } = await import('../src/lib/evm-wallet.js');
 
-    await expect(connectEvmWallet('etherlink-testnet')).rejects.toThrow(
+    await expect(connectEvmWallet('etherlink-shadownet')).rejects.toThrow(
       /returned no accounts/,
     );
   });
 
   it('connects without chain switching when wallet is already on Etherlink', async () => {
-    const request = vi.fn().mockResolvedValueOnce([walletAddress]).mockResolvedValueOnce('0x1f47b');
+    const request = vi.fn().mockResolvedValueOnce([walletAddress]).mockResolvedValueOnce('0x1f34f');
     installProvider(request);
     const { connectEvmWallet } = await import('../src/lib/evm-wallet.js');
 
-    await expect(connectEvmWallet('etherlink-testnet')).resolves.toMatchObject({
+    await expect(connectEvmWallet('etherlink-shadownet')).resolves.toMatchObject({
       address: walletAddress,
-      chainId: 128123,
+      chainId: 127823,
     });
     expect(request).toHaveBeenCalledTimes(2);
   });
@@ -73,7 +73,7 @@ describe('evm-wallet', () => {
     installProvider(request);
     const { connectEvmWallet } = await import('../src/lib/evm-wallet.js');
 
-    await expect(connectEvmWallet('etherlink-testnet')).rejects.toThrow(/user rejected/);
+    await expect(connectEvmWallet('etherlink-shadownet')).rejects.toThrow(/user rejected/);
   });
 
   it('connects to Etherlink and adds the chain when wallet has not seen it', async () => {
@@ -86,17 +86,17 @@ describe('evm-wallet', () => {
     installProvider(request);
     const { connectEvmWallet, hasInjectedEvmProvider } = await import('../src/lib/evm-wallet.js');
 
-    await expect(connectEvmWallet('etherlink-testnet')).resolves.toEqual({
+    await expect(connectEvmWallet('etherlink-shadownet')).resolves.toEqual({
       address: walletAddress,
-      networkId: 'etherlink-testnet',
-      chainId: 128123,
-      rpcUrl: 'https://node.ghostnet.etherlink.com',
+      networkId: 'etherlink-shadownet',
+      chainId: 127823,
+      rpcUrl: 'https://node.shadownet.etherlink.com',
     });
 
     expect(hasInjectedEvmProvider()).toBe(true);
     expect(request).toHaveBeenNthCalledWith(3, {
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: '0x1f47b' }],
+      params: [{ chainId: '0x1f34f' }],
     });
     expect(request).toHaveBeenNthCalledWith(
       4,
@@ -165,7 +165,7 @@ describe('evm-wallet', () => {
 
     await expect(
       deployEvmContract({
-        networkId: 'etherlink-testnet',
+        networkId: 'etherlink-shadownet',
         bytecode: '0x6000',
         abi: [],
       }),
@@ -180,7 +180,7 @@ describe('evm-wallet', () => {
 
     await expect(
       deployEvmContract({
-        networkId: 'etherlink-testnet',
+        networkId: 'etherlink-shadownet',
         bytecode: '0x6000',
         abi: [],
       }),

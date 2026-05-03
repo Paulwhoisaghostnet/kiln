@@ -24,12 +24,12 @@ vi.mock('viem', () => ({
 const env: AppEnv = {
   NODE_ENV: 'test',
   PORT: 3001,
-  KILN_NETWORK: 'etherlink-testnet',
+  KILN_NETWORK: 'etherlink-shadownet',
   TEZOS_RPC_URL: 'https://rpc.shadownet.teztnets.com',
   TEZOS_CHAIN_ID: undefined,
   TEZOS_MAINNET_RPC_URL: undefined,
   TEZOS_GHOSTNET_RPC_URL: undefined,
-  ETHERLINK_TESTNET_RPC_URL: 'https://etherlink.example.test',
+  ETHERLINK_SHADOWNET_RPC_URL: 'https://etherlink.example.test',
   ETHERLINK_MAINNET_RPC_URL: 'https://etherlink.example.mainnet',
   WALLET_A_SECRET_KEY: 'edskA',
   WALLET_B_SECRET_KEY: 'edskB',
@@ -75,7 +75,7 @@ describe('EtherlinkService', () => {
   it('formats native balances with 18 decimals', async () => {
     getBalance.mockResolvedValueOnce(1234500000000000000n);
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(service.getBalance('0x1111111111111111111111111111111111111111')).resolves.toBe(
       '1.2345',
@@ -85,7 +85,7 @@ describe('EtherlinkService', () => {
   it('formats whole and negative unit values without trailing dust', async () => {
     getBalance.mockResolvedValueOnce(1000000000000000000n).mockResolvedValueOnce(-1200000000000000000n);
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(service.getBalance('0x1111111111111111111111111111111111111111')).resolves.toBe('1');
     await expect(service.getBalance('0x1111111111111111111111111111111111111111')).resolves.toBe('-1.2');
@@ -96,7 +96,7 @@ describe('EtherlinkService', () => {
     getBlock.mockResolvedValueOnce({ baseFeePerGas: 10n });
     getFeeHistory.mockResolvedValueOnce({ reward: [[1n], [5n], [3n]] });
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(
       service.estimateDeploy({
@@ -123,7 +123,7 @@ describe('EtherlinkService', () => {
     getBlock.mockResolvedValueOnce({});
     getFeeHistory.mockRejectedValueOnce(new Error('fee history refused'));
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(service.estimateDeploy({ bytecode: '0x6000' })).resolves.toMatchObject({
       gasLimit: 3_000_000n,
@@ -140,7 +140,7 @@ describe('EtherlinkService', () => {
     getBlock.mockResolvedValueOnce({ baseFeePerGas: 7n });
     getFeeHistory.mockResolvedValueOnce({ reward: [[0n]] });
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(service.estimateDeploy({ bytecode: '0x6000' })).resolves.toMatchObject({
       gasLimit: 30_000n,
@@ -154,7 +154,7 @@ describe('EtherlinkService', () => {
     call.mockResolvedValueOnce({ data: '0x60016002' });
     call.mockRejectedValueOnce(new Error('execution reverted: nope\nstack'));
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(service.dryRunDeploy({ bytecode: '0x6000' })).resolves.toEqual({
       ok: true,
@@ -170,7 +170,7 @@ describe('EtherlinkService', () => {
     call.mockResolvedValueOnce({});
     call.mockRejectedValueOnce('reverted');
     const { EtherlinkService } = await import('../src/lib/etherlink-service.js');
-    const service = new EtherlinkService(env, 'etherlink-testnet');
+    const service = new EtherlinkService(env, 'etherlink-shadownet');
 
     await expect(service.dryRunDeploy({ bytecode: '0x6000' })).resolves.toEqual({
       ok: true,

@@ -13,6 +13,7 @@ describe('networks', () => {
     expect(profiles.length).toBeGreaterThanOrEqual(5);
     expect(profiles.some((profile) => profile.id === 'tezos-ghostnet')).toBe(true);
     expect(profiles.some((profile) => profile.id === 'etherlink-mainnet')).toBe(true);
+    expect(profiles.some((profile) => profile.id === 'jstz-local')).toBe(true);
     expect(getNetworkProfile('tezos-shadownet').status).toBe('active');
   });
 
@@ -21,13 +22,16 @@ describe('networks', () => {
     expect(catalog).toHaveLength(4);
     expect(catalog.map((row) => row.id)).toEqual([
       'tezos-shadownet',
-      'etherlink-testnet',
+      'etherlink-shadownet',
       'tezos-mainnet',
       'etherlink-mainnet',
     ]);
     expect(catalog.some((row) => row.id === 'tezos-ghostnet')).toBe(false);
-    expect(catalog.find((row) => row.id === 'etherlink-testnet')?.label).toBe('Etherlink Testnet');
-    expect(catalog.find((row) => row.id === 'etherlink-testnet')?.status).toBe('active');
+    const etherlink = catalog.find((row) => row.id === 'etherlink-shadownet');
+    expect(etherlink?.label).toBe('Etherlink Shadownet');
+    expect(etherlink?.status).toBe('active');
+    expect(etherlink?.defaultRpcUrl).toBe('https://node.shadownet.etherlink.com');
+    expect(etherlink?.evmChainId).toBe(127823);
   });
 
   it('resolves runtime network with env overrides', () => {

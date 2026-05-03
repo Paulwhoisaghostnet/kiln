@@ -1,6 +1,6 @@
 export const requiredNetworks = [
   'tezos-shadownet',
-  'etherlink-testnet',
+  'etherlink-shadownet',
   'tezos-mainnet',
   'etherlink-mainnet',
 ];

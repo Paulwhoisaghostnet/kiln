@@ -2,10 +2,12 @@ export type KilnNetworkId =
   | 'tezos-shadownet'
   | 'tezos-ghostnet'
   | 'tezos-mainnet'
+  | 'etherlink-shadownet'
   | 'etherlink-testnet'
-  | 'etherlink-mainnet';
+  | 'etherlink-mainnet'
+  | 'jstz-local';
 
-export type KilnEcosystem = 'tezos' | 'etherlink';
+export type KilnEcosystem = 'tezos' | 'etherlink' | 'jstz';
 export type KilnNetworkStatus = 'active' | 'planned';
 /** Tier-1 rails get puppet wallet support; mainnets are user-connected-wallet only. */
 export type KilnNetworkTier = 'sandbox' | 'testnet' | 'mainnet';
@@ -19,8 +21,8 @@ export interface KilnNetworkCapabilities {
   predeploy: boolean;
   /** Post-deploy E2E dynamic rig is enabled */
   postdeployE2E: boolean;
-  /** Contract source language: 'michelson' + 'smartpy' for Tezos, 'solidity' for EVM */
-  sourceLanguages: ReadonlyArray<'michelson' | 'smartpy' | 'solidity'>;
+  /** Contract source language: 'michelson' + 'smartpy' for Tezos, 'solidity' for EVM, 'jstz' for smart functions. */
+  sourceLanguages: ReadonlyArray<'michelson' | 'smartpy' | 'solidity' | 'jstz'>;
 }
 
 export interface KilnNetworkProfile {
@@ -118,26 +120,48 @@ const NETWORK_PROFILES: Record<KilnNetworkId, KilnNetworkProfile> = {
       sourceLanguages: ['michelson', 'smartpy'],
     },
   },
-  'etherlink-testnet': {
-    id: 'etherlink-testnet',
-    label: 'Etherlink Testnet',
+  'etherlink-shadownet': {
+    id: 'etherlink-shadownet',
+    label: 'Etherlink Shadownet',
     ecosystem: 'etherlink',
     status: 'active',
     tier: 'testnet',
     accent: 'secondary',
-    defaultRpcUrl: 'https://node.ghostnet.etherlink.com',
-    evmChainId: 128123,
-    beaconNetworkName: '0x1f47b',
+    defaultRpcUrl: 'https://node.shadownet.etherlink.com',
+    evmChainId: 127823,
+    beaconNetworkName: '0x1f34f',
     nativeSymbol: 'XTZ',
-    explorerAddress: 'https://testnet.explorer.etherlink.com/address/{address}',
-    explorerTx: 'https://testnet.explorer.etherlink.com/tx/{tx}',
-    blurb: 'Tezos EVM rollup — Solidity on testnet faucet funds.',
+    explorerAddress: 'https://shadownet.explorer.etherlink.com/address/{address}',
+    explorerTx: 'https://shadownet.explorer.etherlink.com/tx/{tx}',
+    blurb: 'Current Etherlink pre-production rail — Solidity on Shadownet faucet funds.',
     capabilities: {
       walletConnect: true,
       puppetWallets: false,
       predeploy: true,
       postdeployE2E: true,
       sourceLanguages: ['solidity'],
+    },
+  },
+  'etherlink-testnet': {
+    id: 'etherlink-testnet',
+    label: 'Etherlink Ghostnet Testnet (legacy)',
+    ecosystem: 'etherlink',
+    status: 'planned',
+    tier: 'testnet',
+    accent: 'warning',
+    defaultRpcUrl: 'https://node.ghostnet.etherlink.com',
+    evmChainId: 128123,
+    beaconNetworkName: '0x1f47b',
+    nativeSymbol: 'XTZ',
+    explorerAddress: 'https://testnet.explorer.etherlink.com/address/{address}',
+    explorerTx: 'https://testnet.explorer.etherlink.com/tx/{tx}',
+    blurb: 'Legacy Etherlink Ghostnet rail kept only for migration records; not advertised as active support.',
+    capabilities: {
+      walletConnect: false,
+      puppetWallets: false,
+      predeploy: false,
+      postdeployE2E: false,
+      sourceLanguages: [],
     },
   },
   'etherlink-mainnet': {
@@ -162,6 +186,24 @@ const NETWORK_PROFILES: Record<KilnNetworkId, KilnNetworkProfile> = {
       sourceLanguages: ['solidity'],
     },
   },
+  'jstz-local': {
+    id: 'jstz-local',
+    label: 'jstz Local Sandbox',
+    ecosystem: 'jstz',
+    status: 'planned',
+    tier: 'sandbox',
+    accent: 'info',
+    defaultRpcUrl: 'http://localhost:8933',
+    nativeSymbol: 'tez',
+    blurb: 'jstz smart-function support is planned as a local/configurable adapter until stable production networks exist.',
+    capabilities: {
+      walletConnect: false,
+      puppetWallets: false,
+      predeploy: false,
+      postdeployE2E: false,
+      sourceLanguages: ['jstz'],
+    },
+  },
 };
 
 const DEFAULT_NETWORK_ID: KilnNetworkId = 'tezos-shadownet';
@@ -181,7 +223,7 @@ export function listNetworkProfiles(): KilnNetworkProfile[] {
 export function listPickableNetworks(): KilnNetworkProfile[] {
   const order: KilnNetworkId[] = [
     'tezos-shadownet',
-    'etherlink-testnet',
+    'etherlink-shadownet',
     'tezos-mainnet',
     'etherlink-mainnet',
   ];

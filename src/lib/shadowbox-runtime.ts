@@ -31,6 +31,11 @@ export interface ShadowboxRunInput {
   sourceType: 'michelson' | 'smartpy';
   michelson: string;
   initialStorage: string;
+  contracts?: Array<{
+    id: string;
+    michelson: string;
+    initialStorage: string;
+  }>;
   entrypoints: string[];
   steps: SimulationStepInput[];
   codeHash: string;
@@ -203,18 +208,12 @@ async function runMockProvider(
   })) satisfies ShadowboxStepResult[];
 
   const warnings = [...simulation.warnings];
-  let passed = simulation.success;
-
-  if (requiredForClearance) {
-    passed = false;
-    warnings.push(
-      'Shadowbox mock provider is active. Configure command provider for real runtime clearance.',
-    );
-  } else {
-    warnings.push(
-      'Shadowbox ran in mock mode (state-model simulation, no ephemeral chain origination).',
-    );
-  }
+  const passed = false;
+  warnings.push(
+    requiredForClearance
+      ? 'Shadowbox mock provider is active. Configure command provider for real runtime clearance.'
+      : 'Shadowbox mock provider cannot pass under the no-stub policy; configure command provider for real runtime evidence.',
+  );
 
   return {
     passed,
@@ -378,6 +377,15 @@ export class ShadowboxRuntimeRunner {
         provider: this.settings.provider,
         requiredForClearance: this.settings.requiredForClearance,
         reason: `Too many shadowbox steps (${input.steps.length} > ${this.settings.maxSteps}).`,
+      });
+    }
+
+    if ((input.contracts?.length ?? 1) > 1) {
+      return rejectedResult({
+        provider: this.settings.provider,
+        requiredForClearance: this.settings.requiredForClearance,
+        reason:
+          'Shadowbox multi-contract runtime is not implemented yet; no-stub policy blocks pretending this system scenario passed.',
       });
     }
 

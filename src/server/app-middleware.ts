@@ -50,6 +50,19 @@ function isAllowedCorsOrigin(origin: string, allowedOrigins: string[]): boolean 
   });
 }
 
+function isSameRequestOrigin(origin: string, requestHost?: string): boolean {
+  if (!requestHost) {
+    return false;
+  }
+
+  try {
+    const parsedOrigin = new URL(origin);
+    return parsedOrigin.host.toLowerCase() === requestHost.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
 export function configureApiApp(
   app: Express,
   services: ApiAppServices,
@@ -99,18 +112,22 @@ export function configureApiApp(
       app.use(cors());
     }
   } else {
-    app.use(
+    app.use((req, res, next) => {
       cors({
         origin(origin, callback) {
-          if (!origin || isAllowedCorsOrigin(origin, corsOrigins)) {
+          if (
+            !origin ||
+            isSameRequestOrigin(origin, req.headers.host) ||
+            isAllowedCorsOrigin(origin, corsOrigins)
+          ) {
             callback(null, true);
             return;
           }
           callback(new Error(`Origin ${origin} is not allowed by CORS`));
         },
         credentials: true,
-      }),
-    );
+      })(req, res, next);
+    });
   }
 
   app.use(express.json({ limit: services.env.API_JSON_LIMIT }));

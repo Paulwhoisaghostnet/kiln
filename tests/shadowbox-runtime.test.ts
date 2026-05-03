@@ -79,7 +79,7 @@ describe('ShadowboxRuntimeRunner', () => {
     expect(result.reason).toContain('too large');
   });
 
-  it('runs mock provider and returns simulated steps', async () => {
+  it('runs mock provider but refuses to pass Shadowbox under no-stub policy', async () => {
     const runner = createShadowboxRuntimeRunner({
       enabled: true,
       requiredForClearance: false,
@@ -96,12 +96,38 @@ describe('ShadowboxRuntimeRunner', () => {
     expect(result.executed).toBe(true);
     expect(result.provider).toBe('mock');
     expect(result.summary.total).toBe(1);
-    expect(result.passed).toBe(true);
+    expect(result.passed).toBe(false);
     expect(result.warnings).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('mock mode'),
+        expect.stringContaining('no-stub policy'),
       ]),
     );
+  });
+
+  it('blocks multi-contract shadowbox payloads until the real system runtime exists', async () => {
+    const runner = createShadowboxRuntimeRunner({
+      enabled: true,
+      requiredForClearance: true,
+      provider: 'command',
+      command: 'echo should-not-run',
+      timeoutMs: 5_000,
+      maxActiveJobs: 2,
+      maxActiveJobsPerIp: 1,
+      maxSourceBytes: 10_000,
+      maxSteps: 10,
+    });
+
+    const result = await runner.run({
+      ...sampleInput,
+      contracts: [
+        { id: 'token', michelson: sampleInput.michelson, initialStorage: 'Unit' },
+        { id: 'market', michelson: sampleInput.michelson, initialStorage: 'Unit' },
+      ],
+    });
+
+    expect(result.executed).toBe(false);
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain('multi-contract runtime is not implemented');
   });
 
   it('fails mock provider when runtime gate is required for clearance', async () => {

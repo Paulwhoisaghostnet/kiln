@@ -4,7 +4,7 @@ Tezos Kiln is a typed React + Express test rig that covers the contract
 lifecycle across the Tezos family of networks in one environment:
 
 - Tezos Shadownet (sandbox — pre-funded puppets, free-spend testing)
-- Etherlink Testnet (Solidity via faucet funds)
+- Etherlink Shadownet (Solidity via faucet funds)
 - Tezos Mainnet (connected-wallet only, puppets disabled)
 - Etherlink Mainnet (connected MetaMask only, real XTZ)
 
@@ -36,7 +36,9 @@ flows until the user acknowledges risk.
 - Gas + fee estimation with `eth_estimateGas` / `eth_feeHistory` headroom
 - `eth_call` dry-run against the pending nonce
 - Connected-wallet deploy from MetaMask (EIP-1193) with auto chain-switch /
-  chain-add for Etherlink Testnet (`0x1f47b`) and Mainnet (`0xa729`)
+  chain-add for Etherlink Shadownet (`0x1f34f`) and Mainnet (`0xa729`)
+- Stale Etherlink Ghostnet testnet metadata is kept as a hidden legacy profile,
+  not an active network card.
 
 ### Shared
 
@@ -46,6 +48,10 @@ flows until the user acknowledges risk.
   running server can serve all four networks without restarts.
 - Activity logging for HTTP + workflow/audit events (troubleshooting/audit trail)
 - Mainnet-readiness bundle export as a zipped release package
+- Browser-scoped `kiln.project.json` workspace model with a file tree and
+  contract graph. This is intentionally not arbitrary host filesystem browsing.
+- No-stub status reporting: unsupported runtime behavior is marked blocked or
+  unavailable instead of returning a fake success state.
 - Wallet balance visibility for test accounts (puppets only; reports
   `puppetsAvailable: false` on every non-Shadownet network)
 - Native Hetzner hosting (systemd) as the primary runtime; Netlify remains as
@@ -62,8 +68,13 @@ mirrors the same flags to grey out buttons before the request is even made.
 | `tezos-shadownet`   | tezos     | sandbox | yes                         | Beacon           | michelson, smartpy     | yes             |
 | `tezos-ghostnet`    | tezos     | testnet | no                          | Beacon           | michelson, smartpy     | no (planned)    |
 | `tezos-mainnet`     | tezos     | mainnet | **no — blocked**            | Beacon           | michelson, smartpy     | yes             |
-| `etherlink-testnet` | etherlink | testnet | no                          | MetaMask         | solidity               | yes             |
+| `etherlink-shadownet` | etherlink | testnet | no                        | MetaMask         | solidity               | yes             |
 | `etherlink-mainnet` | etherlink | mainnet | **no — blocked**            | MetaMask         | solidity               | yes             |
+
+Planned/legacy profiles are returned separately from active cards:
+`tezos-ghostnet`, `etherlink-testnet` (legacy Ghostnet-era Etherlink), and
+`jstz-local`. jstz stays planned until a real local/configurable adapter is
+implemented and tested.
 
 Server-side guards:
 
@@ -135,6 +146,10 @@ npm run dev
 - `Deploy with Connected Wallet`: deploys from the user’s connected shadownet wallet (with optional burn-placeholder admin replacement).
 - `Deploy with Bert`: deploys via server signer (`wallet A`) and enforces workflow clearance by default.
 - `Run Bert + Ernie E2E`: executes post-deploy calls from puppet wallets controlled by the suite.
+- Tezos execute/E2E payloads support `amountMutez` for payable entrypoints.
+- E2E payloads can target per-step contract addresses. Storage, balance, and
+  big-map assertions are accepted by schema but fail closed until the runtime
+  reader layer is implemented.
 - `Guided Contract Creator`: optional wizard that generates either SmartPy scaffolds (for real build pipelines) or deployable Michelson stubs (for fast predeploy/deploy/E2E flow checks).
 - `Guided Contract Creator` can now load reference-derived contract elements (admin controls, pause, operators, allowlists, royalties, fee controls) sliced from contracts in `reference/`.
 - `Contract Injector` supports SmartPy source loading from `.py`, `.smartpy`, `.sp`, or `.txt` files (same compile path as the workflow).

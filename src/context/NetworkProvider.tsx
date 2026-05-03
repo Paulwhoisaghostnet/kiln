@@ -59,6 +59,9 @@ function readStoredNetworkId(): KilnNetworkId {
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw === 'etherlink-testnet') {
+      return 'etherlink-shadownet';
+    }
     if (isKilnNetworkId(raw)) {
       return raw;
     }

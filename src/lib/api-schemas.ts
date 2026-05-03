@@ -25,8 +25,10 @@ export const networkIdSchema = z
     'tezos-shadownet',
     'tezos-ghostnet',
     'tezos-mainnet',
+    'etherlink-shadownet',
     'etherlink-testnet',
     'etherlink-mainnet',
+    'jstz-local',
   ])
   .optional();
 
@@ -38,6 +40,19 @@ const michelsonArgumentSchema = z.union([
   z.record(z.string(), z.unknown()),
   z.array(z.unknown()),
 ]);
+
+const mutezAmountSchema = z.coerce
+  .number()
+  .int('amountMutez must be an integer number of mutez')
+  .min(0, 'amountMutez cannot be negative')
+  .max(Number.MAX_SAFE_INTEGER, 'amountMutez exceeds JavaScript safe integer range');
+
+const scenarioAssertionSchema = z.object({
+  kind: z.enum(['storage', 'balance', 'big_map']),
+  target: z.string().trim().min(1).max(160).optional(),
+  path: z.array(z.union([z.string(), z.number()])).max(32).optional(),
+  equals: z.unknown().optional(),
+});
 
 export const uploadPayloadSchema = z.object({
   networkId: networkIdSchema,
@@ -56,6 +71,7 @@ export const executePayloadSchema = z.object({
     .min(1, 'entrypoint is required')
     .max(128, 'entrypoint is too long'),
   args: z.array(michelsonArgumentSchema).default([]),
+  amountMutez: mutezAmountSchema.optional(),
   wallet: walletSchema.default('A'),
 });
 
@@ -68,18 +84,35 @@ export const predeployValidationPayloadSchema = z.object({
 export const e2eStepSchema = z.object({
   label: z.string().trim().max(80, 'label is too long').optional(),
   wallet: walletSchema,
+  targetContractId: z.string().trim().min(1).max(120).optional(),
+  targetContractAddress: kt1AddressSchema.optional(),
   entrypoint: z
     .string()
     .trim()
     .min(1, 'entrypoint is required')
     .max(128, 'entrypoint is too long'),
   args: z.array(michelsonArgumentSchema).default([]),
+  amountMutez: mutezAmountSchema.optional(),
+  expectFailure: z.boolean().default(false),
+  assertions: z.array(scenarioAssertionSchema).max(20).default([]),
 });
 
 export const e2eRunPayloadSchema = z.object({
   networkId: networkIdSchema,
-  contractAddress: kt1AddressSchema,
+  contractAddress: kt1AddressSchema.optional(),
   steps: z.array(e2eStepSchema).min(1, 'At least one E2E step is required'),
+}).superRefine((payload, ctx) => {
+  const hasDefaultTarget = Boolean(payload.contractAddress);
+  for (const [index, step] of payload.steps.entries()) {
+    if (!hasDefaultTarget && !step.targetContractAddress) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Each E2E step needs targetContractAddress when no top-level contractAddress is provided',
+        path: ['steps', index, 'targetContractAddress'],
+      });
+    }
+  }
 });
 
 const guidedContractTypeSchema = z.enum([
@@ -141,8 +174,12 @@ const workflowWalletSchema = z.enum(['bert', 'ernie', 'user']);
 export const workflowSimulationStepSchema = z.object({
   label: z.string().trim().max(120).optional(),
   wallet: workflowWalletSchema.default('bert'),
+  targetContractId: z.string().trim().min(1).max(120).optional(),
   entrypoint: z.string().trim().min(1).max(128),
   args: z.array(michelsonArgumentSchema).default([]),
+  amountMutez: mutezAmountSchema.optional(),
+  expectFailure: z.boolean().default(false),
+  assertions: z.array(scenarioAssertionSchema).max(20).default([]),
 });
 
 export const workflowRunPayloadSchema = z.object({

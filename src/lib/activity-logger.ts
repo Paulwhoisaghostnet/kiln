@@ -39,6 +39,7 @@ function safeValue(value: unknown): unknown {
 export function createActivityLogger(customPath?: string): ActivityLogger {
   const filePath =
     customPath?.trim() || resolve(process.cwd(), 'logs', 'kiln-activity.log');
+  let lastWriteErrorKey: string | null = null;
 
   const log = (event: ActivityLogEvent) => {
     const payload = JSON.stringify({
@@ -52,7 +53,12 @@ export function createActivityLogger(customPath?: string): ActivityLogger {
       .mkdir(dirname(filePath), { recursive: true })
       .then(() => fs.appendFile(filePath, `${payload}\n`, 'utf8'))
       .catch((error) => {
-        console.error('Failed to persist activity log:', error);
+        const maybeError = error as NodeJS.ErrnoException;
+        const errorKey = `${maybeError.code ?? 'UNKNOWN'}:${filePath}`;
+        if (errorKey !== lastWriteErrorKey) {
+          lastWriteErrorKey = errorKey;
+          console.error('Failed to persist activity log:', error);
+        }
       });
   };
 

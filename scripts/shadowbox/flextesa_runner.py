@@ -230,6 +230,20 @@ def wallet_alias(wallet: str) -> str:
     return "alice"
 
 
+def mutez_to_tez_string(value: Any) -> str | None:
+    try:
+        mutez = int(value)
+    except (TypeError, ValueError):
+        return None
+    if mutez < 0:
+        return None
+    whole = mutez // 1_000_000
+    frac = mutez % 1_000_000
+    if frac == 0:
+        return str(whole)
+    return f"{whole}.{str(frac).zfill(6).rstrip('0')}"
+
+
 def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
     if not args:
         return "Unit"
@@ -497,6 +511,44 @@ def main(argv: list[str]) -> int:
             entrypoint = str(raw_step.get("entrypoint") or "").strip()
             args = raw_step.get("args")
             step_args = args if isinstance(args, list) else []
+            amount_tez = mutez_to_tez_string(raw_step.get("amountMutez", 0))
+            assertions = raw_step.get("assertions", [])
+
+            if raw_step.get("targetContractId") or raw_step.get("targetContractAddress"):
+                step_results.append(
+                    {
+                        "label": label,
+                        "wallet": wallet,
+                        "entrypoint": entrypoint or "unknown",
+                        "status": "failed",
+                        "note": "This Shadowbox runner originates one contract only; multi-contract targets are blocked by the no-stub policy.",
+                    }
+                )
+                continue
+
+            if amount_tez is None:
+                step_results.append(
+                    {
+                        "label": label,
+                        "wallet": wallet,
+                        "entrypoint": entrypoint or "unknown",
+                        "status": "failed",
+                        "note": "amountMutez must be a non-negative integer.",
+                    }
+                )
+                continue
+
+            if isinstance(assertions, list) and assertions:
+                step_results.append(
+                    {
+                        "label": label,
+                        "wallet": wallet,
+                        "entrypoint": entrypoint or "unknown",
+                        "status": "failed",
+                        "note": "Storage/balance/big-map assertions are not implemented in this runner; no-stub policy blocks treating this step as passed.",
+                    }
+                )
+                continue
 
             if not entrypoint:
                 step_results.append(
@@ -533,7 +585,7 @@ def main(argv: list[str]) -> int:
                         "-M",
                         "client",
                         "transfer",
-                        "0",
+                        amount_tez,
                         "from",
                         account,
                         "to",

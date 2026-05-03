@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import DynamicRig from './components/DynamicRig';
 import GuidedContractBuilder from './components/GuidedContractBuilder';
+import { ProjectWorkspacePanel } from './components/ProjectWorkspacePanel';
 import {
   MainnetConsentModal,
   NetworkStatusPill,
@@ -69,7 +70,7 @@ interface BalancesResponse {
   walletB?: WalletBalance | null;
   error?: string;
   puppetsAvailable?: boolean;
-  ecosystem?: 'tezos' | 'etherlink';
+  ecosystem?: 'tezos' | 'etherlink' | 'jstz';
   networkId?: string;
 }
 
@@ -177,7 +178,7 @@ function looksLikeSolidity(source: string): boolean {
 
 function detectContractSourceType(
   source: string,
-  ecosystem: 'tezos' | 'etherlink',
+  ecosystem: 'tezos' | 'etherlink' | 'jstz',
   fileName?: string,
 ): ContractSourceType {
   const lowerName = fileName?.toLowerCase() ?? '';
@@ -1084,6 +1085,9 @@ export default function App() {
                 buildHeaders={buildHeaders}
                 addLog={addLog}
                 onCompiled={setLastSolidityCompile}
+                entrypoints={abi.map((entrypoint) => entrypoint.name)}
+                contractAddress={contractAddress}
+                clearanceId={clearanceId}
                 onDeployedEvm={(info) => {
                   setContractAddress(info.contractAddress);
                   addLog(`EVM contract live at ${info.contractAddress}.`, 'success');
@@ -1556,6 +1560,9 @@ function BuildTab({
   buildHeaders,
   addLog,
   onCompiled,
+  entrypoints,
+  contractAddress,
+  clearanceId,
   onDeployedEvm,
 }: {
   isTezos: boolean;
@@ -1574,6 +1581,9 @@ function BuildTab({
   buildHeaders: (includeJson?: boolean) => HeadersInit;
   addLog: (msg: string, type?: LogType) => void;
   onCompiled: (result: SolidityCompileResult | null) => void;
+  entrypoints: string[];
+  contractAddress: string;
+  clearanceId: string | null;
   onDeployedEvm: (info: { contractAddress: `0x${string}`; transactionHash: `0x${string}`; networkId: string }) => void;
 }) {
   const { t, tip, mode } = useKilnView();
@@ -1693,6 +1703,16 @@ function BuildTab({
           </div>
         </>
       )}
+
+      <ProjectWorkspacePanel
+        networkId={network.id}
+        sourceType={isTezos ? contractSourceType : 'solidity'}
+        source={isTezos ? michelsonCode : solidityCode}
+        initialStorage={initialStorage}
+        entrypoints={entrypoints}
+        contractAddress={contractAddress}
+        clearanceId={clearanceId}
+      />
 
       {/* Bubble compile results up via a tiny effect hook */}
       <CompileSync onCompiled={onCompiled} />

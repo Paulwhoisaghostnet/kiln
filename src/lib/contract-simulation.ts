@@ -5,8 +5,12 @@ export type SimulationWallet = 'bert' | 'ernie' | 'user';
 export interface SimulationStepInput {
   label?: string;
   wallet: SimulationWallet;
+  targetContractId?: string;
   entrypoint: string;
   args: unknown[];
+  amountMutez?: number;
+  expectFailure?: boolean;
+  assertions?: unknown[];
 }
 
 export interface SimulationStepResult {
@@ -153,6 +157,30 @@ export function runContractSimulation(input: {
   for (const [index, step] of stepsToRun.entries()) {
     const label = step.label?.trim() || `Step ${index + 1}`;
     const entrypoint = step.entrypoint.trim();
+
+    if ((step.amountMutez ?? 0) > 0) {
+      results.push({
+        label,
+        wallet: step.wallet,
+        entrypoint,
+        status: step.expectFailure ? 'passed' : 'failed',
+        note:
+          'Payable mutez calls require the real Shadowbox/live runtime; the structural simulator cannot prove tez movement.',
+      });
+      continue;
+    }
+
+    if ((step.assertions?.length ?? 0) > 0) {
+      results.push({
+        label,
+        wallet: step.wallet,
+        entrypoint,
+        status: step.expectFailure ? 'passed' : 'failed',
+        note:
+          'Storage/balance/big-map assertions require the real Shadowbox/live runtime; no-stub policy blocks structural pass.',
+      });
+      continue;
+    }
 
     if (!knownEntrypoints.has(entrypoint)) {
       results.push({

@@ -22,15 +22,23 @@ function mapSimulationSteps(
   steps: Array<{
     label?: string;
     wallet: 'bert' | 'ernie' | 'user';
+    targetContractId?: string;
     entrypoint: string;
     args: unknown[];
+    amountMutez?: number;
+    expectFailure?: boolean;
+    assertions?: unknown[];
   }>,
 ) {
   return steps.map((step) => ({
     label: step.label,
     wallet: step.wallet,
+    targetContractId: step.targetContractId,
     entrypoint: step.entrypoint,
     args: step.args,
+    amountMutez: step.amountMutez,
+    expectFailure: step.expectFailure,
+    assertions: step.assertions,
   }));
 }
 

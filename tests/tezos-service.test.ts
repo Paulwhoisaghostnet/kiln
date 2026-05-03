@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
   const originateMock = vi.fn();
   const atMock = vi.fn();
   const publicKeyHashMock = vi.fn();
+  const sendMock = vi.fn();
 
   class MockTezosToolkit {
     tz = { getBalance: getBalanceMock };
@@ -36,6 +37,7 @@ const mocks = vi.hoisted(() => {
     originateMock,
     atMock,
     publicKeyHashMock,
+    sendMock,
     MockTezosToolkit,
     MockInMemorySigner,
   };
@@ -109,20 +111,21 @@ describe('TezosService', () => {
         .fn()
         .mockResolvedValue({ address: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton' }),
     });
+    mocks.sendMock.mockResolvedValue({
+      hash: 'opTestHash',
+      status: 'applied',
+      confirmation: async () => ({
+        block: {
+          header: {
+            level: 101,
+          },
+        },
+      }),
+    });
     mocks.atMock.mockResolvedValue({
       methods: {
         mint: (..._args: unknown[]) => ({
-          send: async () => ({
-            hash: 'opTestHash',
-            status: 'applied',
-            confirmation: async () => ({
-              block: {
-                header: {
-                  level: 101,
-                },
-              },
-            }),
-          }),
+          send: mocks.sendMock,
         }),
       },
     });
@@ -180,6 +183,20 @@ describe('TezosService', () => {
       level: 101,
       status: 'applied',
     });
+    expect(mocks.sendMock).toHaveBeenCalledWith(undefined);
+  });
+
+  it('passes mutez amount through Taquito send options for payable entrypoints', async () => {
+    const service = new TezosService('B', baseEnv());
+
+    await service.callContract(
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'mint',
+      ['42'],
+      { amountMutez: 1_250_000 },
+    );
+
+    expect(mocks.sendMock).toHaveBeenCalledWith({ amount: 1_250_000, mutez: true });
   });
 
   it('throws when entrypoint does not exist', async () => {

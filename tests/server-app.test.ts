@@ -81,6 +81,7 @@ function mockTezosServiceFactory() {
       address: string;
       entrypoint: string;
       args: unknown[];
+      options?: { amountMutez?: number };
     }>,
   };
 
@@ -104,8 +105,13 @@ function mockTezosServiceFactory() {
       calls.originate.push({ wallet, code, initialStorage });
       return contractAddress;
     },
-    async callContract(address: string, entrypoint: string, args: unknown[] = []) {
-      calls.execute.push({ wallet, address, entrypoint, args });
+    async callContract(
+      address: string,
+      entrypoint: string,
+      args: unknown[] = [],
+      options?: { amountMutez?: number },
+    ) {
+      calls.execute.push({ wallet, address, entrypoint, args, options });
       return {
         hash: 'opWJ4mXf7J4n4A7x8mR7w',
         level: 12345,
@@ -197,6 +203,25 @@ describe('createApiApp', () => {
     expect(blockedOrigin.status).toBe(500);
   });
 
+  it('allows same-origin browser asset and API requests when CORS allowlist is configured', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        CORS_ORIGINS: 'https://kiln.example.com',
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app)
+      .get('/api/health')
+      .set('Host', 'localhost:3001')
+      .set('Origin', 'http://localhost:3001');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3001',
+    );
+  });
+
   it('returns network catalog and active runtime network', async () => {
     const app = createApiApp({
       env: baseEnv(),
@@ -211,7 +236,7 @@ describe('createApiApp', () => {
     expect(response.body.supported).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'tezos-mainnet', ecosystem: 'tezos' }),
-        expect.objectContaining({ id: 'etherlink-testnet', ecosystem: 'etherlink' }),
+        expect.objectContaining({ id: 'etherlink-shadownet', ecosystem: 'etherlink' }),
         expect.objectContaining({ id: 'etherlink-mainnet', ecosystem: 'etherlink' }),
       ]),
     );
@@ -244,6 +269,24 @@ describe('createApiApp', () => {
       ]),
     );
     expect(response.body.entrypoints.shadowbox).toBe('/api/kiln/shadowbox/run');
+    expect(response.body.noStubPolicy.shadowboxMockClearance).toBe('blocked');
+    expect(response.body.systemScenarios.payableTezosCalls).toBe('supported');
+  });
+
+  it('returns capabilities for the requested network instead of only the runtime default', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get(
+      '/api/kiln/capabilities?networkId=etherlink-shadownet',
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.runtime.network.id).toBe('etherlink-shadownet');
+    expect(response.body.runtime.network.evmChainId).toBe(127823);
+    expect(response.body.sources.supported).toEqual(['solidity']);
   });
 
   it('serves OpenAPI metadata for agent/tool integrations', async () => {
@@ -1030,8 +1073,34 @@ describe('createApiApp', () => {
         address: contractAddress,
         entrypoint: 'mint',
         args: ['42'],
+        options: { amountMutez: undefined },
       },
     ]);
+  });
+
+  it('passes mutez amount through execute payloads for payable calls', async () => {
+    const { factory, calls } = mockTezosServiceFactory();
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: factory,
+    });
+
+    const response = await request(app).post('/api/kiln/execute').send({
+      contractAddress,
+      entrypoint: 'create_listing',
+      args: ['100', '1'],
+      amountMutez: 2_000_000,
+      wallet: 'A',
+    });
+
+    expect(response.status).toBe(200);
+    expect(calls.execute.at(-1)).toMatchObject({
+      wallet: 'A',
+      address: contractAddress,
+      entrypoint: 'create_listing',
+      args: ['100', '1'],
+      options: { amountMutez: 2_000_000 },
+    });
   });
 
   it('runs post-deploy E2E sequence for Bert and Ernie', async () => {
@@ -1084,14 +1153,83 @@ describe('createApiApp', () => {
         address: contractAddress,
         entrypoint: 'mint',
         args: ['1'],
+        options: { amountMutez: undefined },
       },
       {
         wallet: 'B',
         address: contractAddress,
         entrypoint: 'mint',
         args: ['1'],
+        options: { amountMutez: undefined },
       },
     ]);
+  });
+
+  it('runs multi-target E2E steps with per-step payable amounts', async () => {
+    const { factory, calls } = mockTezosServiceFactory();
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: factory,
+    });
+
+    const otherContract = 'KT1SxqT3TUF44syQ5QauuF9L8upWjr4ayVoq';
+    const response = await request(app).post('/api/kiln/e2e/run').send({
+      steps: [
+        {
+          label: 'Pay listing',
+          wallet: 'A',
+          targetContractAddress: otherContract,
+          entrypoint: 'create_listing',
+          args: ['100', '1'],
+          amountMutez: 3_000_000,
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.results[0]).toEqual(
+      expect.objectContaining({
+        contractAddress: otherContract,
+        status: 'passed',
+      }),
+    );
+    expect(calls.execute.at(-1)).toMatchObject({
+      wallet: 'A',
+      address: otherContract,
+      entrypoint: 'create_listing',
+      args: ['100', '1'],
+      options: { amountMutez: 3_000_000 },
+    });
+  });
+
+  it('fails live E2E assertions closed until runtime readers exist', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).post('/api/kiln/e2e/run').send({
+      contractAddress,
+      steps: [
+        {
+          label: 'Assert storage',
+          wallet: 'A',
+          entrypoint: 'mint',
+          args: [],
+          assertions: [{ kind: 'storage', path: ['counter'], equals: 1 }],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(false);
+    expect(response.body.results[0]).toEqual(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.stringContaining('no-stub policy'),
+      }),
+    );
   });
 
   it('continues E2E run when one step fails', async () => {

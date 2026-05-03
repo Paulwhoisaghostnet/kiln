@@ -7,8 +7,10 @@ const networkSchema = z.enum([
   'tezos-shadownet',
   'tezos-ghostnet',
   'tezos-mainnet',
+  'etherlink-shadownet',
   'etherlink-testnet',
   'etherlink-mainnet',
+  'jstz-local',
 ]);
 const shadowboxProviderSchema = z.enum(['mock', 'command']);
 const optionalNonEmptyString = z.preprocess(
@@ -46,6 +48,7 @@ const envSchema = z.object({
   /** Per-network RPC overrides. Set these when the defaults are rate-limited or you run your own node. */
   TEZOS_MAINNET_RPC_URL: optionalNonEmptyString,
   TEZOS_GHOSTNET_RPC_URL: optionalNonEmptyString,
+  ETHERLINK_SHADOWNET_RPC_URL: optionalNonEmptyString,
   ETHERLINK_TESTNET_RPC_URL: optionalNonEmptyString,
   ETHERLINK_MAINNET_RPC_URL: optionalNonEmptyString,
   WALLET_A_SECRET_KEY: optionalNonEmptyString,
