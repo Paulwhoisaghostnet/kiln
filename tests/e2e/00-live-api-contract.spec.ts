@@ -61,6 +61,15 @@ test('openapi includes all required surface paths', async () => {
 });
 
 test('api methods are protected when auth is required', async () => {
+  const capabilities = await callKilnApi('/api/kiln/capabilities');
+  const capabilityPayload = capabilities.json as {
+    runtime?: { auth?: { required?: boolean } };
+  };
+  test.skip(
+    capabilityPayload.runtime?.auth?.required === false,
+    'Kiln API auth is explicitly disabled for this environment.',
+  );
+
   for (const pathname of protectedPostPaths.slice(0, 8)) {
     await expectUnauthorized(pathname, 'POST');
   }
@@ -73,4 +82,3 @@ test('api methods are protected when auth is required', async () => {
   const guidedGet = await stripTokenForUnauthorized('/api/kiln/contracts/guided/elements');
   expect([200, 401, 404, 405]).toContain(guidedGet.status);
 });
-

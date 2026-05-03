@@ -13,6 +13,7 @@ describe('getEnv', () => {
     expect(env.API_RATE_LIMIT_WINDOW_MS).toBe(60_000);
     expect(env.API_RATE_LIMIT_MAX).toBe(30);
     expect(env.API_JSON_LIMIT).toBe('10mb');
+    expect(env.KILN_API_AUTH_REQUIRED).toBeUndefined();
     expect(env.KILN_REQUIRE_SIM_CLEARANCE).toBe(true);
     expect(env.KILN_SHADOWBOX_ENABLED).toBe(false);
     expect(env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE).toBe(false);
@@ -45,11 +46,13 @@ describe('getEnv', () => {
     const env = getEnv({
       TEZOS_RPC_URL: 'https://rpc.shadownet.teztnets.com',
       KILN_REQUIRE_SIM_CLEARANCE: 'false',
+      KILN_API_AUTH_REQUIRED: 'off',
       KILN_SHADOWBOX_ENABLED: 'true',
       KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE: 'yes',
     });
 
     expect(env.KILN_REQUIRE_SIM_CLEARANCE).toBe(false);
+    expect(env.KILN_API_AUTH_REQUIRED).toBe(false);
     expect(env.KILN_SHADOWBOX_ENABLED).toBe(true);
     expect(env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE).toBe(true);
   });

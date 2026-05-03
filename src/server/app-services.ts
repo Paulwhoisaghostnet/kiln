@@ -67,6 +67,11 @@ export interface ApiAppServices {
   mutationLimiter: RequestHandler;
   /** Per-request factory — pass `networkId` to target a specific network. Defaults to `runtimeNetwork` when omitted. */
   createTezosService: (wallet: WalletType, networkId?: KilnNetworkId) => TezosServiceLike;
+  auth: {
+    required: boolean;
+    tokenConfigured: boolean;
+    mode: 'open' | 'token';
+  };
   /** Per-request EVM service factory for Etherlink networks. */
   createEtherlinkService: (networkId?: KilnNetworkId) => EtherlinkService;
   /** Resolve the runtime network config for a given (optional) networkId. */
@@ -151,10 +156,19 @@ export function createApiAppServices(
   const exportBundle = options.exportBundle ?? createMainnetReadyBundle;
   const runtimeNetwork = resolveNetwork();
   const activityLogger = createActivityLogger(env.KILN_ACTIVITY_LOG_PATH);
+  const authRequired = env.KILN_API_AUTH_REQUIRED ?? Boolean(env.API_AUTH_TOKEN);
+  const tokenConfigured = Boolean(env.API_AUTH_TOKEN);
 
   const requireApiToken: RequestHandler = (req, res, next) => {
-    if (!env.API_AUTH_TOKEN) {
+    if (!authRequired) {
       next();
+      return;
+    }
+
+    if (!env.API_AUTH_TOKEN) {
+      res.status(503).json({
+        error: 'API auth is required but API_AUTH_TOKEN is not configured.',
+      });
       return;
     }
 
@@ -185,6 +199,11 @@ export function createApiAppServices(
     requireApiToken,
     mutationLimiter,
     createTezosService,
+    auth: {
+      required: authRequired,
+      tokenConfigured,
+      mode: authRequired ? 'token' : 'open',
+    },
     createEtherlinkService,
     resolveNetwork,
     compileSmartPy,

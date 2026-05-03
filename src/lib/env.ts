@@ -38,6 +38,27 @@ const envBoolean = z.preprocess((value) => {
   }
   return value;
 }, z.boolean());
+const optionalEnvBoolean = z.preprocess((value) => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'string' && value.trim() === '') {
+    return undefined;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+  }
+  return value;
+}, z.boolean().optional());
 
 const envSchema = z.object({
   NODE_ENV: nodeEnvSchema.default('development'),
@@ -60,6 +81,7 @@ const envSchema = z.object({
   KILN_TOKEN_PLATINUM: optionalNonEmptyString,
   KILN_TOKEN_DIAMOND: optionalNonEmptyString,
   API_AUTH_TOKEN: optionalNonEmptyString,
+  KILN_API_AUTH_REQUIRED: optionalEnvBoolean,
   API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   API_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   API_JSON_LIMIT: z.string().trim().min(1).default('10mb'),

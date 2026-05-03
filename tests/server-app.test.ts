@@ -141,6 +141,11 @@ describe('createApiApp', () => {
         networkId: 'tezos-shadownet',
         networkLabel: 'Tezos Shadownet',
         ecosystem: 'tezos',
+        auth: {
+          required: false,
+          tokenConfigured: false,
+          mode: 'open',
+        },
         activityLogPath: expect.any(String),
         requestId: expect.any(String),
         tokens: {
@@ -1391,5 +1396,47 @@ describe('createApiApp', () => {
       .get('/api/kiln/balances')
       .set('x-kiln-token', 'super-secret');
     expect(authorizedBalances.status).toBe(200);
+  });
+
+  it('can disable token auth explicitly while keeping API_AUTH_TOKEN configured', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        API_AUTH_TOKEN: 'super-secret',
+        KILN_API_AUTH_REQUIRED: false,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const upload = await request(app).post('/api/kiln/upload').send({
+      code: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
+      initialStorage: 'Unit',
+      wallet: 'A',
+    });
+
+    expect(upload.status).toBe(200);
+
+    const capabilities = await request(app).get('/api/kiln/capabilities');
+    expect(capabilities.body.runtime.auth).toEqual({
+      required: false,
+      tokenConfigured: true,
+      mode: 'open',
+    });
+  });
+
+  it('fails closed when token auth is forced without a configured API_AUTH_TOKEN', async () => {
+    const app = createApiApp({
+      env: baseEnv({
+        API_AUTH_TOKEN: undefined,
+        KILN_API_AUTH_REQUIRED: true,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get('/api/kiln/balances');
+
+    expect(response.status).toBe(503);
+    expect(response.body.error).toBe(
+      'API auth is required but API_AUTH_TOKEN is not configured.',
+    );
   });
 });

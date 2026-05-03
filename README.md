@@ -213,6 +213,7 @@ If you protect the API with a token, you **must** also set the client-visible bu
 
 - **`API_AUTH_TOKEN`** — checked in the Netlify function on protected routes (including **`GET /api/kiln/balances`** for Bert/Ernie).
 - **`VITE_API_TOKEN`** — same string as `API_AUTH_TOKEN`, but this name is chosen so **Vite inlines it at build time** into the browser bundle. The UI sends it as the `x-kiln-token` header on `/api/...` requests. The legacy `x-api-token` header is still accepted as an alias so old curl/CLI scripts keep working; the `x-` prefix is just the historical convention for custom HTTP headers (RFC 6648) and has nothing to do with X/Twitter.
+- **`KILN_API_AUTH_REQUIRED`** — optional fast switch. Leave blank for legacy behavior (`API_AUTH_TOKEN` present means required). Set `false` to run Kiln as an open public builder while keeping `API_AUTH_TOKEN` configured for quick rollback. Set `true` to force token auth and fail closed if `API_AUTH_TOKEN` is missing.
 
 Without `VITE_API_TOKEN` on the **build**, production will show **Shadownet online** (health is unauthenticated) while Bert/Ernie balances stay in **error** or **401**: the balance route rejects the request.
 

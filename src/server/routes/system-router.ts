@@ -40,6 +40,7 @@ export function createSystemRouter(services: ApiAppServices): Router {
       ecosystem: services.runtimeNetwork.ecosystem,
       tokens: getTokenHealth(services),
       activityLogPath: services.activityLogger.filePath,
+      auth: services.auth,
     });
   });
 
@@ -66,6 +67,7 @@ export function createSystemRouter(services: ApiAppServices): Router {
         shadowboxRequiredForClearance:
           services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
         shadowbox: services.shadowbox,
+        auth: services.auth,
       },
       noStubPolicy: {
         shadowboxMockClearance: 'blocked',
