@@ -36,6 +36,7 @@ import { KilnCopy, useKilnView } from './context/KilnViewProvider';
 import { useKilnNetwork } from './context/NetworkProvider';
 import type { WalletConnectTarget } from './lib/shadownet-wallet';
 import type { AbiEntrypoint, WalletType } from './lib/types';
+import { buildWorkflowDrivenE2ESteps } from './lib/workflow-discovery';
 
 const SolidityPanel = React.lazy(() =>
   import('./components/SolidityPanel').then((module) => ({
@@ -90,6 +91,12 @@ interface E2ERunResponse {
     total: number;
     passed: number;
     failed: number;
+  };
+  coverage?: {
+    passed: boolean;
+    totalEntrypoints: number;
+    coveredEntrypoints: number;
+    missedEntrypoints: string[];
   };
   results: Array<{
     label: string;
@@ -629,7 +636,7 @@ export default function App() {
         simulationArgs = [];
       }
       const simulationEntrypoint = e2eEntrypoint.trim();
-      const simulationSteps = simulationEntrypoint
+      const simulationSteps = simulationEntrypoint && abi.length === 0
         ? [
             {
               label: 'Bert simulation',
@@ -835,23 +842,42 @@ export default function App() {
       );
       return;
     }
+    const discoveredEntrypoints = abi.map((entrypoint) => entrypoint.name);
     const selectedEntrypoint = e2eEntrypoint.trim() || abi[0]?.name;
-    if (!selectedEntrypoint) {
+    if (discoveredEntrypoints.length === 0 && !selectedEntrypoint) {
       addLog('Pick an entrypoint before running E2E.', 'error');
       return;
     }
     let parsedArgs: unknown[] = [];
-    try {
-      parsedArgs = safeParseJsonArray(e2eArgs);
-    } catch (error) {
-      addLog(
-        `Invalid E2E args JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'error',
-      );
-      return;
+    if (discoveredEntrypoints.length === 0) {
+      try {
+        parsedArgs = safeParseJsonArray(e2eArgs);
+      } catch (error) {
+        addLog(
+          `Invalid E2E args JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          'error',
+        );
+        return;
+      }
     }
+    const steps =
+      discoveredEntrypoints.length > 0
+        ? buildWorkflowDrivenE2ESteps({
+            contractId: 'deployed_contract',
+            contractAddress,
+            entrypoints: discoveredEntrypoints,
+          })
+        : [
+            { label: 'Bert step', wallet: 'A' as const, entrypoint: selectedEntrypoint, args: parsedArgs },
+            { label: 'Ernie step', wallet: 'B' as const, entrypoint: selectedEntrypoint, args: parsedArgs },
+          ];
     setIsRunningE2E(true);
-    addLog(`Running post-deploy E2E (Bert + Ernie) on ${selectedEntrypoint}...`, 'info');
+    addLog(
+      discoveredEntrypoints.length > 0
+        ? `Running discovered Bert + Ernie workflow E2E (${steps.length} steps across ${discoveredEntrypoints.length} entrypoints)...`
+        : `Running post-deploy E2E (Bert + Ernie) on ${selectedEntrypoint}...`,
+      'info',
+    );
     try {
       const res = await fetch('/api/kiln/e2e/run', {
         method: 'POST',
@@ -859,10 +885,17 @@ export default function App() {
         body: JSON.stringify({
           networkId,
           contractAddress,
-          steps: [
-            { label: 'Bert step', wallet: 'A', entrypoint: selectedEntrypoint, args: parsedArgs },
-            { label: 'Ernie step', wallet: 'B', entrypoint: selectedEntrypoint, args: parsedArgs },
-          ],
+          contracts:
+            discoveredEntrypoints.length > 0
+              ? [
+                  {
+                    id: 'deployed_contract',
+                    address: contractAddress,
+                    entrypoints: discoveredEntrypoints,
+                  },
+                ]
+              : [],
+          steps,
         }),
       });
       const payload = (await res.json()) as E2ERunResponse | { error?: string };
@@ -873,7 +906,12 @@ export default function App() {
       }
       for (const result of payload.results) {
         if (result.status === 'passed') {
-          addLog(`${result.label} passed (${result.wallet}) hash ${result.hash}`, 'success');
+          const detail = result.hash
+            ? `hash ${result.hash}`
+            : result.error
+              ? `expected rejection: ${result.error}`
+              : 'no operation hash';
+          addLog(`${result.label} passed (${result.wallet}) ${detail}`, 'success');
         } else {
           addLog(
             `${result.label} failed (${result.wallet}): ${result.error ?? 'unknown error'}`,
@@ -885,6 +923,12 @@ export default function App() {
         `E2E summary: ${payload.summary.passed}/${payload.summary.total} passed.`,
         payload.success ? 'success' : 'error',
       );
+      if (payload.coverage) {
+        addLog(
+          `Workflow coverage: ${payload.coverage.coveredEntrypoints}/${payload.coverage.totalEntrypoints} entrypoints covered.`,
+          payload.coverage.passed ? 'success' : 'error',
+        );
+      }
     } catch (error) {
       addLog(
         `E2E run error: ${error instanceof Error ? error.message : 'Unknown error'}`,

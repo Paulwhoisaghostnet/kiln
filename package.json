@@ -25,6 +25,7 @@
     "deploy:dummy-tokens": "tsx scripts/deploy-dummy-tokens.ts",
     "kiln:cli": "tsx scripts/kiln-cli.ts",
     "wtf:check-templates": "tsx scripts/wtf/run-template-checks.ts",
+    "marketplace:suite": "tsx scripts/run-fa2-marketplace-suite.ts",
     "netlify:dev": "npx netlify dev",
     "netlify:deploy:preview": "npx netlify deploy",
     "netlify:deploy:prod": "npx netlify deploy --prod",

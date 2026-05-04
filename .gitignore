@@ -18,6 +18,7 @@ vendor/kiln-python
 .kiln-deploy-host
 
 artifacts/kiln-e2e/
+artifacts/fa2-marketplace-suite/
 test-results/
 playwright-report/
 .lighthouseci/

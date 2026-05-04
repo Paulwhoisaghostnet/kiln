@@ -51,14 +51,37 @@ describe('runContractSimulation', () => {
     expect(result.steps[0]?.note).toContain('not found in contract ABI');
   });
 
-  it('generates default steps when none are provided', () => {
+  it('generates default steps covering every entrypoint when none are provided', () => {
     const result = runContractSimulation({
-      entrypoints: ['mint', 'transfer'],
+      entrypoints: ['mint', 'transfer', 'burn', 'pause'],
       steps: [],
     });
 
     expect(result.generatedDefaultSteps).toBe(true);
-    expect(result.summary.total).toBeGreaterThan(0);
+    expect(result.summary.total).toBe(4);
+    expect(result.coverage.passed).toBe(true);
+    expect(result.coverage.missedEntrypoints).toEqual([]);
+    expect(new Set(result.steps.map((step) => step.wallet))).toEqual(
+      new Set(['bert', 'ernie']),
+    );
+  });
+
+  it('fails simulation clearance when custom steps miss detected entrypoints', () => {
+    const result = runContractSimulation({
+      entrypoints: ['mint', 'transfer'],
+      steps: [
+        {
+          wallet: 'bert',
+          entrypoint: 'mint',
+          args: ['10'],
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.summary.failed).toBe(0);
+    expect(result.coverage.passed).toBe(false);
+    expect(result.coverage.missedEntrypoints).toEqual(['contract.transfer']);
   });
 
   it('blocks non-admin entrypoints while paused', () => {

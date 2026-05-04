@@ -65,6 +65,10 @@ export interface ShadowboxRunResult {
   endedAt?: string;
   durationMs?: number;
   contractAddress?: string;
+  contracts?: Array<{
+    id: string;
+    address: string;
+  }>;
   summary: {
     total: number;
     passed: number;
@@ -77,6 +81,10 @@ export interface ShadowboxRunResult {
 interface ShadowboxProviderResult {
   passed: boolean;
   contractAddress?: string;
+  contracts?: Array<{
+    id: string;
+    address: string;
+  }>;
   steps: ShadowboxStepResult[];
   warnings: string[];
 }
@@ -190,6 +198,31 @@ function normalizeStepResults(
   });
 }
 
+function normalizeContractResults(
+  rawContracts: unknown,
+): Array<{ id: string; address: string }> | undefined {
+  if (!Array.isArray(rawContracts)) {
+    return undefined;
+  }
+
+  const contracts = rawContracts
+    .map((rawContract) => {
+      const record =
+        rawContract && typeof rawContract === 'object'
+          ? (rawContract as Record<string, unknown>)
+          : {};
+      const id = typeof record.id === 'string' ? record.id.trim() : '';
+      const address =
+        typeof record.address === 'string' ? record.address.trim() : '';
+      return id && address ? { id, address } : null;
+    })
+    .filter((contract): contract is { id: string; address: string } =>
+      Boolean(contract),
+    );
+
+  return contracts.length > 0 ? contracts : undefined;
+}
+
 async function runMockProvider(
   input: ShadowboxRunInput,
   requiredForClearance: boolean,
@@ -268,6 +301,7 @@ async function runCommandProvider(
         typeof output.contractAddress === 'string'
           ? output.contractAddress
           : undefined,
+      contracts: normalizeContractResults(output.contracts),
       steps,
       warnings,
     };
@@ -363,7 +397,12 @@ export class ShadowboxRuntimeRunner {
       );
     }
 
-    const sourceBytes = Buffer.byteLength(input.michelson, 'utf8');
+    const sourceBytes =
+      Buffer.byteLength(input.michelson, 'utf8') +
+      (input.contracts ?? []).reduce(
+        (sum, contract) => sum + Buffer.byteLength(contract.michelson, 'utf8'),
+        0,
+      );
     if (sourceBytes > this.settings.maxSourceBytes) {
       return rejectedResult({
         provider: this.settings.provider,
@@ -377,15 +416,6 @@ export class ShadowboxRuntimeRunner {
         provider: this.settings.provider,
         requiredForClearance: this.settings.requiredForClearance,
         reason: `Too many shadowbox steps (${input.steps.length} > ${this.settings.maxSteps}).`,
-      });
-    }
-
-    if ((input.contracts?.length ?? 1) > 1) {
-      return rejectedResult({
-        provider: this.settings.provider,
-        requiredForClearance: this.settings.requiredForClearance,
-        reason:
-          'Shadowbox multi-contract runtime is not implemented yet; no-stub policy blocks pretending this system scenario passed.',
       });
     }
 
@@ -436,6 +466,7 @@ export class ShadowboxRuntimeRunner {
         endedAt,
         durationMs: endedAtMs - startedAtMs,
         contractAddress: providerResult.contractAddress,
+        contracts: providerResult.contracts,
         summary,
         steps: providerResult.steps,
         warnings: providerResult.warnings,

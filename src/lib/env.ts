@@ -95,7 +95,7 @@ const envSchema = z.object({
   KILN_SHADOWBOX_MAX_ACTIVE: z.coerce.number().int().positive().default(2),
   KILN_SHADOWBOX_MAX_ACTIVE_PER_IP: z.coerce.number().int().positive().default(1),
   KILN_SHADOWBOX_MAX_SOURCE_BYTES: z.coerce.number().int().positive().default(250_000),
-  KILN_SHADOWBOX_MAX_STEPS: z.coerce.number().int().positive().default(24),
+  KILN_SHADOWBOX_MAX_STEPS: z.coerce.number().int().positive().default(80),
   KILN_SHADOWBOX_WORKDIR: optionalNonEmptyString,
   KILN_ACTIVITY_LOG_PATH: optionalNonEmptyString,
   // Native hosting paths (Phase 1 of Hetzner migration). All optional so dev

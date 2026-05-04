@@ -19,6 +19,11 @@ describe('runContractWorkflow', () => {
             entrypoint: 'mint',
             args: ['10'],
           },
+          {
+            wallet: 'ernie',
+            entrypoint: 'transfer',
+            args: ['1'],
+          },
         ],
       },
       {
@@ -43,6 +48,48 @@ describe('runContractWorkflow', () => {
     expect(result.simulation.success).toBe(true);
     expect(result.clearance.approved).toBe(true);
     expect(result.clearance.record?.id).toMatch(/^clr_/);
+  });
+
+  it('denies clearance when simulation steps do not cover every entrypoint', async () => {
+    const result = await runContractWorkflow(
+      {
+        sourceType: 'michelson',
+        source: `
+          parameter (or (pair %mint address nat) (pair %transfer address nat));
+          storage unit;
+          code { CAR ; NIL operation ; PAIR };
+        `,
+        initialStorage: 'Unit',
+        simulationSteps: [
+          {
+            wallet: 'bert',
+            entrypoint: 'mint',
+            args: ['10'],
+          },
+        ],
+      },
+      {
+        compileSmartPy: async () => ({
+          scenario: 'unused',
+          michelson: '',
+          initialStorage: 'Unit',
+        }),
+        injectKilnTokens: (code) => code,
+        estimateOrigination: async () => ({
+          gasLimit: 200_000,
+          storageLimit: 10_000,
+          suggestedFeeMutez: 40_000,
+          minimalFeeMutez: 30_000,
+        }),
+        clearanceStore: new DeploymentClearanceStore(),
+      },
+    );
+
+    expect(result.simulation.success).toBe(false);
+    expect(result.simulation.coverage.missedEntrypoints).toEqual([
+      'contract.transfer',
+    ]);
+    expect(result.clearance.approved).toBe(false);
   });
 
   it('compiles smartpy sources when requested', async () => {

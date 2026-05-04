@@ -279,8 +279,8 @@ def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
 
 
 def parse_contract_address(text: str) -> str | None:
-    match = KT1_RE.search(text)
-    return match.group(1) if match else None
+    matches = KT1_RE.findall(text)
+    return matches[-1] if matches else None
 
 
 def parse_operation_hash(text: str) -> str | None:
@@ -341,7 +341,7 @@ def main(argv: list[str]) -> int:
         "steps": step_results,
     }
 
-    tmp_file: Path | None = None
+    tmp_files: list[Path] = []
 
     try:
         run(
@@ -373,99 +373,136 @@ def main(argv: list[str]) -> int:
             write_output(output_path, runner_output)
             return 0
 
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".tz",
-            prefix="kiln-shadowbox-",
-            delete=False,
-            encoding="utf-8",
-        ) as handle:
-            handle.write(str(payload.get("michelson", "")))
-            tmp_file = Path(handle.name)
-
-        run([config.docker_bin, "cp", str(tmp_file), f"{container_name}:/tmp/shadowbox-contract.tz"], timeout=15)
-
-        contract_source = str(payload.get("michelson", ""))
-        try:
-            originate = docker_exec(
-                config,
-                container_name,
-                [
-                    "octez-client",
-                    "-M",
-                    "client",
-                    "originate",
-                    "contract",
-                    "shadowbox",
-                    "transferring",
-                    "0",
-                    "from",
-                    "alice",
-                    "running",
-                    "/tmp/shadowbox-contract.tz",
-                    "--init",
-                    str(payload.get("initialStorage", "Unit")),
-                    "--burn-cap",
-                    "10",
-                    "--force",
-                ],
-                timeout=75,
+        contracts_payload = payload.get("contracts", [])
+        contract_specs: list[dict[str, str]] = []
+        if isinstance(contracts_payload, list) and contracts_payload:
+            for index, item in enumerate(contracts_payload):
+                if not isinstance(item, dict):
+                    continue
+                contract_specs.append(
+                    {
+                        "id": str(item.get("id") or f"contract_{index + 1}"),
+                        "michelson": str(item.get("michelson") or ""),
+                        "initialStorage": str(item.get("initialStorage") or "Unit"),
+                    }
+                )
+        else:
+            contract_specs.append(
+                {
+                    "id": "shadowbox",
+                    "michelson": str(payload.get("michelson", "")),
+                    "initialStorage": str(payload.get("initialStorage", "Unit")),
+                }
             )
-        except subprocess.CalledProcessError as error:
-            error_text = f"{error.stdout}\n{error.stderr}".strip()
-            lower_error = error_text.lower()
-            if "misaligned expression" in lower_error:
-                flattened = flatten_michelson_source(contract_source)
-                if flattened and flattened != contract_source:
-                    try:
-                        if tmp_file is None:
-                            raise RuntimeError("temporary contract path unavailable")
-                        tmp_file.write_text(flattened, encoding="utf-8")
-                        run(
-                            [
-                                config.docker_bin,
-                                "cp",
-                                str(tmp_file),
-                                f"{container_name}:/tmp/shadowbox-contract.tz",
-                            ],
-                            timeout=15,
-                        )
-                        originate = docker_exec(
-                            config,
-                            container_name,
-                            [
-                                "octez-client",
-                                "-M",
-                                "client",
-                                "originate",
-                                "contract",
-                                "shadowbox",
-                                "transferring",
-                                "0",
-                                "from",
-                                "alice",
-                                "running",
-                                "/tmp/shadowbox-contract.tz",
-                                "--init",
-                                str(payload.get("initialStorage", "Unit")),
-                                "--burn-cap",
-                                "10",
-                                "--force",
-                            ],
-                            timeout=75,
-                        )
+
+        originated_contracts: list[dict[str, str]] = []
+
+        for contract_index, contract_spec in enumerate(contract_specs):
+            alias = f"shadowbox_{contract_index + 1}"
+            remote_path = f"/tmp/{alias}.tz"
+            contract_source = contract_spec["michelson"]
+
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".tz",
+                prefix="kiln-shadowbox-",
+                delete=False,
+                encoding="utf-8",
+            ) as handle:
+                handle.write(contract_source)
+                tmp_file = Path(handle.name)
+                tmp_files.append(tmp_file)
+
+            run([config.docker_bin, "cp", str(tmp_file), f"{container_name}:{remote_path}"], timeout=15)
+
+            try:
+                originate = docker_exec(
+                    config,
+                    container_name,
+                    [
+                        "octez-client",
+                        "-M",
+                        "client",
+                        "originate",
+                        "contract",
+                        alias,
+                        "transferring",
+                        "0",
+                        "from",
+                        "alice",
+                        "running",
+                        remote_path,
+                        "--init",
+                        contract_spec["initialStorage"],
+                        "--burn-cap",
+                        "10",
+                        "--force",
+                    ],
+                    timeout=75,
+                )
+            except subprocess.CalledProcessError as error:
+                error_text = f"{error.stdout}\n{error.stderr}".strip()
+                lower_error = error_text.lower()
+                if "misaligned expression" in lower_error:
+                    flattened = flatten_michelson_source(contract_source)
+                    if flattened and flattened != contract_source:
+                        try:
+                            tmp_file.write_text(flattened, encoding="utf-8")
+                            run(
+                                [
+                                    config.docker_bin,
+                                    "cp",
+                                    str(tmp_file),
+                                    f"{container_name}:{remote_path}",
+                                ],
+                                timeout=15,
+                            )
+                            originate = docker_exec(
+                                config,
+                                container_name,
+                                [
+                                    "octez-client",
+                                    "-M",
+                                    "client",
+                                    "originate",
+                                    "contract",
+                                    alias,
+                                    "transferring",
+                                    "0",
+                                    "from",
+                                    "alice",
+                                    "running",
+                                    remote_path,
+                                    "--init",
+                                    contract_spec["initialStorage"],
+                                    "--burn-cap",
+                                    "10",
+                                    "--force",
+                                ],
+                                timeout=75,
+                            )
+                            warnings.append(
+                                f"{contract_spec['id']}: retried origination with normalized Michelson formatting.",
+                            )
+                        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as retry_error:
+                            retry_text = (
+                                f"{getattr(retry_error, 'stdout', '')}\n{getattr(retry_error, 'stderr', '')}"
+                            ).strip()
+                            warnings.append(
+                                f"{contract_spec['id']} origination failed: {error_text or 'Unknown error.'}",
+                            )
+                            warnings.append(
+                                f"{contract_spec['id']} retry after formatting normalization failed: {retry_text or 'Unknown error.'}",
+                            )
+                            if "UNPAIR;" in contract_source:
+                                warnings.append(
+                                    "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is ill-typed for pair-based storage. Use `CDR; NIL operation; PAIR`.",
+                                )
+                            write_output(output_path, runner_output)
+                            return 0
+                    else:
                         warnings.append(
-                            "Shadowbox retried origination with normalized Michelson formatting.",
-                        )
-                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as retry_error:
-                        retry_text = (
-                            f"{getattr(retry_error, 'stdout', '')}\n{getattr(retry_error, 'stderr', '')}"
-                        ).strip()
-                        warnings.append(
-                            f"Origination failed: {error_text or 'Unknown error.'}",
-                        )
-                        warnings.append(
-                            f"Retry after formatting normalization failed: {retry_text or 'Unknown error.'}",
+                            f"{contract_spec['id']} origination failed: {error_text or 'Unknown error.'}"
                         )
                         if "UNPAIR;" in contract_source:
                             warnings.append(
@@ -474,34 +511,37 @@ def main(argv: list[str]) -> int:
                         write_output(output_path, runner_output)
                         return 0
                 else:
-                    warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
+                    warnings.append(
+                        f"{contract_spec['id']} origination failed: {error_text or 'Unknown error.'}"
+                    )
                     if "UNPAIR;" in contract_source:
                         warnings.append(
                             "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is ill-typed for pair-based storage. Use `CDR; NIL operation; PAIR`.",
                         )
                     write_output(output_path, runner_output)
                     return 0
-            else:
-                warnings.append(f"Origination failed: {error_text or 'Unknown error.'}")
-                if "UNPAIR;" in contract_source:
-                    warnings.append(
-                        "Hint: legacy stub sequence `UNPAIR; SWAP; DROP;` is ill-typed for pair-based storage. Use `CDR; NIL operation; PAIR`.",
-                    )
+            except subprocess.TimeoutExpired:
+                warnings.append(f"{contract_spec['id']} origination timed out in shadowbox runtime.")
                 write_output(output_path, runner_output)
                 return 0
-        except subprocess.TimeoutExpired:
-            warnings.append("Origination timed out in shadowbox runtime.")
+
+            originate_text = f"{originate.stdout}\n{originate.stderr}"
+            parsed_address = parse_contract_address(originate_text)
+            if not parsed_address:
+                warnings.append(f"Could not parse KT1 address from {contract_spec['id']} origination output.")
+                write_output(output_path, runner_output)
+                return 0
+            originated_contracts.append({"id": contract_spec["id"], "address": parsed_address})
+
+        if not originated_contracts:
+            warnings.append("No contracts were originated in shadowbox runtime.")
             write_output(output_path, runner_output)
             return 0
 
-        originate_text = f"{originate.stdout}\n{originate.stderr}"
-        contract_address = parse_contract_address(originate_text)
-        if not contract_address:
-            warnings.append("Could not parse KT1 address from origination output.")
-            write_output(output_path, runner_output)
-            return 0
-
+        contract_address = originated_contracts[0]["address"]
         runner_output["contractAddress"] = contract_address
+        runner_output["contracts"] = originated_contracts
+        address_by_id = {item["id"]: item["address"] for item in originated_contracts}
 
         for index, raw_step in enumerate(steps_in):
             if not isinstance(raw_step, dict):
@@ -514,17 +554,37 @@ def main(argv: list[str]) -> int:
             amount_tez = mutez_to_tez_string(raw_step.get("amountMutez", 0))
             assertions = raw_step.get("assertions", [])
 
-            if raw_step.get("targetContractId") or raw_step.get("targetContractAddress"):
-                step_results.append(
-                    {
-                        "label": label,
-                        "wallet": wallet,
-                        "entrypoint": entrypoint or "unknown",
-                        "status": "failed",
-                        "note": "This Shadowbox runner originates one contract only; multi-contract targets are blocked by the no-stub policy.",
-                    }
-                )
-                continue
+            target_contract_address = contract_address
+            target_contract_id = raw_step.get("targetContractId")
+            if isinstance(target_contract_id, str) and target_contract_id.strip():
+                target_contract_address = address_by_id.get(target_contract_id.strip(), "")
+                if not target_contract_address:
+                    step_results.append(
+                        {
+                            "label": label,
+                            "wallet": wallet,
+                            "entrypoint": entrypoint or "unknown",
+                            "status": "failed",
+                            "note": f"Unknown shadowbox targetContractId {target_contract_id}.",
+                        }
+                    )
+                    continue
+            target_contract_hint = raw_step.get("targetContractAddress")
+            if isinstance(target_contract_hint, str) and target_contract_hint.strip():
+                known_addresses = {item["address"] for item in originated_contracts}
+                if target_contract_hint.strip() in known_addresses:
+                    target_contract_address = target_contract_hint.strip()
+                else:
+                    step_results.append(
+                        {
+                            "label": label,
+                            "wallet": wallet,
+                            "entrypoint": entrypoint or "unknown",
+                            "status": "failed",
+                            "note": "targetContractAddress does not match an address originated inside this shadowbox job.",
+                        }
+                    )
+                    continue
 
             if amount_tez is None:
                 step_results.append(
@@ -589,7 +649,7 @@ def main(argv: list[str]) -> int:
                         "from",
                         account,
                         "to",
-                        contract_address,
+                        target_contract_address,
                         "--entrypoint",
                         entrypoint,
                         "--arg",
@@ -642,11 +702,12 @@ def main(argv: list[str]) -> int:
         write_output(output_path, runner_output)
         return 0
     finally:
-        if tmp_file and tmp_file.exists():
-            try:
-                tmp_file.unlink()
-            except OSError:
-                pass
+        for tmp_file in tmp_files:
+            if tmp_file.exists():
+                try:
+                    tmp_file.unlink()
+                except OSError:
+                    pass
         subprocess.run(
             [config.docker_bin, "kill", container_name],
             text=True,

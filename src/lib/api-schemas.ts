@@ -97,18 +97,32 @@ export const e2eStepSchema = z.object({
   assertions: z.array(scenarioAssertionSchema).max(20).default([]),
 });
 
+export const e2eContractManifestSchema = z.object({
+  id: z.string().trim().min(1).max(120),
+  address: kt1AddressSchema,
+  entrypoints: z
+    .array(z.string().trim().min(1).max(128))
+    .min(1, 'contract manifest needs at least one entrypoint')
+    .max(120, 'contract manifest has too many entrypoints'),
+});
+
 export const e2eRunPayloadSchema = z.object({
   networkId: networkIdSchema,
   contractAddress: kt1AddressSchema.optional(),
+  contracts: z.array(e2eContractManifestSchema).max(40).default([]),
   steps: z.array(e2eStepSchema).min(1, 'At least one E2E step is required'),
 }).superRefine((payload, ctx) => {
   const hasDefaultTarget = Boolean(payload.contractAddress);
+  const contractIds = new Set(payload.contracts.map((contract) => contract.id));
   for (const [index, step] of payload.steps.entries()) {
-    if (!hasDefaultTarget && !step.targetContractAddress) {
+    const hasManifestTarget = Boolean(
+      step.targetContractId && contractIds.has(step.targetContractId),
+    );
+    if (!hasDefaultTarget && !step.targetContractAddress && !hasManifestTarget) {
       ctx.addIssue({
         code: 'custom',
         message:
-          'Each E2E step needs targetContractAddress when no top-level contractAddress is provided',
+          'Each E2E step needs targetContractAddress or a known targetContractId when no top-level contractAddress is provided',
         path: ['steps', index, 'targetContractAddress'],
       });
     }

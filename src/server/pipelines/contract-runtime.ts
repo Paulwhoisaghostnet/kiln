@@ -12,6 +12,10 @@ import { injectKilnTokens } from '../../lib/kiln-injector.js';
 import { parseEntrypointsFromMichelson } from '../../lib/michelson-parser.js';
 import type { WalletType } from '../../lib/types.js';
 import type { TezosServiceLike } from '../../lib/tezos-service.js';
+import {
+  buildEntrypointCoverage,
+  type EntrypointCoverageReport,
+} from '../../lib/workflow-coverage.js';
 import { asMessage } from '../http.js';
 
 export class DeploymentBlockedError extends Error {}
@@ -103,6 +107,7 @@ export async function runContractE2E(
     passed: number;
     failed: number;
   };
+  coverage?: EntrypointCoverageReport;
   results: Array<{
     label: string;
     wallet: WalletType;
@@ -124,10 +129,18 @@ export async function runContractE2E(
     level?: number | null;
     error?: string;
   }> = [];
+  const contractManifestById = new Map(
+    payload.contracts.map((contract) => [contract.id, contract]),
+  );
 
   for (const [index, step] of payload.steps.entries()) {
     const label = step.label?.trim() || `Step ${index + 1}`;
-    const targetAddress = step.targetContractAddress ?? payload.contractAddress;
+    const targetAddress =
+      step.targetContractAddress ??
+      (step.targetContractId
+        ? contractManifestById.get(step.targetContractId)?.address
+        : undefined) ??
+      payload.contractAddress;
     if (!targetAddress) {
       results.push({
         label,
@@ -197,15 +210,27 @@ export async function runContractE2E(
 
   const passed = results.filter((result) => result.status === 'passed').length;
   const failed = results.length - passed;
+  const coverage =
+    payload.contracts.length > 0
+      ? buildEntrypointCoverage({
+          contracts: payload.contracts.map((contract) => ({
+            id: contract.id,
+            address: contract.address,
+            entrypoints: contract.entrypoints,
+          })),
+          steps: payload.steps,
+        })
+      : undefined;
 
   return {
-    success: failed === 0,
+    success: failed === 0 && (coverage?.passed ?? true),
     contractAddress: payload.contractAddress ?? '',
     summary: {
       total: results.length,
       passed,
       failed,
     },
+    coverage,
     results,
   };
 }

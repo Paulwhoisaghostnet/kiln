@@ -104,17 +104,51 @@ describe('ShadowboxRuntimeRunner', () => {
     );
   });
 
-  it('blocks multi-contract shadowbox payloads until the real system runtime exists', async () => {
+  it('passes multi-contract payloads through to the command provider', async () => {
+    const workspace = join(tmpdir(), `shadowbox-multi-test-${randomUUID()}`);
+    await fs.mkdir(workspace, { recursive: true });
+    const scriptPath = join(workspace, 'shadowbox-multi-runner.cjs');
+    const script = `
+const fs = require('node:fs');
+const inputPath = process.argv[2];
+const outputPath = process.argv[3];
+const request = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+if (!Array.isArray(request.contracts) || request.contracts.length !== 2) {
+  throw new Error('expected two contracts');
+}
+fs.writeFileSync(
+  outputPath,
+  JSON.stringify({
+    passed: true,
+    contracts: [
+      { id: 'token', address: 'KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW' },
+      { id: 'market', address: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton' },
+    ],
+    warnings: [],
+    steps: request.steps.map((step, index) => ({
+      label: step.label || 'step ' + index,
+      wallet: step.wallet || 'bert',
+      entrypoint: step.entrypoint || 'default',
+      status: 'passed',
+      note: 'Executed multi-contract step.',
+      operationHash: 'opShadow' + index,
+    })),
+  }),
+);
+`;
+    await fs.writeFile(scriptPath, script, 'utf8');
+
     const runner = createShadowboxRuntimeRunner({
       enabled: true,
       requiredForClearance: true,
       provider: 'command',
-      command: 'echo should-not-run',
+      command: `node "${scriptPath}"`,
       timeoutMs: 5_000,
       maxActiveJobs: 2,
       maxActiveJobsPerIp: 1,
       maxSourceBytes: 10_000,
       maxSteps: 10,
+      workDir: workspace,
     });
 
     const result = await runner.run({
@@ -123,11 +157,23 @@ describe('ShadowboxRuntimeRunner', () => {
         { id: 'token', michelson: sampleInput.michelson, initialStorage: 'Unit' },
         { id: 'market', michelson: sampleInput.michelson, initialStorage: 'Unit' },
       ],
+      steps: [
+        {
+          wallet: 'bert',
+          targetContractId: 'market',
+          entrypoint: 'mint',
+          args: [],
+        },
+      ],
     });
 
-    expect(result.executed).toBe(false);
-    expect(result.passed).toBe(false);
-    expect(result.reason).toContain('multi-contract runtime is not implemented');
+    expect(result.executed).toBe(true);
+    expect(result.passed).toBe(true);
+    expect(result.contracts).toEqual([
+      { id: 'token', address: 'KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW' },
+      { id: 'market', address: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton' },
+    ]);
+    expect(result.summary).toEqual({ total: 1, passed: 1, failed: 0 });
   });
 
   it('fails mock provider when runtime gate is required for clearance', async () => {

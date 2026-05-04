@@ -27,4 +27,17 @@ describe('parseEntrypointsFromMichelson', () => {
 
     expect(result).toEqual([]);
   });
+
+  it('ignores storage annotations when detecting entrypoints', () => {
+    const michelson = `
+      parameter (or (unit %mint) (unit %transfer));
+      storage (pair (address %admin) (nat %total_supply));
+      code { CAR ; NIL operation ; PAIR };
+    `;
+
+    expect(parseEntrypointsFromMichelson(michelson)).toEqual([
+      { name: 'mint', args: [] },
+      { name: 'transfer', args: [] },
+    ]);
+  });
 });

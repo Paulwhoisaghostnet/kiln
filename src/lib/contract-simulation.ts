@@ -1,4 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
+import {
+  buildEntrypointCoverage,
+  type EntrypointCoverageReport,
+} from './workflow-coverage.js';
+import { buildWorkflowDrivenSimulationSteps } from './workflow-discovery.js';
 
 export type SimulationWallet = 'bert' | 'ernie' | 'user';
 
@@ -34,8 +39,12 @@ export interface ContractSimulationResult {
     paused: boolean;
     totalSupply: number;
     listings: number;
+    swaps: number;
+    auctions: number;
+    barters: number;
     balances: Record<string, number>;
   };
+  coverage: EntrypointCoverageReport;
   warnings: string[];
 }
 
@@ -105,29 +114,11 @@ export function hashContractCode(code: string): string {
 }
 
 function generateDefaultSteps(entrypoints: string[]): SimulationStepInput[] {
-  const selected = entrypoints.slice(0, 2);
-  if (selected.length === 0) {
-    return [];
-  }
-
-  const steps: SimulationStepInput[] = [];
-  if (selected[0]) {
-    steps.push({
-      label: `Default ${selected[0]} (Bert)`,
-      wallet: 'bert',
-      entrypoint: selected[0],
-      args: [],
-    });
-  }
-  if (selected[1]) {
-    steps.push({
-      label: `Default ${selected[1]} (Ernie)`,
-      wallet: 'ernie',
-      entrypoint: selected[1],
-      args: [],
-    });
-  }
-  return steps;
+  return buildWorkflowDrivenSimulationSteps({
+    contractId: 'contract',
+    entrypoints,
+    includeExpectedFailures: false,
+  });
 }
 
 export function runContractSimulation(input: {
@@ -145,6 +136,9 @@ export function runContractSimulation(input: {
     paused: false,
     totalSupply: 0,
     listings: 0,
+    swaps: 0,
+    auctions: 0,
+    barters: 0,
     balances: {
       bert: 1_000_000,
       ernie: 1_000_000,
@@ -335,6 +329,209 @@ export function runContractSimulation(input: {
         });
         break;
       }
+      case 'open_swap':
+      case 'create_swap': {
+        state.swaps += 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Swap simulation opened one swap workflow.',
+        });
+        break;
+      }
+      case 'accept_swap': {
+        if (state.swaps === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active swaps available to accept in simulation state.',
+          });
+          break;
+        }
+        state.swaps -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Swap simulation accepted one active swap.',
+        });
+        break;
+      }
+      case 'cancel_swap': {
+        if (state.swaps === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active swaps available to cancel in simulation state.',
+          });
+          break;
+        }
+        state.swaps -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Swap simulation canceled one active swap.',
+        });
+        break;
+      }
+      case 'start_auction':
+      case 'open_auction': {
+        state.auctions += 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Auction simulation opened one auction workflow.',
+        });
+        break;
+      }
+      case 'bid_with_token':
+      case 'place_bid': {
+        if (state.auctions === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active auctions available to bid on in simulation state.',
+          });
+          break;
+        }
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Auction simulation placed a custom-token bid.',
+        });
+        break;
+      }
+      case 'settle_auction': {
+        if (state.auctions === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active auctions available to settle in simulation state.',
+          });
+          break;
+        }
+        state.auctions -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Auction simulation settled one auction.',
+        });
+        break;
+      }
+      case 'cancel_auction': {
+        if (state.auctions === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active auctions available to cancel in simulation state.',
+          });
+          break;
+        }
+        state.auctions -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Auction simulation canceled one auction.',
+        });
+        break;
+      }
+      case 'open_barter':
+      case 'create_barter': {
+        state.barters += 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Barter simulation opened one barter workflow.',
+        });
+        break;
+      }
+      case 'counter_barter': {
+        if (state.barters === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active barters available to counter in simulation state.',
+          });
+          break;
+        }
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Barter simulation recorded a counter-offer.',
+        });
+        break;
+      }
+      case 'accept_barter': {
+        if (state.barters === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active barters available to accept in simulation state.',
+          });
+          break;
+        }
+        state.barters -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Barter simulation accepted one barter.',
+        });
+        break;
+      }
+      case 'cancel_barter': {
+        if (state.barters === 0) {
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active barters available to cancel in simulation state.',
+          });
+          break;
+        }
+        state.barters -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Barter simulation canceled one barter.',
+        });
+        break;
+      }
       default: {
         warnings.push(
           `Opaque simulation for ${entrypoint}: no domain-specific model registered.`,
@@ -352,9 +549,24 @@ export function runContractSimulation(input: {
 
   const passed = results.filter((result) => result.status === 'passed').length;
   const failed = results.length - passed;
+  const coverage = buildEntrypointCoverage({
+    contracts: [
+      {
+        id: 'contract',
+        entrypoints: input.entrypoints,
+      },
+    ],
+    steps: stepsToRun,
+  });
+
+  if (!coverage.passed) {
+    warnings.push(
+      `Entrypoint coverage incomplete: ${coverage.missedEntrypoints.join(', ')}`,
+    );
+  }
 
   return {
-    success: failed === 0,
+    success: failed === 0 && coverage.passed,
     summary: {
       total: results.length,
       passed,
@@ -363,6 +575,7 @@ export function runContractSimulation(input: {
     generatedDefaultSteps,
     steps: results,
     state,
+    coverage,
     warnings,
   };
 }
