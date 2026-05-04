@@ -1398,7 +1398,7 @@ describe('createApiApp', () => {
     expect(authorizedBalances.status).toBe(200);
   });
 
-  it('can disable token auth explicitly while keeping API_AUTH_TOKEN configured', async () => {
+  it('keeps protected routes authenticated when API_AUTH_TOKEN is configured', async () => {
     const app = createApiApp({
       env: baseEnv({
         API_AUTH_TOKEN: 'super-secret',
@@ -1407,19 +1407,30 @@ describe('createApiApp', () => {
       createTezosService: mockTezosServiceFactory().factory,
     });
 
-    const upload = await request(app).post('/api/kiln/upload').send({
+    const unauthorized = await request(app).post('/api/kiln/upload').send({
       code: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
       initialStorage: 'Unit',
       wallet: 'A',
     });
 
+    expect(unauthorized.status).toBe(401);
+
+    const upload = await request(app)
+      .post('/api/kiln/upload')
+      .set('x-kiln-token', 'super-secret')
+      .send({
+        code: 'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
+        initialStorage: 'Unit',
+        wallet: 'A',
+      });
+
     expect(upload.status).toBe(200);
 
     const capabilities = await request(app).get('/api/kiln/capabilities');
     expect(capabilities.body.runtime.auth).toEqual({
-      required: false,
+      required: true,
       tokenConfigured: true,
-      mode: 'open',
+      mode: 'token',
     });
   });
 

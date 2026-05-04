@@ -19,17 +19,19 @@ interface SendableMethod {
     hash: string;
     status?: string;
     confirmation(confirmations: number): Promise<{
-      block: {
+      block?: {
         header: {
           level: number;
         };
       };
+      level?: number;
     }>;
   }>;
 }
 
 interface ContractWithMethods {
-  methods: Record<string, (...args: unknown[]) => SendableMethod>;
+  methods?: Record<string, (...args: unknown[]) => SendableMethod>;
+  methodsObject?: Record<string, (...args: unknown[]) => SendableMethod>;
 }
 
 type OriginationParams = {
@@ -421,7 +423,8 @@ export class TezosService implements TezosServiceLike {
         contractAddress,
       )) as unknown as ContractWithMethods;
       
-      const method = contract.methods[entrypoint];
+      const method =
+        contract.methods?.[entrypoint] ?? contract.methodsObject?.[entrypoint];
       if (!method) {
         throw new Error(`Entrypoint ${entrypoint} not found on contract ${contractAddress}`);
       }
@@ -434,11 +437,16 @@ export class TezosService implements TezosServiceLike {
       console.log(`Waiting for confirmation of call... Hash: ${op.hash}`);
       
       const result = await op.confirmation(1);
-      console.log(`Call confirmed in block ${result.block.header.level}`);
+      const level = result.block?.header?.level ?? result.level ?? null;
+      console.log(
+        level === null
+          ? 'Call confirmed; block level unavailable from confirmation result.'
+          : `Call confirmed in block ${level}`,
+      );
       
       return {
         hash: op.hash,
-        level: result.block.header.level,
+        level,
         status: op.status
       };
     } catch (error) {

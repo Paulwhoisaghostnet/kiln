@@ -10,6 +10,15 @@ export async function startServer() {
   const env = getEnv();
   const app = createApiApp({ env }) as express.Express;
 
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      error: 'API route not found',
+      method: req.method,
+      path: req.path,
+      requestId: res.locals.requestId ?? null,
+    });
+  });
+
   if (env.NODE_ENV !== 'production') {
     // Dev-only dynamic import via string specifier so esbuild / node prod
     // bundle never attempts to resolve vite at runtime. vite is a devDep.

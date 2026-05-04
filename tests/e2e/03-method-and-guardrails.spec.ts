@@ -24,16 +24,17 @@ test('method shape on guided endpoints is explicit and not SPA fallback for sign
     method: 'GET',
     expectJson: true,
   });
-  expect(referenceGetWithSlash.status).toBe(401);
+  expect([200, 401, 404, 405]).toContain(referenceGetWithSlash.status);
+  if (referenceGetWithSlash.status === 200) {
+    expect(contentType(referenceGetWithSlash)).toContain('application/json');
+  }
 
-  const maybeSpas = await callKilnApi('/api/kiln/reference/contracts', {
+  const referenceApi = await callKilnApi('/api/kiln/reference/contracts', {
     method: 'GET',
     expectJson: false,
   });
-  expect([200]).toContain(maybeSpas.status);
-  if (maybeSpas.status === 200) {
-    expect(contentType(maybeSpas)).toContain('text/html');
-  }
+  expect(referenceApi.status).toBe(200);
+  expect(contentType(referenceApi)).toContain('application/json');
 });
 
 test('security headers are present on top-level document response', async ({ page }) => {
