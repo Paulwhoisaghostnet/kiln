@@ -118,6 +118,11 @@ export function WorkflowResultsPanel({
   const errors = summary.audit.findings.filter((f) => f.severity === 'error');
   const warnings = summary.audit.findings.filter((f) => f.severity === 'warning');
   const infos = summary.audit.findings.filter((f) => f.severity === 'info');
+  const validationWarnings = summary.validate.warnings;
+  const shadowboxMessages = [
+    ...(summary.shadowbox?.reason ? [summary.shadowbox.reason] : []),
+    ...(summary.shadowbox?.warnings ?? []),
+  ];
 
   return (
     <div className="space-y-4">
@@ -185,15 +190,29 @@ export function WorkflowResultsPanel({
         </div>
       ) : null}
 
-      {summary.shadowbox?.enabled && summary.shadowbox.warnings.length > 0 ? (
+      {validationWarnings.length > 0 ? (
         <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 space-y-1">
           <div className="text-xs font-semibold text-warning flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
-            Shadowbox warnings ({summary.shadowbox.warnings.length})
+            Validation warnings ({validationWarnings.length})
           </div>
           <ul className="text-xs list-disc ml-5 space-y-0.5">
-            {summary.shadowbox.warnings.map((warning, idx) => (
+            {validationWarnings.map((warning, idx) => (
               <li key={idx}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {summary.shadowbox?.enabled && shadowboxMessages.length > 0 ? (
+        <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 space-y-1">
+          <div className="text-xs font-semibold text-warning flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Shadowbox detail ({shadowboxMessages.length})
+          </div>
+          <ul className="text-xs list-disc ml-5 space-y-0.5">
+            {shadowboxMessages.map((message, idx) => (
+              <li key={idx}>{message}</li>
             ))}
           </ul>
         </div>

@@ -199,6 +199,47 @@ describe('TezosService', () => {
     expect(mocks.sendMock).toHaveBeenCalledWith({ amount: 1_250_000, mutez: true });
   });
 
+  it('executes default-only contracts through methodsObject fallback', async () => {
+    mocks.atMock.mockResolvedValue({
+      methodsObject: {
+        default: (..._args: unknown[]) => ({
+          send: mocks.sendMock,
+        }),
+      },
+    });
+    const service = new TezosService('B', baseEnv());
+
+    const result = await service.callContract(
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'default',
+      [],
+    );
+
+    expect(result.hash).toBe('opTestHash');
+    expect(mocks.sendMock).toHaveBeenCalledWith(undefined);
+  });
+
+  it('keeps call results usable when Taquito omits confirmation block metadata', async () => {
+    mocks.sendMock.mockResolvedValueOnce({
+      hash: 'opNoLevelHash',
+      status: 'applied',
+      confirmation: async () => ({}),
+    });
+    const service = new TezosService('B', baseEnv());
+
+    const result = await service.callContract(
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'mint',
+      ['42'],
+    );
+
+    expect(result).toEqual({
+      hash: 'opNoLevelHash',
+      level: null,
+      status: 'applied',
+    });
+  });
+
   it('throws when entrypoint does not exist', async () => {
     mocks.atMock.mockResolvedValue({ methods: {} });
     const service = new TezosService('A', baseEnv());

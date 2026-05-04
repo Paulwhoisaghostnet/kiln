@@ -57,6 +57,12 @@ export async function callKilnApi<T = unknown>(
 export async function expectUnauthorized(pathname: string, method: 'GET' | 'POST' = 'POST') {
   const response = await callKilnApi(pathname, {
     method,
+    headers: apiToken
+      ? {
+          'x-kiln-token': 'wrong-token',
+          'x-api-token': 'wrong-token',
+        }
+      : undefined,
     body: method === 'POST' ? {} : undefined,
     expectJson: false,
   });

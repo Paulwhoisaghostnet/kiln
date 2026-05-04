@@ -12,6 +12,6 @@ export interface AbiEntrypoint {
 
 export interface ContractCallResult {
   hash: string;
-  level: number;
+  level: number | null;
   status?: string;
 }

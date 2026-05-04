@@ -27,26 +27,23 @@ import {
   NetworkStatusPill,
   NetworkSwitcher,
 } from './components/NetworkSwitcher';
-import {
-  SolidityPanel,
-  type SolidityCompileResult,
-} from './components/SolidityPanel';
+import type { SolidityCompileResult } from './components/SolidityPanel';
 import {
   WorkflowResultsPanel,
   type WorkflowSummary,
 } from './components/WorkflowResultsPanel';
 import { KilnCopy, useKilnView } from './context/KilnViewProvider';
 import { useKilnNetwork } from './context/NetworkProvider';
-import {
-  assignConnectedWalletAsAdmin,
-  BURN_PLACEHOLDER_ADDRESS,
-  connectShadownetWallet,
-  disconnectShadownetWallet,
-  getConnectedShadownetWallet,
-  originateWithConnectedWallet,
-  type WalletConnectTarget,
-} from './lib/shadownet-wallet';
+import type { WalletConnectTarget } from './lib/shadownet-wallet';
 import type { AbiEntrypoint, WalletType } from './lib/types';
+
+const SolidityPanel = React.lazy(() =>
+  import('./components/SolidityPanel').then((module) => ({
+    default: module.SolidityPanel,
+  })),
+);
+
+const BURN_PLACEHOLDER_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX';
 
 type LogType = 'info' | 'error' | 'success';
 type DeployMode = 'connected' | 'puppet';
@@ -84,7 +81,7 @@ interface UploadResponse {
 interface ExecuteResponse {
   success: boolean;
   hash: string;
-  level: number;
+  level: number | null;
 }
 
 interface E2ERunResponse {
@@ -100,7 +97,7 @@ interface E2ERunResponse {
     entrypoint: string;
     status: 'passed' | 'failed';
     hash?: string;
-    level?: number;
+    level?: number | null;
     error?: string;
   }>;
 }
@@ -256,7 +253,12 @@ export default function App() {
     const hash = window.location.hash.replace('#', '');
     return isTabKey(hash) ? hash : 'setup';
   });
-  const [terminalOpen, setTerminalOpen] = useState(true);
+  const [terminalOpen, setTerminalOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    return window.matchMedia('(min-width: 768px)').matches;
+  });
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const contractUploadInputRef = useRef<HTMLInputElement>(null);
@@ -348,6 +350,7 @@ export default function App() {
       return;
     }
     try {
+      const { getConnectedShadownetWallet } = await import('./lib/shadownet-wallet');
       const wallet = await getConnectedShadownetWallet(networkId);
       if (!wallet) {
         setConnectedWallet(null);
@@ -464,6 +467,7 @@ export default function App() {
       'info',
     );
     try {
+      const { connectShadownetWallet } = await import('./lib/shadownet-wallet');
       const wallet = await connectShadownetWallet(target, networkId);
       setConnectedWallet({ ...wallet, target });
       addLog(`Connected wallet ${wallet.address} on ${network.label}.`, 'success');
@@ -479,6 +483,7 @@ export default function App() {
 
   const disconnectWallet = async () => {
     try {
+      const { disconnectShadownetWallet } = await import('./lib/shadownet-wallet');
       await disconnectShadownetWallet();
       setConnectedWallet(null);
       addLog('Disconnected wallet session.', 'info');
@@ -725,6 +730,10 @@ export default function App() {
     if (!connectedWallet) {
       throw new Error('Connect a Tezos wallet before deploying.');
     }
+    const {
+      assignConnectedWalletAsAdmin,
+      originateWithConnectedWallet,
+    } = await import('./lib/shadownet-wallet');
     const storageForDeployment = useConnectedWalletAsContractAdmin
       ? assignConnectedWalletAsAdmin(
           workflow.artifacts.initialStorage,
@@ -799,7 +808,12 @@ export default function App() {
           'error' in payload && payload.error ? payload.error : 'Execution failed',
         );
       }
-      addLog(`Execution ok: ${payload.hash} (block ${payload.level}).`, 'success');
+      addLog(
+        payload.level === null
+          ? `Execution ok: ${payload.hash} (block level unavailable).`
+          : `Execution ok: ${payload.hash} (block ${payload.level}).`,
+        'success',
+      );
       void fetchBalances();
     } catch (error) {
       addLog(
@@ -957,8 +971,8 @@ export default function App() {
   ]);
 
   const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
-  const prevTab = activeIndex > 0 ? tabs[activeIndex - 1]?.key : null;
-  const nextTab = activeIndex >= 0 && activeIndex < tabs.length - 1 ? tabs[activeIndex + 1]?.key : null;
+  const prev = activeIndex > 0 ? tabs[activeIndex - 1] : null;
+  const next = activeIndex >= 0 && activeIndex < tabs.length - 1 ? tabs[activeIndex + 1] : null;
 
   const sessionSummary = useMemo(
     () => ({
@@ -1023,7 +1037,7 @@ export default function App() {
                     isActive
                       ? 'bg-base-200/60'
                       : isLocked
-                        ? 'opacity-60 cursor-not-allowed'
+                        ? 'cursor-not-allowed bg-base-300/20'
                         : 'hover:bg-base-200/30'
                   }`}
                 >
@@ -1040,7 +1054,7 @@ export default function App() {
                       >
                         {tab.done ? <CheckCircle2 className="w-3 h-3" /> : idx + 1}
                       </div>
-                      <span className={`font-semibold text-sm ${isActive ? '' : 'text-base-content/80'}`}>
+                      <span className={`font-semibold text-sm ${isActive ? '' : 'text-base-content/90'}`}>
                         {tab.label}
                       </span>
                     </div>
@@ -1161,11 +1175,11 @@ export default function App() {
             <button
               type="button"
               className="btn btn-sm btn-ghost gap-1"
-              onClick={() => prevTab && setActiveTab(prevTab)}
-              disabled={!prevTab}
+              onClick={() => prev?.ready && setActiveTab(prev.key)}
+              disabled={!prev?.ready}
             >
               <ChevronLeft className="w-4 h-4" />
-              {prevTab ? tabs[activeIndex - 1]?.label : 'Back'}
+              {prev ? prev.label : 'Back'}
             </button>
             <div className="text-xs text-base-content/60">
               Step {activeIndex + 1} of {tabs.length}
@@ -1173,10 +1187,10 @@ export default function App() {
             <button
               type="button"
               className="btn btn-sm btn-primary gap-1"
-              onClick={() => nextTab && setActiveTab(nextTab)}
-              disabled={!nextTab || !tabs[activeIndex + 1]?.ready}
+              onClick={() => next?.ready && setActiveTab(next.key)}
+              disabled={!next?.ready}
             >
-              {nextTab ? tabs[activeIndex + 1]?.label : 'Done'}
+              {next ? next.label : 'Done'}
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -1461,6 +1475,8 @@ function SetupTab({
           <button
             type="button"
             className="btn btn-xs btn-ghost"
+            aria-label="Refresh puppet balances"
+            title="Refresh puppet balances"
             onClick={() => {
               void fetchBalances();
             }}
@@ -1687,13 +1703,21 @@ function BuildTab({
       ) : (
         <>
           <KilnCopy k="evmCompileHint" as="p" className="text-xs text-base-content/70" />
-          <SolidityPanel
-            source={solidityCode}
-            onSourceChange={setSolidityCode}
-            buildHeaders={buildHeaders}
-            onLog={addLog}
-            onDeployed={onDeployedEvm}
-          />
+          <React.Suspense
+            fallback={
+              <div className="rounded-lg border border-base-300 bg-base-200/30 p-4 text-sm">
+                Loading Solidity tools...
+              </div>
+            }
+          >
+            <SolidityPanel
+              source={solidityCode}
+              onSourceChange={setSolidityCode}
+              buildHeaders={buildHeaders}
+              onLog={addLog}
+              onDeployed={onDeployedEvm}
+            />
+          </React.Suspense>
           <div className="alert text-xs">
             <span>
               Solidity runs on <span className="font-semibold">{network.label}</span>.
@@ -2257,29 +2281,33 @@ function TerminalDock({
         open ? 'max-h-64' : 'max-h-10'
       }`}
     >
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-wider text-neutral-content/80 hover:bg-neutral-focus"
-      >
-        {open ? <TerminalSquare className="w-4 h-4" /> : <Terminal className="w-4 h-4" />}
-        {t('kilnTerminalLabel')}
-        <span className="ml-auto opacity-60">{logs.length} lines</span>
+      <div className="flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-wider text-neutral-content/85 hover:bg-neutral-focus">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-expanded={open}
+          aria-controls="kiln-terminal-log"
+        >
+          {open ? <TerminalSquare className="w-4 h-4" /> : <Terminal className="w-4 h-4" />}
+          <span>{t('kilnTerminalLabel')}</span>
+          <span className="ml-auto text-neutral-content/75">{logs.length} lines</span>
+        </button>
         {open ? (
           <button
             type="button"
             className="btn btn-ghost btn-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClear();
-            }}
+            onClick={onClear}
           >
             clear
           </button>
         ) : null}
-      </button>
+      </div>
       {open ? (
-        <div className="max-w-7xl mx-auto px-4 pb-3 overflow-y-auto max-h-52 font-mono text-xs space-y-1">
+        <div
+          id="kiln-terminal-log"
+          className="max-w-7xl mx-auto px-4 pb-3 overflow-y-auto max-h-52 font-mono text-xs space-y-1"
+        >
           {logs.length === 0 ? (
             <div className="italic text-neutral-content/40">Waiting for operations...</div>
           ) : null}

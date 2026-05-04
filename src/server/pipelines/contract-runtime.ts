@@ -75,7 +75,7 @@ export async function executeContractCall(
 ): Promise<{
   success: true;
   hash: string;
-  level: number;
+  level: number | null;
   status?: string;
 }> {
   const tezosService = createTezosService(payload.wallet);
@@ -110,7 +110,7 @@ export async function runContractE2E(
     entrypoint: string;
     status: 'passed' | 'failed';
     hash?: string;
-    level?: number;
+    level?: number | null;
     error?: string;
   }>;
 }> {
@@ -121,7 +121,7 @@ export async function runContractE2E(
     entrypoint: string;
     status: 'passed' | 'failed';
     hash?: string;
-    level?: number;
+    level?: number | null;
     error?: string;
   }> = [];
 

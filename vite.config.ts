@@ -32,34 +32,12 @@ export default defineConfig(() => {
               return 'vendor-react';
             }
             if (
-              id.includes('@taquito/') ||
-              id.includes('@airgap/') ||
-              id.includes('@walletconnect/') ||
-              id.includes('@stablelib/') ||
-              id.includes('@noble/') ||
-              id.includes('@scure/')
-            ) {
-              return 'vendor-tezos';
-            }
-            if (id.includes('/viem/') || id.includes('/ox/')) {
-              return 'vendor-evm';
-            }
-            if (
               id.includes('/lucide-react/') ||
               id.includes('/motion/') ||
               id.includes('/clsx/') ||
               id.includes('/tailwind-merge/')
             ) {
               return 'vendor-ui';
-            }
-            if (
-              id.includes('/buffer/') ||
-              id.includes('/process/') ||
-              id.includes('/stream-browserify/') ||
-              id.includes('/events/') ||
-              id.includes('/util/')
-            ) {
-              return 'vendor-polyfills';
             }
           },
         },

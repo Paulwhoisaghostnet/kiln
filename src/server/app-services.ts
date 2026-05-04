@@ -156,8 +156,8 @@ export function createApiAppServices(
   const exportBundle = options.exportBundle ?? createMainnetReadyBundle;
   const runtimeNetwork = resolveNetwork();
   const activityLogger = createActivityLogger(env.KILN_ACTIVITY_LOG_PATH);
-  const authRequired = env.KILN_API_AUTH_REQUIRED ?? Boolean(env.API_AUTH_TOKEN);
   const tokenConfigured = Boolean(env.API_AUTH_TOKEN);
+  const authRequired = tokenConfigured || env.KILN_API_AUTH_REQUIRED === true;
 
   const requireApiToken: RequestHandler = (req, res, next) => {
     if (!authRequired) {
