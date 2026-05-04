@@ -1922,6 +1922,19 @@ function DeployTab({
 }) {
   const { network } = useKilnNetwork();
   const { t, tip } = useKilnView();
+  const selectDeployModeFromKeyboard = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    mode: DeployMode,
+  ) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    if (mode === 'puppet' && !canPuppet) {
+      return;
+    }
+    setDeployMode(mode);
+  };
 
   if (!isTezos) {
     return (
@@ -1970,10 +1983,13 @@ function DeployTab({
         <KilnCopy k="tabDeployIntro" as="p" className="text-sm text-base-content/60 mt-1" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <button
-          type="button"
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup">
+        <div
+          role="radio"
+          tabIndex={0}
+          aria-checked={deployMode === 'connected'}
           onClick={() => setDeployMode('connected')}
+          onKeyDown={(event) => selectDeployModeFromKeyboard(event, 'connected')}
           className={`p-4 rounded-xl border text-left transition-colors ${
             deployMode === 'connected'
               ? 'border-primary bg-primary/5 ring-1 ring-primary'
@@ -2001,11 +2017,18 @@ function DeployTab({
               Connect wallet →
             </button>
           )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setDeployMode('puppet')}
-          disabled={!canPuppet}
+        </div>
+        <div
+          role="radio"
+          tabIndex={canPuppet ? 0 : -1}
+          aria-checked={deployMode === 'puppet'}
+          aria-disabled={!canPuppet}
+          onClick={() => {
+            if (canPuppet) {
+              setDeployMode('puppet');
+            }
+          }}
+          onKeyDown={(event) => selectDeployModeFromKeyboard(event, 'puppet')}
           className={`p-4 rounded-xl border text-left transition-colors ${
             deployMode === 'puppet'
               ? 'border-primary bg-primary/5 ring-1 ring-primary'
@@ -2022,7 +2045,7 @@ function DeployTab({
               Disabled on {network.label}.
             </p>
           ) : null}
-        </button>
+        </div>
       </div>
 
       {deployMode === 'connected' ? (
