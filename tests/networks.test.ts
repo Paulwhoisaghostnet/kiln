@@ -15,6 +15,7 @@ describe('networks', () => {
     expect(profiles.some((profile) => profile.id === 'etherlink-mainnet')).toBe(true);
     expect(profiles.some((profile) => profile.id === 'jstz-local')).toBe(true);
     expect(getNetworkProfile('tezos-shadownet').status).toBe('active');
+    expect(getNetworkProfile('tezos-shadownet').tier).toBe('testnet');
   });
 
   it('lists UI catalog without ghostnet and with concrete Etherlink support', () => {
@@ -26,6 +27,9 @@ describe('networks', () => {
       'tezos-mainnet',
       'etherlink-mainnet',
     ]);
+    expect(catalog.find((row) => row.id === 'tezos-shadownet')?.tier).toBe(
+      'testnet',
+    );
     expect(catalog.some((row) => row.id === 'tezos-ghostnet')).toBe(false);
     const etherlink = catalog.find((row) => row.id === 'etherlink-shadownet');
     expect(etherlink?.label).toBe('Etherlink Shadownet');

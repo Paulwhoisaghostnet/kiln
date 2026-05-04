@@ -130,7 +130,7 @@ export function NetworkSwitcher() {
         <div className="card-body !p-3 space-y-3">
           <div className="flex items-center gap-2 text-xs text-base-content/60">
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Risk increases left → right. Mainnets spend real funds.</span>
+            <span>Shadowbox is the preflight sandbox; these are live network targets.</span>
           </div>
           {grouped.sandbox.length > 0 ? (
             <section className="space-y-1">

@@ -7,8 +7,8 @@ export type KilnViewMode = 'builder' | 'eli5';
 const C = {
   headerTagline: {
     b: 'Pre-deploy validation + live deployment + Bert/Ernie E2E for Tezos builders.',
-    e: 'Check your contract, launch it on the practice network, then run pretend wallet tests—without touching mainnet money here.',
-    tip: 'Kiln is a workshop: Shadownet is a fake-money test chain. Bert and Ernie are robot wallets the server uses so you can try transfers and calls safely.',
+    e: 'Check your contract in Shadowbox, launch it on the Shadownet testnet, then run pretend wallet tests—without touching mainnet money here.',
+    tip: 'Kiln is a workshop: Shadowbox is the temporary sandbox, Shadownet is a fake-money public testnet, and Bert/Ernie are robot wallets the server uses to try transfers and calls.',
   },
   viewModeBuilder: {
     b: 'Builder',
@@ -23,12 +23,12 @@ const C = {
   networkArchTitle: {
     b: 'Network Architecture',
     e: 'Which blockchain network is this?',
-    tip: 'Shows which network Kiln is talking to right now. Shadownet is for practice; “planned” means the UI is aware of mainnet-style targets but you are not live on them from this screen alone.',
+    tip: 'Shows which network Kiln is talking to right now. Shadowbox runs before network deployment; Shadownet and Etherlink Shadownet are testnets; mainnets spend real funds.',
   },
   networkArchBody: {
-    b: 'Shadownet is active now. Tezos Mainnet and Tezos EVM support are modeled as planned targets.',
-    e: 'You are on the practice chain (Shadownet). Mainnet and Tezos EVM (rollup-style) support are listed as future targets—not live from this screen.',
-    tip: 'Always double-check the “Active” line before you sign anything in your real wallet. Practice networks use worthless test coins.',
+    b: 'Shadowbox is the preflight sandbox. Shadownet targets are live testnets; mainnets are production.',
+    e: 'First Kiln checks things in a temporary sandbox. Then it can deploy to a testnet like Shadownet, or to mainnet only when you explicitly choose it.',
+    tip: 'Always double-check the active network before you sign anything. Shadowbox costs nothing; testnets use worthless faucet/test coins; mainnets use real funds.',
   },
   deploymentTitle: {
     b: 'Deployment Control',
@@ -436,7 +436,7 @@ const C = {
     tip: 'Validation results grant a short-lived clearance id. Editing source invalidates it — re-run before deploying.',
   },
   tabDeployIntro: {
-    b: 'Originate the contract. Puppet deploy is fastest on sandboxes; connected wallet is required on mainnet.',
+    b: 'Originate the contract. Puppet deploy is fastest on Shadownet testnets; connected wallet is required on mainnet.',
     e: 'Ready to publish? Pick how you want to sign it, then press Deploy. On mainnet, it will be your own wallet.',
     tip: 'Deploys write to the live chain. Mainnets cost real tez/XTZ; double-check the address, admin, and initial storage.',
   },
@@ -453,11 +453,11 @@ const C = {
   networkPickerTitle: {
     b: 'Target Network',
     e: 'Which chain are we pointing at?',
-    tip: 'Controls where every deploy, call, and estimate goes. Sandbox is free. Testnets need faucet funds. Mainnets spend real money.',
+    tip: 'Controls where every deploy, call, and estimate goes. Shadowbox is the free preflight sandbox before these targets. Testnets use faucet funds; mainnets spend real money.',
   },
   networkPickerBody: {
     b: 'Kiln now ships with Tezos Shadownet/Mainnet and Etherlink Testnet/Mainnet. Switch any time; state persists.',
-    e: 'You can build on the sandbox and push to mainnet later. Etherlink is the Tezos EVM rollup — Solidity lives there.',
+    e: 'You can preflight in Shadowbox, deploy to a testnet, and push to mainnet later. Etherlink is the Tezos EVM rollup — Solidity lives there.',
     tip: 'Switching mainnet requires explicit consent. RPC URLs can be overridden via env vars if defaults rate-limit you.',
   },
   walletTezosConnect: {

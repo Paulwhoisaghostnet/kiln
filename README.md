@@ -3,7 +3,7 @@
 Tezos Kiln is a typed React + Express test rig that covers the contract
 lifecycle across the Tezos family of networks in one environment:
 
-- Tezos Shadownet (sandbox — pre-funded puppets, free-spend testing)
+- Tezos Shadownet (testnet — pre-funded puppets, faucet/test funds)
 - Etherlink Shadownet (Solidity via faucet funds)
 - Tezos Mainnet (connected-wallet only, puppets disabled)
 - Etherlink Mainnet (connected MetaMask only, real XTZ)
@@ -65,7 +65,7 @@ mirrors the same flags to grey out buttons before the request is even made.
 
 | Network             | Ecosystem | Tier    | Puppet wallets (Bert/Ernie) | Connected wallet | Source languages       | Post-deploy E2E |
 |---------------------|-----------|---------|-----------------------------|------------------|------------------------|-----------------|
-| `tezos-shadownet`   | tezos     | sandbox | yes                         | Beacon           | michelson, smartpy     | yes             |
+| `tezos-shadownet`   | tezos     | testnet | yes                         | Beacon           | michelson, smartpy     | yes             |
 | `tezos-ghostnet`    | tezos     | testnet | no                          | Beacon           | michelson, smartpy     | no (planned)    |
 | `tezos-mainnet`     | tezos     | mainnet | **no — blocked**            | Beacon           | michelson, smartpy     | yes             |
 | `etherlink-shadownet` | etherlink | testnet | no                        | MetaMask         | solidity               | yes             |
@@ -75,6 +75,10 @@ Planned/legacy profiles are returned separately from active cards:
 `tezos-ghostnet`, `etherlink-testnet` (legacy Ghostnet-era Etherlink), and
 `jstz-local`. jstz stays planned until a real local/configurable adapter is
 implemented and tested.
+
+Shadowbox is not a network alternative in this matrix. It is Kiln's preflight
+sandbox runtime: contracts run there before live Shadownet/Etherlink/mainnet
+deployment decisions.
 
 Server-side guards:
 

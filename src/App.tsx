@@ -2038,7 +2038,7 @@ function DeployTab({
         >
           <div className="font-semibold text-sm">{t('deployModePuppet')}</div>
           <p className="text-xs text-base-content/60 mt-1">
-            Fast path for sandboxes. Server-held key; never use with real funds.
+            Fast path for Shadownet testnet deploys. Server-held key; never use with real funds.
           </p>
           {!canPuppet ? (
             <p className="text-[0.65rem] text-error mt-2">

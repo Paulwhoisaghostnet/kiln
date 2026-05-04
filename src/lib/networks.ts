@@ -9,7 +9,7 @@ export type KilnNetworkId =
 
 export type KilnEcosystem = 'tezos' | 'etherlink' | 'jstz';
 export type KilnNetworkStatus = 'active' | 'planned';
-/** Tier-1 rails get puppet wallet support; mainnets are user-connected-wallet only. */
+/** Testnet rails can get puppet wallet support; mainnets are user-connected-wallet only. */
 export type KilnNetworkTier = 'sandbox' | 'testnet' | 'mainnet';
 
 export interface KilnNetworkCapabilities {
@@ -59,7 +59,7 @@ const NETWORK_PROFILES: Record<KilnNetworkId, KilnNetworkProfile> = {
     label: 'Tezos Shadownet',
     ecosystem: 'tezos',
     status: 'active',
-    tier: 'sandbox',
+    tier: 'testnet',
     accent: 'success',
     defaultRpcUrl: 'https://rpc.shadownet.teztnets.com',
     chainId: 'NetXsqzbfFenSTS',
@@ -67,7 +67,7 @@ const NETWORK_PROFILES: Record<KilnNetworkId, KilnNetworkProfile> = {
     nativeSymbol: 'tez',
     explorerAddress: 'https://shadownet.tzkt.io/{address}',
     explorerTx: 'https://shadownet.tzkt.io/{tx}',
-    blurb: 'Fast-iteration sandbox with pre-funded puppets for free-spend testing.',
+    blurb: 'Public Tezos testnet with pre-funded Bert/Ernie puppets for live-chain testing.',
     capabilities: {
       walletConnect: true,
       puppetWallets: true,
@@ -217,8 +217,9 @@ export function listNetworkProfiles(): KilnNetworkProfile[] {
 }
 
 /**
- * Networks surfaced in the UI picker. Order is intentional: sandbox first, then
- * testnets, then mainnets (so the user reads left-to-right as risk increases).
+ * Networks surfaced in the UI picker. Shadowbox is a preflight sandbox stage,
+ * not a selectable network target, so the picker starts with testnets and then
+ * moves to mainnets.
  */
 export function listPickableNetworks(): KilnNetworkProfile[] {
   const order: KilnNetworkId[] = [

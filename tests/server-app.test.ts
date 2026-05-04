@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { createApiApp } from '../src/server-app.js';
 import type { AppEnv } from '../src/lib/env.js';
 import type { WalletType } from '../src/lib/types.js';
+import { buildWorkflowDrivenSimulationSteps } from '../src/lib/workflow-discovery.js';
 
 const walletAAddress = 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb';
 const walletBAddress = 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6';
@@ -28,6 +29,13 @@ const sampleMichelson = `
     PAIR
   };
 `;
+
+function sampleSimulationSteps() {
+  return buildWorkflowDrivenSimulationSteps({
+    contractId: 'sample',
+    entrypoints: ['mint', 'transfer', 'pause'],
+  });
+}
 
 function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
   return {
@@ -472,13 +480,7 @@ describe('createApiApp', () => {
       sourceType: 'michelson',
       source: sampleMichelson,
       initialStorage: 'Unit',
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['25'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(response.status).toBe(200);
@@ -524,13 +526,7 @@ describe('createApiApp', () => {
       sourceType: 'michelson',
       source: sampleMichelson,
       initialStorage: 'Unit',
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['5'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(response.status).toBe(200);
@@ -598,13 +594,7 @@ describe('createApiApp', () => {
     const response = await request(app).post('/api/kiln/simulate/run').send({
       sourceType: 'michelson',
       source: sampleMichelson,
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['10'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(response.status).toBe(200);
@@ -625,13 +615,7 @@ describe('createApiApp', () => {
     const response = await request(app).post('/api/kiln/simulate/run').send({
       sourceType: 'michelson',
       source: sampleMichelson,
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['10'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(response.status).toBe(200);
@@ -685,13 +669,7 @@ describe('createApiApp', () => {
       sourceType: 'michelson',
       source: sampleMichelson,
       initialStorage: 'Unit',
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['10'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(response.status).toBe(200);
@@ -713,13 +691,7 @@ describe('createApiApp', () => {
       sourceType: 'michelson',
       source: sampleMichelson,
       initialStorage: 'Unit',
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['10'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(response.status).toBe(200);
@@ -755,13 +727,7 @@ describe('createApiApp', () => {
       sourceType: 'michelson',
       source: sampleMichelson,
       initialStorage: 'Unit',
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['5'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(workflow.status).toBe(200);
@@ -790,13 +756,7 @@ describe('createApiApp', () => {
       sourceType: 'michelson',
       source: sampleMichelson,
       initialStorage: 'Unit',
-      simulationSteps: [
-        {
-          wallet: 'bert',
-          entrypoint: 'mint',
-          args: ['5'],
-        },
-      ],
+      simulationSteps: sampleSimulationSteps(),
     });
 
     expect(workflow.status).toBe(200);

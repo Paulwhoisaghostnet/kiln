@@ -8,7 +8,7 @@ describe('kiln-view-copy', () => {
   });
 
   it('uses ELI5 strings in eli5 mode', () => {
-    expect(viewText('eli5', 'headerTagline')).toContain('practice network');
+    expect(viewText('eli5', 'headerTagline')).toContain('Shadownet testnet');
     expect(viewText('eli5', 'bertErnieNearWallets')).toContain('pretend people');
   });
 
