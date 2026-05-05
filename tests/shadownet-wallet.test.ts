@@ -191,7 +191,7 @@ beforeEach(() => {
 });
 
 describe('shadownet-wallet', () => {
-  it('connects Temple wallet and verifies shadownet', async () => {
+  it('connects through Beacon without opening the Temple homepage', async () => {
     const localStorage = setupBrowserStubs();
     const walletModule = await import('../src/lib/shadownet-wallet.js');
 
@@ -203,18 +203,14 @@ describe('shadownet-wallet', () => {
       networkId: 'tezos-shadownet',
       rpcUrl: 'https://rpc.shadownet.teztnets.com',
     });
-    expect(mocks.state.open).toHaveBeenCalledWith(
-      'https://templewallet.com',
-      '_blank',
-      'noopener,noreferrer',
-    );
+    expect(mocks.state.open).not.toHaveBeenCalled();
     expect(mocks.state.requestPermissions).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('beacon:stale')).toBeNull();
     expect(localStorage.getItem('beacon-sdk:stale')).toBeNull();
     expect(localStorage.getItem('app:keep')).toBe('1');
   });
 
-  it('opens Kukai shadownet URL and blocks non-shadownet RPC account', async () => {
+  it('lets Beacon handle Kukai selection and blocks non-shadownet RPC account', async () => {
     mocks.state.grantedAccount = {
       address: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6',
       network: {
@@ -228,11 +224,7 @@ describe('shadownet-wallet', () => {
     await expect(walletModule.connectShadownetWallet('kukai')).rejects.toThrow(
       /Wallet connected to kukai/,
     );
-    expect(mocks.state.open).toHaveBeenCalledWith(
-      'https://shadownet.kukai.app',
-      '_blank',
-      'noopener,noreferrer',
-    );
+    expect(mocks.state.open).not.toHaveBeenCalled();
   });
 
   it('rejects connect when chain id does not match shadownet', async () => {

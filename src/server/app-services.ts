@@ -16,6 +16,11 @@ import { getEnv, type AppEnv } from '../lib/env.js';
 import { EtherlinkService } from '../lib/etherlink-service.js';
 import { injectKilnTokens } from '../lib/kiln-injector.js';
 import {
+  createKilnUserStore,
+  type KilnUserStore,
+  type WalletSignatureVerifier,
+} from '../lib/kiln-users.js';
+import {
   resolveNetworkConfig,
   type KilnNetworkId,
   type RuntimeNetworkConfig,
@@ -56,6 +61,9 @@ export interface ApiAppOptions {
   exportBundle?: (
     payload: BundleExportInput,
   ) => Promise<BundleExportResult>;
+  userStore?: KilnUserStore;
+  walletSignatureVerifier?: WalletSignatureVerifier;
+  now?: () => Date;
 }
 
 export interface ApiAppServices {
@@ -98,6 +106,7 @@ export interface ApiAppServices {
     };
   };
   exportBundle: (payload: BundleExportInput) => Promise<BundleExportResult>;
+  userStore: KilnUserStore;
 }
 
 export function createApiAppServices(
@@ -156,6 +165,13 @@ export function createApiAppServices(
   const exportBundle = options.exportBundle ?? createMainnetReadyBundle;
   const runtimeNetwork = resolveNetwork();
   const activityLogger = createActivityLogger(env.KILN_ACTIVITY_LOG_PATH);
+  const userStore =
+    options.userStore ??
+    createKilnUserStore({
+      env,
+      now: options.now,
+      walletSignatureVerifier: options.walletSignatureVerifier,
+    });
   const tokenConfigured = Boolean(env.API_AUTH_TOKEN);
   const authRequired = tokenConfigured || env.KILN_API_AUTH_REQUIRED === true;
 
@@ -212,5 +228,6 @@ export function createApiAppServices(
     runShadowbox,
     shadowbox: shadowboxRunner.describe(),
     exportBundle,
+    userStore,
   };
 }

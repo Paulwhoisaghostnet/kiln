@@ -27,10 +27,12 @@ export function buildOpenApiSpec(
     ],
     tags: [
       { name: 'health' },
+      { name: 'auth' },
       { name: 'workflow' },
       { name: 'deployment' },
       { name: 'operations' },
       { name: 'reference' },
+      { name: 'mcp' },
     ],
     'x-kiln': {
       defaultNetwork: runtimeNetwork.id,
@@ -45,6 +47,17 @@ export function buildOpenApiSpec(
       shadowboxRuntime: {
         endpoint: '/api/kiln/shadowbox/run',
         mode: 'ephemeral_tezos_runtime',
+      },
+      mcp: {
+        endpoint: '/mcp',
+        transport: 'streamable-http-json-rpc',
+        tokenTtlHours: 24,
+        accessFlow: [
+          '/api/kiln/auth/challenge',
+          '/api/kiln/auth/verify',
+          '/api/kiln/mcp/access/request',
+          '/api/kiln/mcp/token',
+        ],
       },
     },
     paths: {
@@ -64,6 +77,54 @@ export function buildOpenApiSpec(
         get: {
           tags: ['workflow'],
           summary: 'Machine-readable capabilities for UI/CLI/agents',
+        },
+      },
+      '/api/kiln/auth/challenge': {
+        post: {
+          tags: ['auth'],
+          summary:
+            'Create a wallet-signable login challenge for Settings and MCP token generation',
+        },
+      },
+      '/api/kiln/auth/verify': {
+        post: {
+          tags: ['auth'],
+          summary:
+            'Verify wallet signature and return a short-lived Settings session token',
+        },
+      },
+      '/api/kiln/me': {
+        get: {
+          tags: ['auth'],
+          summary:
+            'Return the wallet-authenticated Kiln user for a Settings session token',
+        },
+      },
+      '/api/kiln/mcp/status': {
+        get: {
+          tags: ['mcp'],
+          summary: 'Return MCP access status for the logged-in wallet',
+        },
+      },
+      '/api/kiln/mcp/access/request': {
+        post: {
+          tags: ['mcp'],
+          summary:
+            'Wake the MCP access worker to check accesslist/blocklist and approve or block the wallet',
+        },
+      },
+      '/api/kiln/mcp/token': {
+        post: {
+          tags: ['mcp'],
+          summary:
+            'Generate a one-time displayed MCP bearer token valid for 24 hours',
+        },
+      },
+      '/mcp': {
+        post: {
+          tags: ['mcp'],
+          summary:
+            'MCP Streamable HTTP JSON-RPC endpoint exposing Kiln tools to agents',
         },
       },
       '/api/kiln/workflow/run': {

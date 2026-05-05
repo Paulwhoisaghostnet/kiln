@@ -12,7 +12,10 @@ import {
 import { selectNetworkForRequest } from '../../lib/ecosystem-resolver.js';
 import { injectKilnTokens } from '../../lib/kiln-injector.js';
 import { parseEntrypointsFromMichelson } from '../../lib/michelson-parser.js';
-import { runContractWorkflow } from '../../lib/workflow-runner.js';
+import {
+  resolveSmartPyInitialStorage,
+  runContractWorkflow,
+} from '../../lib/workflow-runner.js';
 import type { ApiAppServices } from '../app-services.js';
 import { asMessage, validationErrorMessage } from '../http.js';
 import { materializeContractSource } from '../pipelines/contract-source.js';
@@ -282,10 +285,10 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           scenario: payload.data.scenario,
           compileSmartPy: services.compileSmartPy,
         });
-        const initialStorage =
-          payload.data.initialStorage?.trim() ||
-          source.compiled?.initialStorage ||
-          'Unit';
+        const initialStorage = resolveSmartPyInitialStorage({
+          requestedInitialStorage: payload.data.initialStorage,
+          compiledInitialStorage: source.compiled?.initialStorage,
+        }).initialStorage;
         const injectedCode = injectKilnTokens(source.michelson, services.env);
         const entrypoints = parseEntrypointsFromMichelson(injectedCode).map(
           (entry) => entry.name,

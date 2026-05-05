@@ -122,6 +122,70 @@ describe('runContractWorkflow', () => {
     expect(result.artifacts.initialStorage).toBe('Unit');
   });
 
+  it('uses compiled smartpy storage when caller sends the default Unit placeholder', async () => {
+    const compiledStorage =
+      '(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" (Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" 0))';
+    const seen = {
+      estimateStorage: '',
+      shadowboxStorage: '',
+    };
+
+    const result = await runContractWorkflow(
+      {
+        sourceType: 'smartpy',
+        source: 'import smartpy as sp',
+        initialStorage: 'Unit',
+        simulationSteps: [],
+      },
+      {
+        compileSmartPy: async () => ({
+          scenario: 'default',
+          michelson:
+            'parameter unit; storage (pair address (pair address nat)); code { CDR ; NIL operation ; PAIR };',
+          initialStorage: compiledStorage,
+        }),
+        injectKilnTokens: (code) => code,
+        estimateOrigination: async (_code, initialStorage) => {
+          seen.estimateStorage = initialStorage;
+          return {
+            gasLimit: 200_000,
+            storageLimit: 10_000,
+            suggestedFeeMutez: 40_000,
+            minimalFeeMutez: 30_000,
+          };
+        },
+        runShadowbox: async (input) => {
+          seen.shadowboxStorage = input.initialStorage;
+          return {
+            enabled: true,
+            requiredForClearance: false,
+            provider: 'command',
+            executed: true,
+            passed: true,
+            jobId: 'sbox_storage',
+            contractAddress: undefined,
+            startedAt: '2026-05-04T00:00:00.000Z',
+            endedAt: '2026-05-04T00:00:01.000Z',
+            durationMs: 1000,
+            summary: { total: 0, passed: 0, failed: 0 },
+            steps: [],
+            warnings: [],
+          };
+        },
+        clearanceStore: new DeploymentClearanceStore(),
+      },
+    );
+
+    expect(result.artifacts.initialStorage).toBe(compiledStorage);
+    expect(seen.estimateStorage).toBe(compiledStorage);
+    expect(seen.shadowboxStorage).toBe(compiledStorage);
+    expect(result.compile.warnings).toEqual(
+      expect.arrayContaining([
+        'Initial storage auto-filled from SmartPy compilation output.',
+      ]),
+    );
+  });
+
   it('denies clearance when validation fails', async () => {
     const result = await runContractWorkflow(
       {

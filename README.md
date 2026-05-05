@@ -6,7 +6,7 @@ lifecycle across the Tezos family of networks in one environment:
 - Tezos Shadownet (testnet — pre-funded puppets, faucet/test funds)
 - Etherlink Shadownet (Solidity via faucet funds)
 - Tezos Mainnet (connected-wallet only, puppets disabled)
-- Etherlink Mainnet (connected MetaMask only, real XTZ)
+- Etherlink Mainnet (verified EIP-1193 wallet only, real XTZ)
 
 The UI is a six-tab stepper — **Setup → Build → Validate → Deploy → Test →
 Handoff** — with progressive unlock, shared session state, URL-hash routing,
@@ -35,8 +35,9 @@ flows until the user acknowledges risk.
   code, deprecated opcodes) folded into the same clearance object as Tezos
 - Gas + fee estimation with `eth_estimateGas` / `eth_feeHistory` headroom
 - `eth_call` dry-run against the pending nonce
-- Connected-wallet deploy from MetaMask (EIP-1193) with auto chain-switch /
-  chain-add for Etherlink Shadownet (`0x1f34f`) and Mainnet (`0xa729`)
+- Verified-wallet deploy from Temple, MetaMask, or another EIP-1193 provider
+  with auto chain-switch / chain-add for Etherlink Shadownet (`0x1f34f`) and
+  Mainnet (`0xa729`)
 - Stale Etherlink Ghostnet testnet metadata is kept as a hidden legacy profile,
   not an active network card.
 
@@ -54,8 +55,7 @@ flows until the user acknowledges risk.
   unavailable instead of returning a fake success state.
 - Wallet balance visibility for test accounts (puppets only; reports
   `puppetsAvailable: false` on every non-Shadownet network)
-- Native Hetzner hosting (systemd) as the primary runtime; Netlify remains as
-  rollback until the native deploy is signed off.
+- Native Hetzner hosting (systemd) as the production runtime.
 
 ## Network tier matrix
 
@@ -68,8 +68,8 @@ mirrors the same flags to grey out buttons before the request is even made.
 | `tezos-shadownet`   | tezos     | testnet | yes                         | Beacon           | michelson, smartpy     | yes             |
 | `tezos-ghostnet`    | tezos     | testnet | no                          | Beacon           | michelson, smartpy     | no (planned)    |
 | `tezos-mainnet`     | tezos     | mainnet | **no — blocked**            | Beacon           | michelson, smartpy     | yes             |
-| `etherlink-shadownet` | etherlink | testnet | no                        | MetaMask         | solidity               | yes             |
-| `etherlink-mainnet` | etherlink | mainnet | **no — blocked**            | MetaMask         | solidity               | yes             |
+| `etherlink-shadownet` | etherlink | testnet | no                        | Verified EIP-1193 wallet | solidity        | yes             |
+| `etherlink-mainnet` | etherlink | mainnet | **no — blocked**            | Verified EIP-1193 wallet | solidity        | yes             |
 
 Planned/legacy profiles are returned separately from active cards:
 `tezos-ghostnet`, `etherlink-testnet` (legacy Ghostnet-era Etherlink), and
@@ -101,14 +101,14 @@ visible but disabled, which makes the dependency chain legible at a glance.
 1. **Setup** — pick a network via `NetworkSwitcher`, confirm the
    `MainnetConsentModal` if moving to a mainnet tier, and (for Tezos)
    connect a Beacon wallet or inspect Bert/Ernie balances. EVM networks
-   show a MetaMask prompt.
+   prompt users to verify ownership of the browser wallet that will deploy.
 2. **Build** — write or upload source. The panel swaps between a Michelson
    + SmartPy editor (Tezos) and a Solidity editor backed by the
    `SolidityPanel` (Etherlink) depending on the active ecosystem.
 3. **Validate** — compile → validate → audit → simulate → shadowbox runtime → clearance.
    Results render in `WorkflowResultsPanel` with uniform stats regardless of
    ecosystem. No clearance, no deploy.
-4. **Deploy** — connected-wallet or Bert deploy on Tezos, connected-MetaMask
+4. **Deploy** — connected-wallet or Bert deploy on Tezos, verified-wallet
    deploy on Etherlink. Clearance record id is carried forward so the
    deploy transaction can be tied back to a specific validate run.
 5. **Test** — post-deploy entrypoint execution with Bert/Ernie on
@@ -168,39 +168,23 @@ npm run start
 
 `npm run start` launches with `NODE_ENV=production`.
 
-## Netlify Production Deployment
+## Native Hetzner Production Deployment
 
-This repo is now pre-configured for Netlify:
-- `netlify.toml` sets:
-  - build command: `bash scripts/netlify-build.sh` (Vite build plus a **Linux standalone Python** with `smartpy-tezos` under `vendor/kiln-python`, zipped into the API function so SmartPy workflow/compile works—Netlify’s Node runtime does not include system Python)
-  - publish dir: `dist`
-  - functions dir: `netlify/functions`
-  - `/api/*` rewrites to `/.netlify/functions/api/:splat`
-  - SPA fallback `/* -> /index.html`
-- `netlify/functions/api.ts` runs the existing Express API in a Netlify Function.
-- Optional: set **`KILN_PYTHON`** to an absolute Python path if you self-host and want a specific interpreter (otherwise the bundled `vendor/kiln-python` is used on Netlify, then `python3` on PATH elsewhere).
-
-### Local Netlify emulation
+Kiln deploys as a native Node/systemd service on the Hetzner host. The canonical
+deploy path is:
 
 ```bash
-npm run netlify:dev
+ssh paul@5.78.202.50
+cd /opt/platform/repos/shadownet-kiln
+sudo KILN_DEPLOY_BRANCH=main bash scripts/server-deploy.sh
 ```
 
-### Deploy commands
+The same deploy script is also wired to the manual `Deploy Kiln to Hetzner`
+GitHub Actions workflow.
 
-Preview deploy:
-```bash
-npm run netlify:deploy:preview
-```
+### Required production environment variables
 
-Production deploy:
-```bash
-npm run netlify:deploy:prod
-```
-
-### Required Netlify environment variables
-
-Set these in Netlify Site Settings → Environment variables (use the same names for **Production** and **Deploy previews** unless you intentionally split them):
+Set these in `/opt/platform/repos/shadownet-kiln/.env` on the server:
 
 - `TEZOS_RPC_URL`
 - `TEZOS_CHAIN_ID` (recommended to pin for safety)
@@ -215,7 +199,7 @@ Set these in Netlify Site Settings → Environment variables (use the same names
 
 If you protect the API with a token, you **must** also set the client-visible build variable (same value as the server secret):
 
-- **`API_AUTH_TOKEN`** — checked in the Netlify function on protected routes (including **`GET /api/kiln/balances`** for Bert/Ernie).
+- **`API_AUTH_TOKEN`** — checked on protected routes (including **`GET /api/kiln/balances`** for Bert/Ernie).
 - **`VITE_API_TOKEN`** — same string as `API_AUTH_TOKEN`, but this name is chosen so **Vite inlines it at build time** into the browser bundle. The UI sends it as the `x-kiln-token` header on `/api/...` requests. The legacy `x-api-token` header is still accepted as an alias so old curl/CLI scripts keep working; the `x-` prefix is just the historical convention for custom HTTP headers (RFC 6648) and has nothing to do with X/Twitter.
 - **`KILN_API_AUTH_REQUIRED`** — optional fail-closed switch. Leave blank for normal behavior (`API_AUTH_TOKEN` present means protected routes require it). Set `true` to force token auth and fail closed if `API_AUTH_TOKEN` is missing. Setting `false` only leaves protected routes open when `API_AUTH_TOKEN` is also blank; a configured token always protects deployment, execution, export, reference, and workflow routes.
 
@@ -230,33 +214,14 @@ Optional:
 - `KILN_REQUIRE_SIM_CLEARANCE` (default `true`; blocks deploys that skip workflow gate)
 - `KILN_ACTIVITY_LOG_PATH` (default `./logs/kiln-activity.log`)
 
-### Bert/Ernie balances on Netlify
+### Operational notes
 
 - **`/api/health`** does not use `API_AUTH_TOKEN`. **`/api/kiln/balances`** does when the token is configured.
-- If balances fail with **401**, add **`VITE_API_TOKEN`** in Netlify and trigger a **new deploy** (clear cache if needed) so the static bundle picks it up.
-- If balances fail with **500**, check function logs: missing `WALLET_*` keys, chain mismatch (`TEZOS_CHAIN_ID`), or RPC errors are common causes.
-
-### Same-origin/CORS configuration (important)
-
-Ideal Netlify setup is same-origin:
-- Frontend and API live under the same Netlify domain.
-- Frontend calls relative `/api/...` routes (already implemented).
-- Leave `CORS_ORIGINS` empty in production for strict same-origin behavior.
-
-If you must allow external origins:
-- Set `CORS_ORIGINS` as a comma-separated allowlist.
-- Wildcard preview domains are supported, e.g.:
-  - `https://*.netlify.app`
-  - `https://your-prod-domain.com`
-
-### Netlify-specific operational notes
-
-- `vite-plugin-node-polyfills` is listed under **dependencies** (not only devDependencies) so Netlify installs it even when the install step runs with production-style omission of dev-only packages; the Vite config imports it for Beacon/Taquito browser shims (`Buffer`, `global`, `process`).
-- Contract origination + confirmation can be slow on shadownet.
-- Netlify Functions have execution limits; long confirmation waits may time out.
-- If this happens in production, ideal architecture is:
-  - keep frontend on Netlify
-  - move long-running chain operations to a dedicated backend worker/API.
+- If balances fail with **401**, make sure `VITE_API_TOKEN` was present before the server build.
+- If balances fail with **500**, check service logs: missing `WALLET_*` keys, chain mismatch (`TEZOS_CHAIN_ID`), or RPC errors are common causes.
+- Frontend and API are expected to be same-origin at `https://kiln.wtfgameshow.app`.
+- Leave `CORS_ORIGINS` empty in production for strict same-origin behavior unless an explicit external origin is required.
+- Contract origination + confirmation can be slow on shadownet; the native runtime is used so these long-running operations are not constrained by serverless limits.
 
 ## Quality Gates
 
@@ -298,7 +263,7 @@ EVM-only endpoints (Etherlink testnet + mainnet):
 - `POST /api/kiln/evm/estimate` (gas + fee estimate against the live RPC)
 - `POST /api/kiln/evm/dry-run` (`eth_call` simulation)
 - `POST /api/kiln/evm/deploy` (server-side deploy path; real deploys go
-  through the user's connected MetaMask from the client)
+  through the user's verified browser wallet from the client)
 
 Every route accepts `networkId` in the body (POST) or query string (GET) and
 falls back to `KILN_NETWORK` from the env if omitted.

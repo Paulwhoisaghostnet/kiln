@@ -18,7 +18,7 @@ import { asMessage, validationErrorMessage } from '../http.js';
 
 /**
  * EVM/Etherlink router. Complements the Tezos runtime-router. Real deploys
- * and method calls are submitted by the browser wallet (MetaMask), so the
+ * and method calls are submitted by the browser wallet, so the
  * server only handles:
  *
  * - POST /api/kiln/evm/compile  — Solidity -> bytecode + ABI

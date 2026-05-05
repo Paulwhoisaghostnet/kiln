@@ -97,6 +97,10 @@ export function configureApiApp(
                 ],
                 // Allow remote images for wallet icons / IPFS previews.
                 'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+                // WalletConnect Verify uses a hidden iframe during wallet
+                // connection. Keep frame policy narrow instead of falling
+                // back to `default-src 'self'`.
+                'frame-src': ["'self'", 'https://verify.walletconnect.org'],
               },
             }
           : false,

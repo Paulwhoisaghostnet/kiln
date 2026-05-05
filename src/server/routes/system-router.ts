@@ -26,6 +26,100 @@ function getTokenHealth(services: ApiAppServices) {
   }
 }
 
+export function buildKilnCapabilities(
+  services: ApiAppServices,
+  requestedNetworkId?: unknown,
+) {
+  const network = selectNetworkForRequest(services.env, requestedNetworkId);
+  return {
+    success: true,
+    runtime: {
+      network,
+      defaultNetwork: services.runtimeNetwork,
+      clearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
+      deployClearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
+      shadowboxRequiredForClearance:
+        services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
+      shadowbox: services.shadowbox,
+      auth: services.auth,
+      mcp: {
+        endpoint: '/mcp',
+        auth: 'Bearer token generated from Settings after wallet login',
+        tokenTtlHours: services.env.KILN_MCP_TOKEN_TTL_HOURS,
+      },
+    },
+    noStubPolicy: {
+      shadowboxMockClearance: 'blocked',
+      unsupportedAssertions: 'fail_closed',
+      incompleteAdapters: 'planned_or_unavailable',
+    },
+    projectWorkspace: {
+      manifest: 'kiln.project.json',
+      status: 'active-browser-workspace',
+      hostFilesystemBrowsing: 'blocked',
+    },
+    systemScenarios: {
+      payableTezosCalls: network.ecosystem === 'tezos' ? 'supported' : 'not-applicable',
+      multiContractTargets:
+        network.ecosystem === 'tezos'
+          ? 'supported-in-live-e2e-payloads'
+          : 'blocked-until-adapter-e2e-runner',
+      storageAssertions: 'blocked-until-runtime-reader',
+      shadowboxMultiContract: 'blocked-single-contract-runner-present',
+    },
+    sources: {
+      supported:
+        network.capabilities.sourceLanguages.length === 0
+          ? []
+          : network.capabilities.sourceLanguages.includes('solidity')
+            ? ['solidity']
+            : network.capabilities.sourceLanguages.includes('jstz')
+              ? ['jstz']
+              : ['auto', 'smartpy', 'michelson'],
+      uploadExtensions: ['.tz', '.json', '.smartpy', '.sp', '.py', '.txt', '.md'],
+    },
+    workflowStages: [
+      'source_intake',
+      'compile_if_needed',
+      'validate',
+      'audit',
+      'simulate',
+      'shadowbox_runtime',
+      'clearance',
+      'deploy',
+      'post_deploy_e2e',
+    ],
+    exports: {
+      source: ['smartpy', 'michelson'],
+      compiled: ['michelson (.tz)'],
+      deliverables: ['mainnet-ready bundle (.zip)'],
+    },
+    entrypoints: {
+      guidedElements: '/api/kiln/contracts/guided/elements',
+      guidedCreate: '/api/kiln/contracts/guided/create',
+      audit: '/api/kiln/audit/run',
+      simulate: '/api/kiln/simulate/run',
+      shadowbox: '/api/kiln/shadowbox/run',
+      workflow: '/api/kiln/workflow/run',
+      deploy: '/api/kiln/upload',
+      execute: '/api/kiln/execute',
+      e2e: '/api/kiln/e2e/run',
+      balance: '/api/kiln/balances',
+      evmCompile: '/api/kiln/evm/compile',
+      evmEstimate: '/api/kiln/evm/estimate',
+      evmDryRun: '/api/kiln/evm/dry-run',
+      evmBalance: '/api/kiln/evm/balance',
+      bundle: '/api/kiln/export/bundle',
+      mcp: '/mcp',
+    },
+    clients: {
+      ui: true,
+      cli: 'npm run kiln:cli',
+      agentic: 'Use /mcp after generating a 24-hour agent token from Settings.',
+    },
+  };
+}
+
 export function createSystemRouter(services: ApiAppServices): Router {
   const router = Router();
 
@@ -55,82 +149,9 @@ export function createSystemRouter(services: ApiAppServices): Router {
   });
 
   router.get('/api/kiln/capabilities', (req, res) => {
-    const network = selectNetworkForRequest(services.env, req.query.networkId);
     res.json({
-      success: true,
+      ...buildKilnCapabilities(services, req.query.networkId),
       requestId: res.locals.requestId,
-      runtime: {
-        network,
-        defaultNetwork: services.runtimeNetwork,
-        clearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
-        deployClearanceRequired: services.env.KILN_REQUIRE_SIM_CLEARANCE,
-        shadowboxRequiredForClearance:
-          services.env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE,
-        shadowbox: services.shadowbox,
-        auth: services.auth,
-      },
-      noStubPolicy: {
-        shadowboxMockClearance: 'blocked',
-        unsupportedAssertions: 'fail_closed',
-        incompleteAdapters: 'planned_or_unavailable',
-      },
-      projectWorkspace: {
-        manifest: 'kiln.project.json',
-        status: 'active-browser-workspace',
-        hostFilesystemBrowsing: 'blocked',
-      },
-      systemScenarios: {
-        payableTezosCalls: network.ecosystem === 'tezos' ? 'supported' : 'not-applicable',
-        multiContractTargets:
-          network.ecosystem === 'tezos'
-            ? 'supported-in-live-e2e-payloads'
-            : 'blocked-until-adapter-e2e-runner',
-        storageAssertions: 'blocked-until-runtime-reader',
-        shadowboxMultiContract: 'blocked-single-contract-runner-present',
-      },
-      sources: {
-        supported:
-          network.capabilities.sourceLanguages.length === 0
-            ? []
-            : network.capabilities.sourceLanguages.includes('solidity')
-              ? ['solidity']
-              : network.capabilities.sourceLanguages.includes('jstz')
-                ? ['jstz']
-                : ['auto', 'smartpy', 'michelson'],
-        uploadExtensions: ['.tz', '.json', '.smartpy', '.sp', '.py', '.txt', '.md'],
-      },
-      workflowStages: [
-        'source_intake',
-        'compile_if_needed',
-        'validate',
-        'audit',
-        'simulate',
-        'shadowbox_runtime',
-        'clearance',
-        'deploy',
-        'post_deploy_e2e',
-      ],
-      exports: {
-        source: ['smartpy', 'michelson'],
-        compiled: ['michelson (.tz)'],
-        deliverables: ['mainnet-ready bundle (.zip)'],
-      },
-      entrypoints: {
-        guidedElements: '/api/kiln/contracts/guided/elements',
-        audit: '/api/kiln/audit/run',
-        simulate: '/api/kiln/simulate/run',
-        shadowbox: '/api/kiln/shadowbox/run',
-        workflow: '/api/kiln/workflow/run',
-        deploy: '/api/kiln/upload',
-        execute: '/api/kiln/execute',
-        e2e: '/api/kiln/e2e/run',
-        bundle: '/api/kiln/export/bundle',
-      },
-      clients: {
-        ui: true,
-        cli: 'npm run kiln:cli',
-        agentic: 'Use OpenAPI + JSON endpoints for tool-call orchestration.',
-      },
     });
   });
 

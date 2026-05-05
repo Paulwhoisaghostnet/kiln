@@ -5,14 +5,18 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardCopy,
   Download,
   FlaskConical,
   Globe,
   Hammer,
+  KeyRound,
   Lock,
   Package,
+  PlugZap,
   RefreshCw,
   Rocket,
+  Settings,
   ShieldCheck,
   Terminal,
   TerminalSquare,
@@ -34,6 +38,7 @@ import {
 } from './components/WorkflowResultsPanel';
 import { KilnCopy, useKilnView } from './context/KilnViewProvider';
 import { useKilnNetwork } from './context/NetworkProvider';
+import type { EvmWalletTarget } from './lib/evm-wallet';
 import type { WalletConnectTarget } from './lib/shadownet-wallet';
 import type { AbiEntrypoint, WalletType } from './lib/types';
 import { buildWorkflowDrivenE2ESteps } from './lib/workflow-discovery';
@@ -50,7 +55,7 @@ type LogType = 'info' | 'error' | 'success';
 type DeployMode = 'connected' | 'puppet';
 type ContractSourceType = 'michelson' | 'smartpy' | 'solidity';
 
-type TabKey = 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
+type TabKey = 'setup' | 'settings' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
 
 interface LogEntry {
   time: string;
@@ -114,6 +119,33 @@ interface ConnectedWalletState {
   networkName: string | null;
   rpcUrl: string | null;
   target: WalletConnectTarget;
+}
+
+type KilnWalletKind = 'tezos' | 'evm';
+
+interface KilnAuthUser {
+  id: string;
+  walletKind: KilnWalletKind;
+  walletAddress: string;
+  access: {
+    status: 'none' | 'pending' | 'approved' | 'blocked';
+    requestedAt?: string;
+    checkedAt?: string;
+    checkedBy?: string;
+    reason?: string;
+  };
+  currentMcpToken?: {
+    id: string;
+    createdAt: string;
+    expiresAt: string;
+    revokedAt?: string;
+  } | null;
+}
+
+interface KilnAuthSession {
+  token: string;
+  expiresAt: string;
+  user: KilnAuthUser;
 }
 
 interface WorkflowRunResponse extends WorkflowSummary {
@@ -253,6 +285,11 @@ export default function App() {
   const [lastWorkflow, setLastWorkflow] = useState<WorkflowRunResponse | null>(null);
   const [lastSolidityCompile, setLastSolidityCompile] =
     useState<SolidityCompileResult | null>(null);
+  const [authSession, setAuthSession] = useState<KilnAuthSession | null>(null);
+  const [mcpToken, setMcpToken] = useState<string | null>(null);
+  const [isMcpLoggingIn, setIsMcpLoggingIn] = useState(false);
+  const [isRequestingMcpAccess, setIsRequestingMcpAccess] = useState(false);
+  const [isGeneratingMcpToken, setIsGeneratingMcpToken] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window === 'undefined') {
       return 'setup';
@@ -325,6 +362,8 @@ export default function App() {
     setAbi([]);
     setLastWorkflow(null);
     setLastSolidityCompile(null);
+    setAuthSession(null);
+    setMcpToken(null);
     setBalances(null);
     void fetchBalances();
     void hydrateConnectedWallet();
@@ -363,7 +402,7 @@ export default function App() {
         setConnectedWallet(null);
         return;
       }
-      setConnectedWallet({ ...wallet, target: 'temple' });
+      setConnectedWallet({ ...wallet, target: 'beacon' });
     } catch {
       setConnectedWallet(null);
     }
@@ -465,18 +504,13 @@ export default function App() {
     setAbi([]);
   };
 
-  const connectWallet = async (target: WalletConnectTarget) => {
+  const connectWallet = async () => {
     setIsConnectingWallet(true);
-    addLog(
-      target === 'kukai'
-        ? `Opening Kukai and requesting Beacon permissions on ${network.label}...`
-        : `Opening Temple and requesting Beacon permissions on ${network.label}...`,
-      'info',
-    );
+    addLog(`Requesting Beacon wallet permissions on ${network.label}...`, 'info');
     try {
       const { connectShadownetWallet } = await import('./lib/shadownet-wallet');
-      const wallet = await connectShadownetWallet(target, networkId);
-      setConnectedWallet({ ...wallet, target });
+      const wallet = await connectShadownetWallet('beacon', networkId);
+      setConnectedWallet({ ...wallet, target: 'beacon' });
       addLog(`Connected wallet ${wallet.address} on ${network.label}.`, 'success');
     } catch (error) {
       addLog(
@@ -499,6 +533,198 @@ export default function App() {
         `Wallet disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'error',
       );
+    }
+  };
+
+  const sessionHeaders = (includeJson = false): HeadersInit => {
+    const headers = buildHeaders(includeJson) as Record<string, string>;
+    if (authSession?.token) {
+      headers.authorization = `Bearer ${authSession.token}`;
+    }
+    return headers;
+  };
+
+  const startMcpWalletLogin = async (evmTarget: EvmWalletTarget = 'auto') => {
+    setIsMcpLoggingIn(true);
+    setMcpToken(null);
+    try {
+      let walletKind: KilnWalletKind;
+      let walletAddress: string;
+      let signature: string;
+      let publicKey: string | undefined;
+
+      if (isTezos) {
+        if (!connectedWallet) {
+          throw new Error('Connect a Tezos wallet on the Setup tab before requesting MCP access.');
+        }
+        walletKind = 'tezos';
+        walletAddress = connectedWallet.address;
+      } else {
+        const { connectEvmWallet, getConnectedEvmWallet } = await import('./lib/evm-wallet');
+        const wallet =
+          (await getConnectedEvmWallet(networkId, evmTarget)) ??
+          (await connectEvmWallet(networkId, evmTarget));
+        walletKind = 'evm';
+        walletAddress = wallet.address;
+      }
+
+      const challengeResponse = await fetch('/api/kiln/auth/challenge', {
+        method: 'POST',
+        headers: buildHeaders(true),
+        body: JSON.stringify({ walletKind, walletAddress, networkId }),
+      });
+      const challenge = (await challengeResponse.json()) as
+        | {
+            challengeId: string;
+            message: string;
+            messageBytes: string;
+            error?: string;
+          }
+        | { error?: string };
+      if (!challengeResponse.ok || !('challengeId' in challenge)) {
+        throw new Error(challenge.error ?? 'Unable to create wallet login challenge.');
+      }
+
+      if (walletKind === 'tezos') {
+        const { signKilnAuthChallenge } = await import('./lib/shadownet-wallet');
+        const signed = await signKilnAuthChallenge(challenge.message, networkId);
+        signature = signed.signature;
+        publicKey = signed.publicKey;
+      } else {
+        const { signEvmAuthChallenge } = await import('./lib/evm-wallet');
+        const signed = await signEvmAuthChallenge(challenge.message, networkId, evmTarget);
+        signature = signed.signature;
+      }
+
+      const verifyResponse = await fetch('/api/kiln/auth/verify', {
+        method: 'POST',
+        headers: buildHeaders(true),
+        body: JSON.stringify({
+          challengeId: challenge.challengeId,
+          signature,
+          publicKey,
+        }),
+      });
+      const verified = (await verifyResponse.json()) as
+        | {
+            sessionToken: string;
+            expiresAt: string;
+            user: KilnAuthUser;
+            error?: string;
+          }
+        | { error?: string };
+      if (!verifyResponse.ok || !('sessionToken' in verified)) {
+        throw new Error(verified.error ?? 'Wallet login verification failed.');
+      }
+
+      setAuthSession({
+        token: verified.sessionToken,
+        expiresAt: verified.expiresAt,
+        user: verified.user,
+      });
+      addLog(`Wallet ownership verified for Kiln account: ${verified.user.walletAddress}.`, 'success');
+    } catch (error) {
+      addLog(
+        `Wallet verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsMcpLoggingIn(false);
+    }
+  };
+
+  const requestMcpAccess = async () => {
+    if (!authSession) {
+      addLog('Wallet login is required before requesting MCP access.', 'error');
+      return;
+    }
+    setIsRequestingMcpAccess(true);
+    setMcpToken(null);
+    try {
+      const response = await fetch('/api/kiln/mcp/access/request', {
+        method: 'POST',
+        headers: sessionHeaders(true),
+        body: JSON.stringify({}),
+      });
+      const payload = (await response.json()) as
+        | { access: KilnAuthUser['access']; error?: string }
+        | { error?: string };
+      if ('access' in payload) {
+        setAuthSession((prev) =>
+          prev
+            ? {
+                ...prev,
+                user: { ...prev.user, access: payload.access },
+              }
+            : prev,
+        );
+      }
+      if (!response.ok || !('access' in payload) || payload.access.status !== 'approved') {
+        throw new Error(payload.error ?? 'MCP access was not approved.');
+      }
+      addLog('MCP access approved by Kiln access worker.', 'success');
+    } catch (error) {
+      addLog(
+        `MCP access request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsRequestingMcpAccess(false);
+    }
+  };
+
+  const generateMcpToken = async () => {
+    if (!authSession) {
+      addLog('Wallet login is required before generating an MCP token.', 'error');
+      return;
+    }
+    setIsGeneratingMcpToken(true);
+    try {
+      const response = await fetch('/api/kiln/mcp/token', {
+        method: 'POST',
+        headers: sessionHeaders(true),
+        body: JSON.stringify({}),
+      });
+      const payload = (await response.json()) as
+        | {
+            token: string;
+            expiresAt: string;
+            user: KilnAuthUser;
+            error?: string;
+          }
+        | { error?: string };
+      if (!response.ok || !('token' in payload)) {
+        throw new Error(payload.error ?? 'Unable to generate MCP token.');
+      }
+      setMcpToken(payload.token);
+      setAuthSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: payload.user,
+            }
+          : prev,
+      );
+      addLog(`MCP token generated; expires ${new Date(payload.expiresAt).toLocaleString()}.`, 'success');
+    } catch (error) {
+      addLog(
+        `MCP token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsGeneratingMcpToken(false);
+    }
+  };
+
+  const copyMcpToken = async () => {
+    if (!mcpToken) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(mcpToken);
+      addLog('MCP token copied to clipboard.', 'success');
+    } catch {
+      addLog('Clipboard copy failed. Select the token text manually.', 'error');
     }
   };
 
@@ -940,6 +1166,9 @@ export default function App() {
   };
 
   // Tab guard logic
+  const verifiedEvmWalletAddress =
+    isEvm && authSession?.user.walletKind === 'evm' ? authSession.user.walletAddress : null;
+
   const tabs = useMemo<
     Array<{
       key: TabKey;
@@ -953,6 +1182,7 @@ export default function App() {
     const hasSource = isEvm ? solidityCode.trim().length > 0 : michelsonCode.trim().length > 0;
     const hasClearance = isEvm ? Boolean(lastSolidityCompile?.entry) : Boolean(clearanceId);
     const hasContract = Boolean(contractAddress);
+    const hasMcpAccess = authSession?.user.access.status === 'approved';
     return [
       {
         key: 'setup',
@@ -961,6 +1191,14 @@ export default function App() {
         tipKey: 'tabSetupLabel',
         ready: true,
         done: true,
+      },
+      {
+        key: 'settings',
+        label: 'Settings',
+        icon: <Settings className="w-4 h-4" />,
+        tipKey: 'tabSetupLabel',
+        ready: true,
+        done: hasMcpAccess,
       },
       {
         key: 'build',
@@ -1011,6 +1249,7 @@ export default function App() {
     clearanceId,
     contractAddress,
     lastWorkflow,
+    authSession,
     t,
   ]);
 
@@ -1125,6 +1364,22 @@ export default function App() {
                 isConnectingWallet={isConnectingWallet}
               />
             ) : null}
+            {activeTab === 'settings' ? (
+              <SettingsTab
+                isTezos={isTezos}
+                isEvm={isEvm}
+                connectedWallet={connectedWallet}
+                authSession={authSession}
+                mcpToken={mcpToken}
+                isMcpLoggingIn={isMcpLoggingIn}
+                isRequestingMcpAccess={isRequestingMcpAccess}
+                isGeneratingMcpToken={isGeneratingMcpToken}
+                onLogin={startMcpWalletLogin}
+                onRequestAccess={requestMcpAccess}
+                onGenerateToken={generateMcpToken}
+                onCopyToken={copyMcpToken}
+              />
+            ) : null}
             {activeTab === 'build' ? (
               <BuildTab
                 isTezos={isTezos}
@@ -1146,6 +1401,9 @@ export default function App() {
                 entrypoints={abi.map((entrypoint) => entrypoint.name)}
                 contractAddress={contractAddress}
                 clearanceId={clearanceId}
+                verifiedEvmWalletAddress={verifiedEvmWalletAddress}
+                isAssociatingEvmWallet={isMcpLoggingIn}
+                onAssociateEvmWallet={startMcpWalletLogin}
                 onDeployedEvm={(info) => {
                   setContractAddress(info.contractAddress);
                   addLog(`EVM contract live at ${info.contractAddress}.`, 'success');
@@ -1270,7 +1528,7 @@ export default function App() {
 }
 
 function isTabKey(value: string): value is TabKey {
-  return ['setup', 'build', 'validate', 'deploy', 'test', 'handoff'].includes(value);
+  return ['setup', 'settings', 'build', 'validate', 'deploy', 'test', 'handoff'].includes(value);
 }
 
 /** Bottom spacer so the terminal dock never covers the tab nav. */
@@ -1412,7 +1670,7 @@ function SetupTab({
   balancesError: string | null;
   fetchBalances: () => Promise<void>;
   connectedWallet: ConnectedWalletState | null;
-  onConnect: (target: WalletConnectTarget) => Promise<void>;
+  onConnect: () => Promise<void>;
   onDisconnect: () => Promise<void>;
   isConnectingWallet: boolean;
 }) {
@@ -1464,20 +1722,11 @@ function SetupTab({
             <button
               className="btn btn-sm btn-outline"
               onClick={() => {
-                void onConnect('temple');
+                void onConnect();
               }}
               disabled={isConnectingWallet}
             >
-              Connect Temple
-            </button>
-            <button
-              className="btn btn-sm btn-outline"
-              onClick={() => {
-                void onConnect('kukai');
-              }}
-              disabled={isConnectingWallet}
-            >
-              Connect Kukai
+              Connect wallet
             </button>
             <button
               className="btn btn-sm btn-ghost"
@@ -1505,8 +1754,8 @@ function SetupTab({
             Connect EVM wallet
           </h3>
           <p className="text-xs text-base-content/60">
-            On Etherlink, your MetaMask wallet is the signer. Kiln never holds your key.
-            Connection happens automatically on the Build tab when you press Deploy.
+            On Etherlink, your verified EVM wallet is the signer. Associate it with a
+            signature before deploy so Kiln can show the exact address it will use.
           </p>
         </section>
       )}
@@ -1592,13 +1841,192 @@ function SetupTab({
         <div className="alert alert-info text-xs">
           <span>
             Etherlink uses Solidity. When you switch to the Build tab, Kiln will show a Solidity
-            editor and compile path. Deploys go through MetaMask.
+            editor and compile path. Deploys go through a verified EIP-1193 wallet.
           </span>
         </div>
       ) : null}
 
       {/* Swallow the unused t var in case we export it later. */}
       <span className="hidden">{t('tabSetupLabel')}</span>
+    </div>
+  );
+}
+
+function SettingsTab({
+  isTezos,
+  isEvm,
+  connectedWallet,
+  authSession,
+  mcpToken,
+  isMcpLoggingIn,
+  isRequestingMcpAccess,
+  isGeneratingMcpToken,
+  onLogin,
+  onRequestAccess,
+  onGenerateToken,
+  onCopyToken,
+}: {
+  isTezos: boolean;
+  isEvm: boolean;
+  connectedWallet: ConnectedWalletState | null;
+  authSession: KilnAuthSession | null;
+  mcpToken: string | null;
+  isMcpLoggingIn: boolean;
+  isRequestingMcpAccess: boolean;
+  isGeneratingMcpToken: boolean;
+  onLogin: (target?: EvmWalletTarget) => Promise<void>;
+  onRequestAccess: () => Promise<void>;
+  onGenerateToken: () => Promise<void>;
+  onCopyToken: () => Promise<void>;
+}) {
+  const access = authSession?.user.access;
+  const accessStatus = access?.status ?? 'none';
+  const tokenMeta = authSession?.user.currentMcpToken;
+  const walletLabel = authSession?.user.walletAddress ?? connectedWallet?.address ?? 'No wallet login';
+  const walletKindLabel = authSession?.user.walletKind ?? (isEvm ? 'evm' : 'tezos');
+  const canRequestAccess = Boolean(authSession) && !isRequestingMcpAccess;
+  const canGenerateToken =
+    Boolean(authSession) && accessStatus === 'approved' && !isGeneratingMcpToken;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Settings className="w-5 h-5 text-primary" />
+          Settings
+        </h2>
+            <p className="text-sm text-base-content/60 mt-1">
+          Verify wallet ownership, request MCP access, then generate a 24-hour agent token.
+        </p>
+      </div>
+
+      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              Verified wallet
+            </h3>
+            <p className="text-xs text-base-content/60 mt-1">
+              {isTezos
+                ? 'Uses the currently connected Beacon wallet from Setup.'
+                : 'Uses Temple, MetaMask, or another EIP-1193 wallet for Etherlink.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary gap-2"
+            disabled={isMcpLoggingIn}
+            onClick={() => {
+              void onLogin();
+            }}
+          >
+            <KeyRound className="w-4 h-4" />
+            {isMcpLoggingIn ? 'Signing…' : authSession ? 'Re-verify' : 'Sign wallet'}
+          </button>
+        </div>
+        <div className="rounded-lg bg-base-200/50 border border-base-300 p-3 text-xs font-mono break-all">
+          <div>Wallet: {walletLabel}</div>
+          <div>Kind: {walletKindLabel}</div>
+          {authSession ? <div>Session expires: {new Date(authSession.expiresAt).toLocaleString()}</div> : null}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+              <PlugZap className="w-4 h-4" />
+              MCP access
+            </h3>
+            <p className="text-xs text-base-content/60 mt-1">
+              Kiln checks the accesslist and blocklist before enabling agent access.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary gap-2"
+            disabled={!canRequestAccess}
+            onClick={() => {
+              void onRequestAccess();
+            }}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            {isRequestingMcpAccess ? 'Checking…' : 'Request access'}
+          </button>
+        </div>
+        <div
+          className={`alert text-xs ${
+            accessStatus === 'approved'
+              ? 'alert-success'
+              : accessStatus === 'blocked'
+                ? 'alert-error'
+                : 'alert-info'
+          }`}
+        >
+          <span>
+            Status: {accessStatus}
+            {access?.reason ? ` · ${access.reason}` : ''}
+          </span>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+              <KeyRound className="w-4 h-4" />
+              Agent token
+            </h3>
+            <p className="text-xs text-base-content/60 mt-1">
+              The full token is shown only when generated. It expires after 24 hours.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary gap-2"
+            disabled={!canGenerateToken}
+            onClick={() => {
+              void onGenerateToken();
+            }}
+          >
+            <KeyRound className="w-4 h-4" />
+            {isGeneratingMcpToken ? 'Generating…' : 'Generate token'}
+          </button>
+        </div>
+
+        {tokenMeta ? (
+          <div className="rounded-lg border border-base-300 bg-base-200/40 p-3 text-xs space-y-1">
+            <div className="font-mono">Token id: {tokenMeta.id}</div>
+            <div>Expires: {new Date(tokenMeta.expiresAt).toLocaleString()}</div>
+          </div>
+        ) : null}
+
+        {mcpToken ? (
+          <div className="space-y-2">
+            <textarea
+              className="textarea textarea-bordered w-full font-mono text-xs min-h-24"
+              readOnly
+              value={mcpToken}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-outline gap-2"
+              onClick={() => {
+                void onCopyToken();
+              }}
+            >
+              <ClipboardCopy className="w-4 h-4" />
+              Copy token
+            </button>
+          </div>
+        ) : (
+          <div className="text-xs text-base-content/60 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-base-content/40" />
+            Generate a token after access is approved.
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -1623,6 +2051,9 @@ function BuildTab({
   entrypoints,
   contractAddress,
   clearanceId,
+  verifiedEvmWalletAddress,
+  isAssociatingEvmWallet,
+  onAssociateEvmWallet,
   onDeployedEvm,
 }: {
   isTezos: boolean;
@@ -1644,6 +2075,9 @@ function BuildTab({
   entrypoints: string[];
   contractAddress: string;
   clearanceId: string | null;
+  verifiedEvmWalletAddress: string | null;
+  isAssociatingEvmWallet: boolean;
+  onAssociateEvmWallet: (target?: EvmWalletTarget) => Promise<void>;
   onDeployedEvm: (info: { contractAddress: `0x${string}`; transactionHash: `0x${string}`; networkId: string }) => void;
 }) {
   const { t, tip, mode } = useKilnView();
@@ -1759,14 +2193,17 @@ function BuildTab({
               onSourceChange={setSolidityCode}
               buildHeaders={buildHeaders}
               onLog={addLog}
+              verifiedWalletAddress={verifiedEvmWalletAddress}
+              isAssociatingWallet={isAssociatingEvmWallet}
+              onAssociateWallet={onAssociateEvmWallet}
               onDeployed={onDeployedEvm}
             />
           </React.Suspense>
           <div className="alert text-xs">
             <span>
               Solidity runs on <span className="font-semibold">{network.label}</span>.
-              Kiln compiles with solc-js, but the deploy transaction is signed by your
-              MetaMask wallet directly.
+              Kiln compiles with solc-js, but the deploy transaction is signed by your verified
+              Etherlink wallet directly.
             </span>
           </div>
         </>
@@ -1950,8 +2387,8 @@ function DeployTab({
           <div className="rounded-xl border border-success/40 bg-success/5 p-4 space-y-2 text-sm">
             <div className="font-semibold">{solidityResult.entry.name}</div>
             <p className="text-xs text-base-content/70">
-              Compile is ready. Use the Deploy button on the Build tab — it signs with MetaMask
-              directly.
+              Compile is ready. Use the Deploy button on the Build tab — it signs with the verified
+              Etherlink wallet directly.
             </p>
           </div>
         ) : (

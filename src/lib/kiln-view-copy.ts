@@ -46,9 +46,9 @@ const C = {
     tip: 'Beacon is the standard way Tezos websites ask your wallet for permission. You stay in control: the site never sees your seed phrase.',
   },
   kukaiNote: {
-    b: 'Kukai users: keep Kukai opened on shadownet.kukai.app before approving.',
-    e: 'If you use Kukai, open the Shadownet version of Kukai first, then come back here to approve.',
-    tip: 'Kukai has different sites for mainnet vs testnets. Shadownet lives at shadownet.kukai.app so your approvals go to the practice chain.',
+    b: 'Beacon will ask which Tezos wallet to use.',
+    e: 'Pick Temple or Kukai in the Beacon popup and approve on the matching network.',
+    tip: 'Kiln verifies the connected wallet network after approval so a mainnet/testnet mismatch is caught before deploy.',
   },
   connectedWalletHeading: {
     b: 'Connected Wallet Status',
@@ -467,12 +467,12 @@ const C = {
   },
   walletEvmConnect: {
     b: 'Connect EVM wallet',
-    e: 'Hook up MetaMask',
-    tip: 'Uses EIP-1193. Kiln will ask MetaMask to switch or add the Etherlink chain automatically.',
+    e: 'Verify your Etherlink wallet',
+    tip: 'Uses EIP-1193. Kiln asks Temple, MetaMask, or another browser wallet to switch or add the Etherlink chain.',
   },
   walletEvmMissing: {
-    b: 'No EVM wallet detected — install MetaMask and reload.',
-    e: 'You need MetaMask (or a similar wallet) installed in this browser.',
+    b: 'No EVM wallet detected — install Temple, MetaMask, or another EIP-1193 wallet and reload.',
+    e: 'You need Temple, MetaMask, or a similar wallet installed in this browser.',
     tip: 'Etherlink deploys go through your browser wallet directly — Kiln never handles your private key.',
   },
   mainnetBanner: {
@@ -493,7 +493,7 @@ const C = {
   sourceLangSolidity: {
     b: 'Solidity',
     e: 'Solidity',
-    tip: 'EVM contract language. Kiln compiles it with solc-js on the server and you deploy via MetaMask.',
+    tip: 'EVM contract language. Kiln compiles it with solc-js on the server and you deploy through your verified browser wallet.',
   },
   solidityCompileBtn: {
     b: 'Compile Solidity',
@@ -511,9 +511,9 @@ const C = {
     tip: 'Submits the deploy to the node in a simulated call — no tx fires, but constructor reverts get surfaced.',
   },
   evmDeployBtn: {
-    b: 'Deploy via MetaMask',
-    e: 'Send it to mainnet (MetaMask)',
-    tip: 'Kiln encodes the deploy calldata; MetaMask will ask you to approve the transaction.',
+    b: 'Deploy via verified wallet',
+    e: 'Send it with my verified wallet',
+    tip: 'Kiln encodes the deploy calldata; your verified browser wallet will ask you to approve the transaction.',
   },
   stepperGuardLocked: {
     b: 'Locked — complete earlier steps first.',

@@ -17,8 +17,12 @@ vi.mock('viem', () => ({
 const walletAddress = '0x1111111111111111111111111111111111111111' as const;
 
 function installProvider(request: ReturnType<typeof vi.fn>) {
+  installWindow({ ethereum: { request } });
+}
+
+function installWindow(value: Record<string, unknown>) {
   Object.defineProperty(globalThis, 'window', {
-    value: { ethereum: { request } },
+    value,
     configurable: true,
   });
 }
@@ -62,6 +66,70 @@ describe('evm-wallet', () => {
       chainId: 127823,
     });
     expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it('connects Etherlink through the Temple EVM provider when selected', async () => {
+    const request = vi.fn().mockResolvedValueOnce([walletAddress]).mockResolvedValueOnce('0x1f34f');
+    installWindow({ templeEthereum: { request } });
+    const { connectEvmWallet, hasInjectedEvmProvider } = await import('../src/lib/evm-wallet.js');
+
+    expect(hasInjectedEvmProvider('temple')).toBe(true);
+    await expect(connectEvmWallet('etherlink-shadownet', 'temple')).resolves.toMatchObject({
+      address: walletAddress,
+      chainId: 127823,
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it('prefers Temple from a multi-provider injection when selected', async () => {
+    const metamaskRequest = vi.fn();
+    const templeRequest = vi
+      .fn()
+      .mockResolvedValueOnce([walletAddress])
+      .mockResolvedValueOnce('0x1f34f');
+    installWindow({
+      ethereum: {
+        request: metamaskRequest,
+        providers: [
+          { request: metamaskRequest, info: { name: 'MetaMask', rdns: 'io.metamask' } },
+          { request: templeRequest, isTemple: true, info: { name: 'Temple Wallet' } },
+        ],
+      },
+    });
+    const { connectEvmWallet } = await import('../src/lib/evm-wallet.js');
+
+    await expect(connectEvmWallet('etherlink-shadownet', 'temple')).resolves.toMatchObject({
+      address: walletAddress,
+      chainId: 127823,
+    });
+    expect(templeRequest).toHaveBeenCalledTimes(2);
+    expect(metamaskRequest).not.toHaveBeenCalled();
+  });
+
+  it('signs account association challenges through the selected Temple provider', async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce([walletAddress])
+      .mockResolvedValueOnce('0x1f34f')
+      .mockResolvedValueOnce('0xsigned');
+    installWindow({ templeEthereum: { request } });
+    const { signEvmAuthChallenge } = await import('../src/lib/evm-wallet.js');
+
+    await expect(
+      signEvmAuthChallenge('Sign in to Kiln', 'etherlink-shadownet', 'temple'),
+    ).resolves.toEqual({
+      wallet: {
+        address: walletAddress,
+        networkId: 'etherlink-shadownet',
+        chainId: 127823,
+        rpcUrl: 'https://node.shadownet.etherlink.com',
+      },
+      signature: '0xsigned',
+    });
+    expect(request).toHaveBeenNthCalledWith(3, {
+      method: 'personal_sign',
+      params: ['Sign in to Kiln', walletAddress],
+    });
   });
 
   it('rethrows wallet chain switch failures other than unknown-chain', async () => {

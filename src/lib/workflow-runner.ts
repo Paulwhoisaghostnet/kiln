@@ -53,6 +53,24 @@ export interface WorkflowRunResult {
   };
 }
 
+export function resolveSmartPyInitialStorage(input: {
+  requestedInitialStorage?: string;
+  compiledInitialStorage?: string;
+}): { initialStorage: string; autoFilled: boolean } {
+  const requested = input.requestedInitialStorage?.trim();
+  const compiled = input.compiledInitialStorage?.trim();
+  const requestedIsPlaceholder = !requested || requested === 'Unit';
+
+  if (compiled && requestedIsPlaceholder) {
+    return { initialStorage: compiled, autoFilled: true };
+  }
+
+  return {
+    initialStorage: requested || compiled || 'Unit',
+    autoFilled: !requested && Boolean(compiled),
+  };
+}
+
 function hasMichelsonSection(
   code: string,
   section: 'parameter' | 'storage' | 'code',
@@ -120,8 +138,12 @@ export async function runContractWorkflow(
     const compiled = await deps.compileSmartPy(input.source, input.scenario);
     michelson = compiled.michelson;
     scenario = compiled.scenario;
-    if (!input.initialStorage?.trim()) {
-      initialStorage = compiled.initialStorage;
+    const storageResolution = resolveSmartPyInitialStorage({
+      requestedInitialStorage: input.initialStorage,
+      compiledInitialStorage: compiled.initialStorage,
+    });
+    initialStorage = storageResolution.initialStorage;
+    if (storageResolution.autoFilled) {
       compileWarnings.push('Initial storage auto-filled from SmartPy compilation output.');
     }
   }

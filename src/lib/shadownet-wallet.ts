@@ -1,13 +1,14 @@
-import { NetworkType } from '@airgap/beacon-dapp';
+import { NetworkType, SigningType } from '@airgap/beacon-dapp';
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { TezosToolkit } from '@taquito/taquito';
+import { stringToBytes } from '@taquito/utils';
 import {
   getDefaultNetworkId,
   getNetworkProfile,
   type KilnNetworkId,
 } from './networks.js';
 
-export type WalletConnectTarget = 'temple' | 'kukai';
+export type WalletConnectTarget = 'beacon' | 'temple' | 'kukai';
 
 export interface ConnectedWalletState {
   address: string;
@@ -22,9 +23,12 @@ export interface ConnectedOriginationResult {
   level: number | null;
 }
 
-const KUKAI_SHADOWNET_URL = 'https://shadownet.kukai.app';
-const KUKAI_MAINNET_URL = 'https://wallet.kukai.app';
-const TEMPLE_WALLET_URL = 'https://templewallet.com';
+export interface SignedKilnAuthChallenge {
+  signature: string;
+  publicKey: string;
+  messageBytes: string;
+}
+
 /** Fixed address used in compiled storage as admin placeholder until deploy. */
 export const BURN_PLACEHOLDER_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX';
 
@@ -132,18 +136,6 @@ async function ensureToolkit(networkId: KilnNetworkId): Promise<TezosWalletHandl
   return initializing;
 }
 
-function openWalletTarget(target: WalletConnectTarget, networkId: KilnNetworkId): void {
-  const url =
-    target === 'kukai'
-      ? networkId === 'tezos-mainnet'
-        ? KUKAI_MAINNET_URL
-        : networkId === 'tezos-shadownet'
-          ? KUKAI_SHADOWNET_URL
-          : KUKAI_MAINNET_URL
-      : TEMPLE_WALLET_URL;
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
 async function assertExpectedNetwork(
   handle: TezosWalletHandle,
   networkId: KilnNetworkId,
@@ -206,10 +198,9 @@ function findContractAddress(node: unknown): string | null {
 }
 
 export async function connectShadownetWallet(
-  target: WalletConnectTarget,
+  _target: WalletConnectTarget = 'beacon',
   networkId: KilnNetworkId = getDefaultNetworkId(),
 ): Promise<ConnectedWalletState> {
-  openWalletTarget(target, networkId);
   const handle = await ensureToolkit(networkId);
 
   await handle.wallet.clearActiveAccount();
@@ -245,6 +236,29 @@ export async function getConnectedShadownetWallet(
     networkId,
     rpcUrl: activeAccount.network?.rpcUrl ?? null,
   };
+}
+
+export async function signKilnAuthChallenge(
+  message: string,
+  networkId: KilnNetworkId = getDefaultNetworkId(),
+): Promise<SignedKilnAuthChallenge> {
+  const handle = await ensureToolkit(networkId);
+  await assertExpectedNetwork(handle, networkId);
+
+  const publicKey = await handle.wallet.getPK();
+  const messageBytes = stringToBytes(message);
+  const client = handle.wallet.client as unknown as {
+    requestSignPayload(input: {
+      signingType: SigningType;
+      payload: string;
+    }): Promise<{ signature: string }>;
+  };
+  const { signature } = await client.requestSignPayload({
+    signingType: SigningType.RAW,
+    payload: messageBytes,
+  });
+
+  return { signature, publicKey, messageBytes };
 }
 
 export async function disconnectShadownetWallet(): Promise<void> {

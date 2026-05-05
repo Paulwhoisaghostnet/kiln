@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlaskConical, Gauge, Hammer, Rocket } from 'lucide-react';
+import { FlaskConical, Gauge, Hammer, Rocket, Wallet } from 'lucide-react';
 import type { Abi, Hex } from 'viem';
 import { encodeAbiParameters, parseAbiParameters } from 'viem';
 import { useKilnNetwork } from '../context/NetworkProvider';
@@ -9,6 +9,7 @@ import {
   getConnectedEvmWallet,
   hasInjectedEvmProvider,
   type ConnectedEvmWallet,
+  type EvmWalletTarget,
 } from '../lib/evm-wallet';
 
 export interface SolidityCompileResult {
@@ -53,6 +54,9 @@ interface SolidityPanelProps {
   onSourceChange: (next: string) => void;
   buildHeaders: (includeJson?: boolean) => HeadersInit;
   onLog: (message: string, type?: 'info' | 'error' | 'success') => void;
+  verifiedWalletAddress?: string | null;
+  isAssociatingWallet?: boolean;
+  onAssociateWallet?: (target?: EvmWalletTarget) => Promise<void>;
   onDeployed?: (info: {
     contractAddress: Hex;
     transactionHash: Hex;
@@ -80,6 +84,9 @@ export function SolidityPanel({
   onSourceChange,
   buildHeaders,
   onLog,
+  verifiedWalletAddress,
+  isAssociatingWallet = false,
+  onAssociateWallet,
   onDeployed,
 }: SolidityPanelProps) {
   const { networkId, network } = useKilnNetwork();
@@ -88,12 +95,20 @@ export function SolidityPanel({
   const [compileResult, setCompileResult] = useState<SolidityCompileResult | null>(null);
   const [estimate, setEstimate] = useState<SolidityEstimate | null>(null);
   const [evmWallet, setEvmWallet] = useState<ConnectedEvmWallet | null>(null);
+  const [preferredWalletTarget, setPreferredWalletTarget] =
+    useState<EvmWalletTarget>('auto');
   const [isCompiling, setIsCompiling] = useState(false);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isDryRunning, setIsDryRunning] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
 
   const evmDetected = hasInjectedEvmProvider();
+  const templeEvmDetected = hasInjectedEvmProvider('temple');
+  const verifiedAddress = verifiedWalletAddress?.toLowerCase() ?? null;
+  const activeWalletMatchesVerification =
+    Boolean(evmWallet && verifiedAddress && evmWallet.address.toLowerCase() === verifiedAddress);
+  const canAssociateSelectedWallet =
+    preferredWalletTarget === 'temple' ? templeEvmDetected : evmDetected;
 
   const runCompile = async () => {
     if (!source.trim()) {
@@ -255,11 +270,12 @@ export function SolidityPanel({
     }
   };
 
-  const connectWallet = async () => {
+  const connectWallet = async (target: EvmWalletTarget = 'auto') => {
     try {
-      const wallet = await connectEvmWallet(networkId);
+      const wallet = await connectEvmWallet(networkId, target);
       setEvmWallet(wallet);
-      onLog(`EVM wallet connected: ${wallet.address} (chainId ${wallet.chainId}).`, 'success');
+      const label = target === 'temple' ? 'Temple EVM wallet' : 'EVM wallet';
+      onLog(`${label} connected: ${wallet.address} (chainId ${wallet.chainId}).`, 'success');
     } catch (error) {
       onLog(
         `EVM connect error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -272,9 +288,27 @@ export function SolidityPanel({
     if (!compileResult?.entry) {
       return;
     }
-    const wallet = evmWallet ?? (await getConnectedEvmWallet(networkId));
+    if (!verifiedWalletAddress) {
+      onLog(
+        'Associate your Etherlink wallet first. Kiln requires a wallet signature before deploying so the deployment signer is explicit.',
+        'error',
+      );
+      return;
+    }
+    let wallet = evmWallet ?? (await getConnectedEvmWallet(networkId));
+    if (!wallet || (network.evmChainId && wallet.chainId !== network.evmChainId)) {
+      wallet = await connectEvmWallet(networkId);
+    }
     if (!wallet) {
-      onLog('Connect an EVM wallet before deploying.', 'error');
+      onLog('Connect the verified EVM wallet before deploying.', 'error');
+      return;
+    }
+    setEvmWallet(wallet);
+    if (wallet.address.toLowerCase() !== verifiedWalletAddress.toLowerCase()) {
+      onLog(
+        `Connected wallet ${wallet.address} does not match verified deployment wallet ${verifiedWalletAddress}.`,
+        'error',
+      );
       return;
     }
     let args: unknown[];
@@ -407,11 +441,13 @@ export function SolidityPanel({
           onClick={() => {
             void runDeploy();
           }}
-          disabled={isDeploying || !compileResult?.entry || !evmDetected}
+          disabled={isDeploying || !compileResult?.entry || !evmDetected || !verifiedWalletAddress}
           title={
-            evmDetected
-              ? 'Encodes deploy calldata and asks MetaMask to sign + send the transaction.'
-              : 'Install MetaMask or a compatible EIP-1193 wallet to enable deploy.'
+            !verifiedWalletAddress
+              ? 'Associate and sign with your Etherlink wallet before deploy.'
+              : evmDetected
+              ? 'Encodes deploy calldata and asks your EVM wallet to sign + send the transaction.'
+              : 'Install Temple, MetaMask, or a compatible EIP-1193 wallet to enable deploy.'
           }
         >
           <Rocket className="w-4 h-4" />
@@ -419,30 +455,82 @@ export function SolidityPanel({
         </button>
       </div>
 
-      {evmDetected ? (
-        <div className="text-xs flex items-center gap-2 flex-wrap">
-          {evmWallet ? (
-            <>
-              <span className="badge badge-success badge-sm">Wallet connected</span>
-              <span className="font-mono">{evmWallet.address}</span>
-              <span className="opacity-60">· chain {evmWallet.chainId}</span>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-xs btn-outline"
-              onClick={() => {
-                void connectWallet();
-              }}
-            >
-              Connect MetaMask
-            </button>
-          )}
+      {evmDetected || templeEvmDetected ? (
+        <div className={`alert text-xs ${verifiedWalletAddress ? 'alert-success' : 'alert-info'}`}>
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              {verifiedWalletAddress ? (
+                <>
+                  <div className="font-semibold">Verified deployment wallet</div>
+                  <div className="font-mono break-all">{verifiedWalletAddress}</div>
+                  {evmWallet ? (
+                    <div className={activeWalletMatchesVerification ? 'opacity-70' : 'text-warning'}>
+                      Active wallet {evmWallet.address}
+                      {activeWalletMatchesVerification ? ' matches.' : ' does not match.'}
+                    </div>
+                  ) : (
+                    <div className="opacity-70">
+                      Deploy will only continue if the connected wallet matches this address.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold">Associate deployment wallet</div>
+                  <div className="opacity-80">
+                    Sign a Kiln message from the Etherlink wallet you want to deploy with.
+                  </div>
+                </>
+              )}
+            </div>
+            {verifiedWalletAddress ? (
+              <button
+                type="button"
+                className="btn btn-xs btn-outline gap-1"
+                onClick={() => {
+                  void connectWallet();
+                }}
+              >
+                <Wallet className="w-3 h-3" />
+                Reconnect wallet
+              </button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="select select-xs select-bordered"
+                  value={preferredWalletTarget}
+                  onChange={(event) =>
+                    setPreferredWalletTarget(event.target.value as EvmWalletTarget)
+                  }
+                  title="Choose which browser EVM provider Kiln asks for the signature."
+                >
+                  <option value="auto">Browser default</option>
+                  <option value="temple">Temple</option>
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-primary gap-1"
+                  onClick={() => {
+                    void onAssociateWallet?.(preferredWalletTarget);
+                  }}
+                  disabled={isAssociatingWallet || !onAssociateWallet || !canAssociateSelectedWallet}
+                  title={
+                    canAssociateSelectedWallet
+                      ? 'Ask the selected wallet to sign a Kiln ownership challenge.'
+                      : 'Selected EVM provider was not detected in this browser.'
+                  }
+                >
+                  <Wallet className="w-3 h-3" />
+                  {isAssociatingWallet ? 'Signing…' : 'Sign wallet'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="alert alert-warning text-xs">
           <span>
-            No EIP-1193 wallet detected. Install MetaMask or a compatible wallet to deploy.
+            No EIP-1193 wallet detected. Install or enable Temple, MetaMask, or a compatible wallet to deploy.
           </span>
         </div>
       )}

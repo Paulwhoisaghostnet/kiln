@@ -18,6 +18,8 @@ describe('getEnv', () => {
     expect(env.KILN_SHADOWBOX_ENABLED).toBe(false);
     expect(env.KILN_SHADOWBOX_REQUIRED_FOR_CLEARANCE).toBe(false);
     expect(env.KILN_SHADOWBOX_PROVIDER).toBe('mock');
+    expect(env.KILN_MCP_TOKEN_TTL_HOURS).toBe(24);
+    expect(env.KILN_SESSION_TTL_MINUTES).toBe(240);
   });
 
   it('throws when TEZOS_RPC_URL is invalid', () => {

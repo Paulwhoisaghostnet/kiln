@@ -177,7 +177,7 @@ const NETWORK_PROFILES: Record<KilnNetworkId, KilnNetworkProfile> = {
     nativeSymbol: 'XTZ',
     explorerAddress: 'https://explorer.etherlink.com/address/{address}',
     explorerTx: 'https://explorer.etherlink.com/tx/{tx}',
-    blurb: 'Production Tezos EVM — real funds. Connected MetaMask only.',
+    blurb: 'Production Tezos EVM — real funds. Verified browser wallet only.',
     capabilities: {
       walletConnect: true,
       puppetWallets: false,

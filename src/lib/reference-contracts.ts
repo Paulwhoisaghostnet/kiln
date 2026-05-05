@@ -63,6 +63,41 @@ function parseEntrypointsFromSmartPy(source: string): string[] {
   return uniqueSorted(Array.from(entrypoints));
 }
 
+function parseEntrypointsFromMichelineJson(source: string): string[] {
+  const parsed = JSON.parse(source) as unknown;
+  const roots = Array.isArray(parsed) ? parsed : [parsed];
+  const parameterNode = roots.find(
+    (node) =>
+      Boolean(node) &&
+      typeof node === 'object' &&
+      (node as Record<string, unknown>).prim === 'parameter',
+  );
+  if (!parameterNode) {
+    return [];
+  }
+
+  const entrypoints = new Set<string>();
+  const visit = (node: unknown) => {
+    if (!node || typeof node !== 'object') {
+      return;
+    }
+    const record = node as Record<string, unknown>;
+    const annots = Array.isArray(record.annots) ? record.annots : [];
+    for (const annot of annots) {
+      if (typeof annot === 'string' && annot.startsWith('%') && annot.length > 1) {
+        entrypoints.add(annot.slice(1));
+      }
+    }
+    const args = Array.isArray(record.args) ? record.args : [];
+    for (const arg of args) {
+      visit(arg);
+    }
+  };
+
+  visit(parameterNode);
+  return uniqueSorted(Array.from(entrypoints));
+}
+
 function detectSourceType(filePath: string): ReferenceSourceType {
   const lower = filePath.toLowerCase();
   if (lower.endsWith('.json')) {
@@ -139,6 +174,9 @@ async function parseEntrypointsFromFile(
     const source = await fs.readFile(filePath, 'utf8');
     if (sourceType === 'smartpy') {
       return parseEntrypointsFromSmartPy(source);
+    }
+    if (sourceType === 'micheline_json') {
+      return parseEntrypointsFromMichelineJson(source);
     }
     return uniqueSorted(
       parseEntrypointsFromMichelson(source).map((entrypoint) => entrypoint.name),

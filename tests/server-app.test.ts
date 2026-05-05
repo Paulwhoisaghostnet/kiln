@@ -68,6 +68,11 @@ function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
     KILN_SHADOWBOX_MAX_SOURCE_BYTES: 250_000,
     KILN_SHADOWBOX_MAX_STEPS: 24,
     KILN_SHADOWBOX_WORKDIR: undefined,
+    KILN_USER_DB_PATH: undefined,
+    KILN_MCP_ACCESSLIST: undefined,
+    KILN_MCP_BLOCKLIST: undefined,
+    KILN_MCP_TOKEN_TTL_HOURS: 24,
+    KILN_SESSION_TTL_MINUTES: 240,
     KILN_REFERENCE_MAX_FILES: 200,
     KILN_REFERENCE_MAX_BYTES: 200 * 1024 * 1024,
     ...overrides,
@@ -180,6 +185,23 @@ describe('createApiApp', () => {
     expect(response.body.chainId).toBe('NetProd');
   });
 
+  it('allows WalletConnect verify iframe in production CSP', async () => {
+    const app = createApiApp({
+      env: baseEnv({ NODE_ENV: 'production' }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app).get('/api/health');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-security-policy']).toContain(
+      'frame-src',
+    );
+    expect(response.headers['content-security-policy']).toContain(
+      'https://verify.walletconnect.org',
+    );
+  });
+
   it('does not emit permissive CORS headers in production by default', async () => {
     const app = createApiApp({
       env: baseEnv({ NODE_ENV: 'production', CORS_ORIGINS: undefined }),
@@ -197,17 +219,17 @@ describe('createApiApp', () => {
   it('supports wildcard preview domains in CORS allowlist', async () => {
     const app = createApiApp({
       env: baseEnv({
-        CORS_ORIGINS: 'https://*.netlify.app,https://kiln.example.com',
+        CORS_ORIGINS: 'https://*.preview.kiln.example.com,https://kiln.example.com',
       }),
       createTezosService: mockTezosServiceFactory().factory,
     });
 
     const allowedPreview = await request(app)
       .get('/api/health')
-      .set('Origin', 'https://deploy-preview-42--kiln.netlify.app');
+      .set('Origin', 'https://deploy-42.preview.kiln.example.com');
     expect(allowedPreview.status).toBe(200);
     expect(allowedPreview.headers['access-control-allow-origin']).toBe(
-      'https://deploy-preview-42--kiln.netlify.app',
+      'https://deploy-42.preview.kiln.example.com',
     );
 
     const blockedOrigin = await request(app)
@@ -677,6 +699,53 @@ describe('createApiApp', () => {
     expect(response.body.codeHash).toMatch(/[a-f0-9]{64}/);
     expect(response.body.shadowbox.jobId).toBe('sbox_123');
     expect(response.body.shadowbox.passed).toBe(true);
+  });
+
+  it('uses compiled SmartPy storage for standalone shadowbox when caller sends Unit placeholder', async () => {
+    const compiledStorage =
+      '(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" (Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" 0))';
+    const seen = { initialStorage: '' };
+    const app = createApiApp({
+      env: baseEnv({
+        KILN_SHADOWBOX_ENABLED: true,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+      compileSmartPy: async () => ({
+        scenario: 'default',
+        michelson:
+          'parameter unit; storage (pair address (pair address nat)); code { CDR ; NIL operation ; PAIR };',
+        initialStorage: compiledStorage,
+      }),
+      runShadowbox: async (input) => {
+        seen.initialStorage = input.initialStorage;
+        return {
+          enabled: true,
+          requiredForClearance: false,
+          provider: 'command',
+          executed: true,
+          passed: true,
+          jobId: 'sbox_storage',
+          contractAddress: undefined,
+          startedAt: '2026-05-04T00:00:00.000Z',
+          endedAt: '2026-05-04T00:00:01.000Z',
+          durationMs: 1000,
+          summary: { total: 0, passed: 0, failed: 0 },
+          steps: [],
+          warnings: [],
+        };
+      },
+    });
+
+    const response = await request(app).post('/api/kiln/shadowbox/run').send({
+      sourceType: 'smartpy',
+      source: 'import smartpy as sp',
+      initialStorage: 'Unit',
+      simulationSteps: [],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(seen.initialStorage).toBe(compiledStorage);
   });
 
   it('reports shadowbox runtime endpoint as unsuccessful when runtime is disabled', async () => {
@@ -1409,5 +1478,305 @@ describe('createApiApp', () => {
     expect(response.body.error).toBe(
       'API auth is required but API_AUTH_TOKEN is not configured.',
     );
+  });
+
+  it('logs in with a connected wallet, approves MCP access, and serves MCP tools with a 24h token', async () => {
+    const fixedNow = new Date('2026-05-04T12:00:00.000Z');
+    let now = fixedNow;
+    const userDbPath = join(tmpdir(), `kiln-users-${randomUUID()}.json`);
+
+    try {
+      const app = createApiApp({
+        env: {
+          ...baseEnv(),
+          KILN_USER_DB_PATH: userDbPath,
+        } as AppEnv,
+        createTezosService: mockTezosServiceFactory().factory,
+        createEtherlinkService: () =>
+          ({
+            async estimateDeploy() {
+              return {
+                gasLimit: 21_000n,
+                baseFeePerGas: 1n,
+                maxFeePerGas: 2n,
+                maxPriorityFeePerGas: 1n,
+                maxWeiCost: 42_000n,
+                maxXtzCost: '0.000000000000042',
+              };
+            },
+            async dryRunDeploy() {
+              return { ok: true, reverted: false, error: null };
+            },
+            async getBalance() {
+              return '1.5';
+            },
+            async getChainId() {
+              return 127823;
+            },
+          }) as never,
+        compileSmartPy: async () => ({
+          scenario: 'default',
+          michelson: sampleMichelson,
+          initialStorage: 'Unit',
+        }),
+        exportBundle: async () => ({
+          bundleId: 'bundle-mcp-test',
+          exportDir: '/tmp/kiln-bundle',
+          zipFileName: 'bundle-mcp-test.zip',
+          zipPath: '/tmp/kiln-bundle/bundle-mcp-test.zip',
+          downloadUrl: '/api/kiln/export/download/bundle-mcp-test.zip',
+        }),
+        walletSignatureVerifier: async () => true,
+        now: () => now,
+      } as Parameters<typeof createApiApp>[0] & {
+        walletSignatureVerifier: () => Promise<boolean>;
+        now: () => Date;
+      });
+
+      const challenge = await request(app).post('/api/kiln/auth/challenge').send({
+        walletKind: 'tezos',
+        walletAddress: walletAAddress,
+        networkId: 'tezos-shadownet',
+      });
+
+      expect(challenge.status).toBe(200);
+      expect(challenge.body.message).toContain(walletAAddress);
+      expect(challenge.body.messageBytes).toMatch(/^[0-9a-f]+$/);
+
+      const verified = await request(app).post('/api/kiln/auth/verify').send({
+        challengeId: challenge.body.challengeId,
+        signature: 'sig-valid-for-test',
+        publicKey: 'edpk-test',
+      });
+
+      expect(verified.status).toBe(200);
+      expect(verified.body.user.walletAddress).toBe(walletAAddress);
+      expect(verified.body.sessionToken).toMatch(/^kiln_session_/);
+
+      const access = await request(app)
+        .post('/api/kiln/mcp/access/request')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`)
+        .send();
+
+      expect(access.status).toBe(200);
+      expect(access.body.access.status).toBe('approved');
+      expect(access.body.access.checkedBy).toBe('kiln-mcp-access-worker');
+
+      const tokenResponse = await request(app)
+        .post('/api/kiln/mcp/token')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`)
+        .send();
+
+      expect(tokenResponse.status).toBe(200);
+      expect(tokenResponse.body.token).toMatch(/^kiln_mcp_/);
+      expect(tokenResponse.body.expiresAt).toBe('2026-05-05T12:00:00.000Z');
+
+      const initialize = await request(app)
+        .post('/mcp')
+        .set('authorization', `Bearer ${tokenResponse.body.token}`)
+        .send({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {
+            protocolVersion: '2025-06-18',
+            clientInfo: { name: 'vitest-agent', version: '1.0.0' },
+            capabilities: {},
+          },
+        });
+
+      expect(initialize.status).toBe(200);
+      expect(initialize.body.result.protocolVersion).toBe('2025-06-18');
+      expect(initialize.body.result.capabilities.tools).toEqual(
+        expect.objectContaining({ listChanged: false }),
+      );
+
+      const tools = await request(app)
+        .post('/mcp')
+        .set('authorization', `Bearer ${tokenResponse.body.token}`)
+        .send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+
+      expect(tools.status).toBe(200);
+      expect(tools.body.result.tools).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'kiln_get_capabilities' }),
+          expect.objectContaining({ name: 'kiln_run_workflow' }),
+          expect.objectContaining({ name: 'kiln_compile_solidity' }),
+        ]),
+      );
+
+      const toolCall = await request(app)
+        .post('/mcp')
+        .set('authorization', `Bearer ${tokenResponse.body.token}`)
+        .send({
+          jsonrpc: '2.0',
+          id: 3,
+          method: 'tools/call',
+          params: {
+            name: 'kiln_get_capabilities',
+            arguments: { networkId: 'etherlink-shadownet' },
+          },
+        });
+
+      expect(toolCall.status).toBe(200);
+      expect(toolCall.body.result.content[0].type).toBe('text');
+      const parsedToolResult = JSON.parse(toolCall.body.result.content[0].text);
+      expect(parsedToolResult.success).toBe(true);
+      expect(parsedToolResult.runtime.network.id).toBe('etherlink-shadownet');
+
+      const callTool = async (name: string, args: unknown = {}) => {
+        const response = await request(app)
+          .post('/mcp')
+          .set('authorization', `Bearer ${tokenResponse.body.token}`)
+          .send({
+            jsonrpc: '2.0',
+            id: `tool-${name}`,
+            method: 'tools/call',
+            params: { name, arguments: args },
+          });
+        expect(response.status).toBe(200);
+        expect(response.body.result.isError).toBeUndefined();
+        return JSON.parse(response.body.result.content[0].text);
+      };
+
+      await callTool('kiln_get_health');
+      await callTool('kiln_list_networks');
+      await callTool('kiln_get_openapi');
+      await callTool('kiln_list_reference_contracts');
+      await callTool('kiln_get_guided_elements', { contractType: 'nft_collection' });
+      await callTool('kiln_create_guided_contract', {
+        contractType: 'nft_collection',
+        projectName: 'MCP Mint',
+        adminAddress: walletAAddress,
+        outputFormat: 'smartpy',
+      });
+      await callTool('kiln_compile_smartpy', {
+        source: 'import smartpy as sp',
+      });
+      await callTool('kiln_run_workflow', {
+        sourceType: 'michelson',
+        source: sampleMichelson,
+        initialStorage: 'Unit',
+        simulationSteps: sampleSimulationSteps(),
+      });
+      await callTool('kiln_run_audit', {
+        sourceType: 'michelson',
+        source: sampleMichelson,
+      });
+      await callTool('kiln_run_simulation', {
+        sourceType: 'michelson',
+        source: sampleMichelson,
+        simulationSteps: sampleSimulationSteps(),
+      });
+      await callTool('kiln_run_shadowbox', {
+        sourceType: 'michelson',
+        source: sampleMichelson,
+        initialStorage: 'Unit',
+        simulationSteps: sampleSimulationSteps(),
+      });
+      await callTool('kiln_validate_predeploy', {
+        code: sampleMichelson,
+        initialStorage: 'Unit',
+      });
+      await callTool('kiln_deploy_tezos_puppet', {
+        code: sampleMichelson,
+        wallet: 'A',
+        initialStorage: 'Unit',
+      });
+      await callTool('kiln_execute_tezos_puppet', {
+        contractAddress,
+        entrypoint: 'mint',
+        args: [walletAAddress, 1],
+        wallet: 'A',
+      });
+      await callTool('kiln_run_tezos_e2e', {
+        contractAddress,
+        steps: [
+          {
+            wallet: 'A',
+            entrypoint: 'mint',
+            args: [walletAAddress, 1],
+          },
+        ],
+      });
+      await callTool('kiln_get_balances');
+      await callTool('kiln_compile_solidity', {
+        networkId: 'etherlink-shadownet',
+        source:
+          'pragma solidity ^0.8.20; contract Demo { uint256 public x; constructor(uint256 value) { x = value; } }',
+      });
+      await callTool('kiln_estimate_evm_deploy', {
+        networkId: 'etherlink-shadownet',
+        bytecode: '0x6000',
+      });
+      await callTool('kiln_dry_run_evm_deploy', {
+        networkId: 'etherlink-shadownet',
+        bytecode: '0x6000',
+      });
+      await callTool('kiln_get_evm_balance', {
+        networkId: 'etherlink-shadownet',
+        address: '0x1111111111111111111111111111111111111111',
+      });
+      await callTool('kiln_export_bundle', {
+        projectName: 'MCP Bundle',
+        sourceType: 'michelson',
+        source: sampleMichelson,
+        compiledMichelson: sampleMichelson,
+        initialStorage: 'Unit',
+      });
+
+      now = new Date('2026-05-05T12:00:01.000Z');
+      const expired = await request(app)
+        .post('/mcp')
+        .set('authorization', `Bearer ${tokenResponse.body.token}`)
+        .send({ jsonrpc: '2.0', id: 4, method: 'tools/list' });
+
+      expect(expired.status).toBe(401);
+    } finally {
+      await fs.rm(userDbPath, { force: true });
+    }
+  });
+
+  it('blocks MCP access when the wallet is on the blocklist', async () => {
+    const userDbPath = join(tmpdir(), `kiln-users-${randomUUID()}.json`);
+    const app = createApiApp({
+      env: {
+        ...baseEnv(),
+        KILN_USER_DB_PATH: userDbPath,
+        KILN_MCP_BLOCKLIST: walletAAddress,
+      } as AppEnv,
+      createTezosService: mockTezosServiceFactory().factory,
+      walletSignatureVerifier: async () => true,
+    } as Parameters<typeof createApiApp>[0] & {
+      walletSignatureVerifier: () => Promise<boolean>;
+    });
+
+    const challenge = await request(app).post('/api/kiln/auth/challenge').send({
+      walletKind: 'tezos',
+      walletAddress: walletAAddress,
+      networkId: 'tezos-shadownet',
+    });
+    const verified = await request(app).post('/api/kiln/auth/verify').send({
+      challengeId: challenge.body.challengeId,
+      signature: 'sig-valid-for-test',
+      publicKey: 'edpk-test',
+    });
+
+    const access = await request(app)
+      .post('/api/kiln/mcp/access/request')
+      .set('authorization', `Bearer ${verified.body.sessionToken}`)
+      .send();
+
+    expect(access.status).toBe(403);
+    expect(access.body.access.status).toBe('blocked');
+    expect(access.body.error).toMatch(/blocklist/i);
+
+    const token = await request(app)
+      .post('/api/kiln/mcp/token')
+      .set('authorization', `Bearer ${verified.body.sessionToken}`)
+      .send();
+
+    expect(token.status).toBe(403);
+    await fs.rm(userDbPath, { force: true });
   });
 });

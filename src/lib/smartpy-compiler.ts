@@ -13,7 +13,7 @@ export interface SmartPyCompilationResult {
   initialStorage: string;
 }
 
-/** Netlify build drops a standalone CPython here so the Node function can run SmartPy. */
+/** Native deploys may provide a repo-local CPython fallback for SmartPy. */
 function resolveBundledPython(): string | undefined {
   const binDir = join(process.cwd(), 'vendor', 'kiln-python', 'bin');
   for (const name of ['python3.12', 'python3.13', 'python3.11', 'python3.10', 'python3']) {
@@ -63,7 +63,7 @@ async function ensureSmartPyRuntimeAvailable(python: string): Promise<void> {
   const py = await pythonImportsSmartPy(python);
   if (!cli && !py) {
     throw new Error(
-      'SmartPy compiler unavailable: install smartpy-tezos (`pip install smartpy-tezos`) so Python can `import smartpy`, or put the legacy `smartpy` CLI on PATH. For Netlify, deploy from Linux CI so the build can bundle `vendor/kiln-python` (see scripts/netlify-build.sh).',
+      'SmartPy compiler unavailable: install smartpy-tezos (`pip install smartpy-tezos`) so Python can `import smartpy`, set KILN_PYTHON to the server virtualenv Python, or put the legacy `smartpy` CLI on PATH.',
     );
   }
 }

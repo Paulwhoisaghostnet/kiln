@@ -190,7 +190,7 @@ export async function compileSolidity(
  * Lightweight static audit of Solidity source. NOT a substitute for Slither /
  * professional audit — this is a "did you leave obvious landmines?" pass.
  * Used in the pre-deploy workflow so users get early feedback before they
- * ever hit MetaMask.
+ * ever hit the user's browser wallet.
  */
 export interface SolidityAuditFinding {
   id: string;

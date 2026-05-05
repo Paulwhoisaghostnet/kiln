@@ -31,7 +31,7 @@ export interface EvmDeployEstimate {
 
 /**
  * EVM-side counterpart to TezosService. Read-only by design on the server
- * (signing happens in the user's browser via MetaMask); this service handles:
+ * (signing happens in the user's browser wallet); this service handles:
  *
  * - Balance reads
  * - Gas/fee estimates for bytecode deploys

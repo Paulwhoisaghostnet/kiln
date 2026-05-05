@@ -98,6 +98,11 @@ const envSchema = z.object({
   KILN_SHADOWBOX_MAX_STEPS: z.coerce.number().int().positive().default(80),
   KILN_SHADOWBOX_WORKDIR: optionalNonEmptyString,
   KILN_ACTIVITY_LOG_PATH: optionalNonEmptyString,
+  KILN_USER_DB_PATH: optionalNonEmptyString,
+  KILN_MCP_ACCESSLIST: optionalNonEmptyString,
+  KILN_MCP_BLOCKLIST: optionalNonEmptyString,
+  KILN_MCP_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(24),
+  KILN_SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(240),
   // Native hosting paths (Phase 1 of Hetzner migration). All optional so dev
   // retains repo-relative defaults; production systemd unit pins absolute paths.
   KILN_PYTHON: optionalNonEmptyString,
