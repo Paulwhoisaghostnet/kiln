@@ -261,4 +261,68 @@ describe('runContractWorkflow', () => {
       ]),
     );
   });
+
+  it('passes generated default workflow steps into shadowbox runtime', async () => {
+    let shadowboxStepCount = -1;
+
+    const result = await runContractWorkflow(
+      {
+        sourceType: 'michelson',
+        source: `
+          parameter (or (pair %mint address nat) (pair %transfer address nat));
+          storage unit;
+          code { CAR ; NIL operation ; PAIR };
+        `,
+        initialStorage: 'Unit',
+        simulationSteps: [],
+      },
+      {
+        compileSmartPy: async () => ({
+          scenario: 'unused',
+          michelson: '',
+          initialStorage: 'Unit',
+        }),
+        injectKilnTokens: (code) => code,
+        estimateOrigination: async () => ({
+          gasLimit: 200_000,
+          storageLimit: 10_000,
+          suggestedFeeMutez: 40_000,
+          minimalFeeMutez: 30_000,
+        }),
+        runShadowbox: async (input) => {
+          shadowboxStepCount = input.steps.length;
+          return {
+            enabled: true,
+            requiredForClearance: true,
+            provider: 'command',
+            executed: true,
+            passed: true,
+            jobId: 'sbox_generated_steps',
+            startedAt: '2026-05-04T00:00:00.000Z',
+            endedAt: '2026-05-04T00:00:01.000Z',
+            durationMs: 1000,
+            summary: {
+              total: input.steps.length,
+              passed: input.steps.length,
+              failed: 0,
+            },
+            steps: input.steps.map((step, index) => ({
+              label: step.label ?? `Step ${index + 1}`,
+              wallet: step.wallet,
+              entrypoint: step.entrypoint,
+              status: 'passed',
+              note: 'Executed generated workflow step.',
+            })),
+            warnings: [],
+          };
+        },
+        shadowboxRequiredForClearance: true,
+        clearanceStore: new DeploymentClearanceStore(),
+      },
+    );
+
+    expect(shadowboxStepCount).toBeGreaterThan(0);
+    expect(result.shadowbox.summary.total).toBe(shadowboxStepCount);
+    expect(result.clearance.approved).toBe(true);
+  });
 });

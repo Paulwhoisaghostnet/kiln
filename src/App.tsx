@@ -306,6 +306,7 @@ export default function App() {
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const contractUploadInputRef = useRef<HTMLInputElement>(null);
+  const keepWorkflowAfterStorageSyncRef = useRef(false);
   const apiToken = getApiToken();
 
   const buildHeaders = (includeJson = false): HeadersInit => {
@@ -387,7 +388,12 @@ export default function App() {
   }, [abi, e2eEntrypoint]);
 
   useEffect(() => {
+    if (keepWorkflowAfterStorageSyncRef.current) {
+      keepWorkflowAfterStorageSyncRef.current = false;
+      return;
+    }
     setClearanceId(null);
+    setLastWorkflow(null);
   }, [michelsonCode, initialStorage, contractSourceType]);
 
   const hydrateConnectedWallet = async () => {
@@ -916,6 +922,7 @@ export default function App() {
       }
       const preparedInitialStorage = payload.artifacts.initialStorage;
       if (preparedInitialStorage && preparedInitialStorage !== initialStorage) {
+        keepWorkflowAfterStorageSyncRef.current = true;
         setInitialStorage(preparedInitialStorage);
       }
       return payload;

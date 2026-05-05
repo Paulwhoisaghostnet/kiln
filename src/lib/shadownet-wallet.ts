@@ -31,6 +31,9 @@ export interface SignedKilnAuthChallenge {
 
 /** Fixed address used in compiled storage as admin placeholder until deploy. */
 export const BURN_PLACEHOLDER_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX';
+const ORIGINATION_CONFIRMATION_TIMEOUT_MS = 180_000;
+const ORIGINATION_RPC_POLL_MS = 4_000;
+const ORIGINATION_RECENT_BLOCK_DEPTH = 12;
 
 type TezosWalletHandle = {
   toolkit: TezosToolkit;
@@ -42,20 +45,24 @@ let activeHandle: TezosWalletHandle | null = null;
 let initializingFor: KilnNetworkId | null = null;
 let initializing: Promise<TezosWalletHandle> | null = null;
 
-function resolveBeaconNetworkType(): string {
+function resolveBeaconNetworkType(networkId: KilnNetworkId): NetworkType {
   const typedNetworkType = NetworkType as unknown as {
-    MAINNET?: string;
-    GHOSTNET?: string;
-    SHADOWNET?: string;
-    CUSTOM?: string;
+    MAINNET?: NetworkType;
+    GHOSTNET?: NetworkType;
+    SHADOWNET?: NetworkType;
+    CUSTOM?: NetworkType;
   };
-  return (
-    typedNetworkType.MAINNET ??
-    typedNetworkType.GHOSTNET ??
-    typedNetworkType.SHADOWNET ??
-    typedNetworkType.CUSTOM ??
-    'custom'
-  );
+
+  switch (networkId) {
+    case 'tezos-mainnet':
+      return typedNetworkType.MAINNET ?? ('mainnet' as NetworkType);
+    case 'tezos-ghostnet':
+      return typedNetworkType.GHOSTNET ?? typedNetworkType.CUSTOM ?? ('custom' as NetworkType);
+    case 'tezos-shadownet':
+      return typedNetworkType.SHADOWNET ?? typedNetworkType.CUSTOM ?? ('custom' as NetworkType);
+    default:
+      return typedNetworkType.CUSTOM ?? ('custom' as NetworkType);
+  }
 }
 
 function clearStaleBeaconStorage(): void {
@@ -117,7 +124,7 @@ async function ensureToolkit(networkId: KilnNetworkId): Promise<TezosWalletHandl
       name: 'Tezos Kiln',
       iconUrl: '/favicon.ico',
       network: {
-        type: resolveBeaconNetworkType() as never,
+        type: resolveBeaconNetworkType(networkId) as never,
         name: normalizedBeaconNetworkName(networkId),
         rpcUrl: profile.defaultRpcUrl,
       },
@@ -195,6 +202,238 @@ function findContractAddress(node: unknown): string | null {
     }
   }
   return null;
+}
+
+function findOriginatedContractAddress(node: unknown): string | null {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = findOriginatedContractAddress(item);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  if (!node || typeof node !== 'object') {
+    return null;
+  }
+
+  const record = node as Record<string, unknown>;
+  const originatedContracts = record.originated_contracts;
+  if (Array.isArray(originatedContracts)) {
+    const originatedAddress = findContractAddress(originatedContracts);
+    if (originatedAddress) {
+      return originatedAddress;
+    }
+  }
+
+  return (
+    findOriginatedContractAddress(record.operation_result) ??
+    findOriginatedContractAddress(record.metadata) ??
+    findOriginatedContractAddress(record.contents) ??
+    null
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error(label)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  });
+}
+
+async function readOperationResultsNode(operation: unknown): Promise<unknown> {
+  const record = operation as Record<string, unknown>;
+  const operationResults = record.operationResults;
+
+  if (typeof operationResults === 'function') {
+    try {
+      return await (operationResults as () => Promise<unknown>).call(operation);
+    } catch {
+      return undefined;
+    }
+  }
+
+  return operationResults;
+}
+
+async function findContractAddressFromWalletOperation(
+  operation: unknown,
+): Promise<string | null> {
+  const record = operation as {
+    contract?: () => Promise<{ address?: string } | null | undefined>;
+  } & Record<string, unknown>;
+
+  try {
+    const contract = await record.contract?.();
+    if (contract?.address) {
+      return contract.address;
+    }
+  } catch {
+    /* Fall through to confirmed operation metadata. */
+  }
+
+  const operationResults = await readOperationResultsNode(operation);
+  return (
+    findOriginatedContractAddress(operationResults) ??
+    findOriginatedContractAddress(record.opResponse) ??
+    findContractAddress(operationResults) ??
+    findContractAddress(record.opResponse) ??
+    null
+  );
+}
+
+function findOperationInBlock(block: unknown, opHash: string): unknown | null {
+  const record =
+    block && typeof block === 'object'
+      ? (block as Record<string, unknown>)
+      : {};
+  const groups = Array.isArray(record.operations) ? record.operations : [];
+
+  for (const group of groups) {
+    if (!Array.isArray(group)) {
+      continue;
+    }
+    for (const operation of group) {
+      if (
+        operation &&
+        typeof operation === 'object' &&
+        (operation as Record<string, unknown>).hash === opHash
+      ) {
+        return operation;
+      }
+    }
+  }
+
+  return null;
+}
+
+function getBlockLevel(block: unknown): number | null {
+  const record =
+    block && typeof block === 'object'
+      ? (block as Record<string, unknown>)
+      : {};
+  const header =
+    record.header && typeof record.header === 'object'
+      ? (record.header as Record<string, unknown>)
+      : {};
+  return typeof header.level === 'number' && Number.isFinite(header.level)
+    ? header.level
+    : null;
+}
+
+async function findOriginationInRecentBlocks(
+  handle: TezosWalletHandle,
+  opHash: string,
+): Promise<{ contractAddress: string; level: number | null } | null> {
+  for (let offset = 0; offset <= ORIGINATION_RECENT_BLOCK_DEPTH; offset += 1) {
+    const blockId = offset === 0 ? 'head' : `head~${offset}`;
+    let block: unknown;
+    try {
+      block = await handle.toolkit.rpc.getBlock({ block: blockId });
+    } catch {
+      continue;
+    }
+
+    const operation = findOperationInBlock(block, opHash);
+    if (!operation) {
+      continue;
+    }
+
+    const contractAddress =
+      findOriginatedContractAddress(operation) ?? findContractAddress(operation);
+    if (contractAddress) {
+      return {
+        contractAddress,
+        level: getBlockLevel(block),
+      };
+    }
+  }
+
+  return null;
+}
+
+async function waitForRpcOrigination(
+  handle: TezosWalletHandle,
+  opHash: string,
+  shouldStop = () => false,
+): Promise<{ contractAddress: string; level: number | null }> {
+  const deadline = Date.now() + ORIGINATION_CONFIRMATION_TIMEOUT_MS;
+
+  while (!shouldStop() && Date.now() <= deadline) {
+    const found = await findOriginationInRecentBlocks(handle, opHash);
+    if (found) {
+      return found;
+    }
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+    await sleep(Math.min(ORIGINATION_RPC_POLL_MS, remainingMs));
+  }
+
+  if (shouldStop()) {
+    throw new Error(`RPC confirmation scan cancelled for origination ${opHash}.`);
+  }
+
+  throw new Error(
+    `Origination ${opHash} was not found in recent RPC blocks before confirmation timeout.`,
+  );
+}
+
+async function waitForTaquitoOrigination(operation: {
+  opHash: string;
+  confirmation(confirmations: number): Promise<
+    | {
+        block?: {
+          header?: {
+            level?: number;
+          };
+        };
+      }
+    | undefined
+  >;
+}): Promise<{ contractAddress: string; level: number | null }> {
+  const confirmation = await operation.confirmation(1);
+  const contractAddress = await findContractAddressFromWalletOperation(operation);
+
+  if (!contractAddress) {
+    throw new Error(
+      `Origination ${operation.opHash} confirmed but KT1 address was not found.`,
+    );
+  }
+
+  return {
+    contractAddress,
+    level: confirmation?.block?.header?.level ?? null,
+  };
+}
+
+function formatOriginationFailure(error: unknown): string {
+  if (error instanceof AggregateError) {
+    return error.errors
+      .map((entry) => (entry instanceof Error ? entry.message : String(entry)))
+      .join(' / ');
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 export async function connectShadownetWallet(
@@ -280,35 +519,29 @@ export async function originateWithConnectedWallet(
     .originate({ code, init: initialStorage })
     .send();
 
-  const confirmation = await operation.confirmation(1);
-  let contractAddress: string | null = null;
-
+  let observed: { contractAddress: string; level: number | null };
+  let stopRpcScan = false;
   try {
-    const contract = await operation.contract();
-    contractAddress = contract?.address ?? null;
-  } catch {
-    contractAddress = null;
-  }
-
-  if (!contractAddress) {
-    contractAddress = findContractAddress(operation.operationResults) ?? null;
-  }
-  if (!contractAddress) {
-    contractAddress = findContractAddress(
-      (operation as unknown as Record<string, unknown>).opResponse,
-    );
-  }
-
-  if (!contractAddress) {
+    observed = await Promise.any([
+      withTimeout(
+        waitForTaquitoOrigination(operation),
+        ORIGINATION_CONFIRMATION_TIMEOUT_MS,
+        `Taquito confirmation timed out for origination ${operation.opHash}.`,
+      ),
+      waitForRpcOrigination(handle, operation.opHash, () => stopRpcScan),
+    ]);
+  } catch (error) {
     throw new Error(
-      `Origination ${operation.opHash} confirmed but KT1 address was not found.`,
+      `Origination ${operation.opHash} was sent but Kiln could not confirm the KT1 address: ${formatOriginationFailure(error)}`,
     );
+  } finally {
+    stopRpcScan = true;
   }
 
   return {
     hash: operation.opHash,
-    contractAddress,
-    level: confirmation?.block?.header?.level ?? null,
+    contractAddress: observed.contractAddress,
+    level: observed.level,
   };
 }
 

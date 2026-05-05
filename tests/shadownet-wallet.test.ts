@@ -64,7 +64,9 @@ const mocks = vi.hoisted(() => {
     clearActiveAccount: ReturnType<typeof vi.fn>;
     getActiveAccount: ReturnType<typeof vi.fn>;
     originate: ReturnType<typeof vi.fn>;
+    getBlock: ReturnType<typeof vi.fn>;
     open: ReturnType<typeof vi.fn>;
+    beaconWalletOptions: unknown[];
   } = {
     activeAccount: null,
     grantedAccount: null,
@@ -87,7 +89,13 @@ const mocks = vi.hoisted(() => {
     originate: vi.fn(() => ({
       send: async () => state.operation,
     })),
+    getBlock: vi.fn(async () => ({
+      hash: 'BLockHash',
+      header: { level: 1 },
+      operations: [[], [], [], []],
+    })),
     open: vi.fn(),
+    beaconWalletOptions: [],
   };
 
   class MockBeaconWallet {
@@ -95,7 +103,9 @@ const mocks = vi.hoisted(() => {
       getActiveAccount: state.getActiveAccount,
     };
 
-    constructor(_options: unknown) {}
+    constructor(options: unknown) {
+      state.beaconWalletOptions.push(options);
+    }
 
     requestPermissions = state.requestPermissions;
     clearActiveAccount = state.clearActiveAccount;
@@ -104,6 +114,7 @@ const mocks = vi.hoisted(() => {
   class MockTezosToolkit {
     rpc = {
       getChainId: vi.fn(async () => state.chainId),
+      getBlock: state.getBlock,
     };
 
     wallet = {
@@ -132,6 +143,8 @@ vi.mock('@taquito/taquito', () => ({
 
 vi.mock('@airgap/beacon-dapp', () => ({
   NetworkType: {
+    MAINNET: 'mainnet',
+    GHOSTNET: 'ghostnet',
     SHADOWNET: 'shadownet',
     CUSTOM: 'custom',
   },
@@ -185,7 +198,9 @@ beforeEach(() => {
   mocks.state.clearActiveAccount.mockClear();
   mocks.state.getActiveAccount.mockClear();
   mocks.state.originate.mockClear();
+  mocks.state.getBlock.mockClear();
   mocks.state.open.mockClear();
+  mocks.state.beaconWalletOptions = [];
 
   setupBrowserStubs();
 });
@@ -208,6 +223,20 @@ describe('shadownet-wallet', () => {
     expect(localStorage.getItem('beacon:stale')).toBeNull();
     expect(localStorage.getItem('beacon-sdk:stale')).toBeNull();
     expect(localStorage.getItem('app:keep')).toBe('1');
+  });
+
+  it('requests the concrete Beacon network type for Shadownet even when mainnet is available', async () => {
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+
+    await walletModule.connectShadownetWallet('temple');
+
+    expect(mocks.state.beaconWalletOptions[0]).toMatchObject({
+      network: {
+        type: 'shadownet',
+        name: 'shadownet',
+        rpcUrl: 'https://rpc.shadownet.teztnets.com',
+      },
+    });
   });
 
   it('lets Beacon handle Kukai selection and blocks non-shadownet RPC account', async () => {
@@ -305,6 +334,68 @@ describe('shadownet-wallet', () => {
       hash: 'opFallbackAddress',
       contractAddress: 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg',
       level: null,
+    });
+  });
+
+  it('recovers connected-wallet origination from recent RPC blocks when Taquito confirmation misses inclusion', async () => {
+    const originatedAddress = 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg';
+    mocks.state.operation = {
+      opHash: 'opRaceIncludedBeforeWatcher',
+      confirmation: () => new Promise(() => undefined),
+      contract: async () => {
+        throw new Error('contract lookup unavailable');
+      },
+      operationResults: [],
+      opResponse: {},
+    };
+    mocks.state.getBlock.mockResolvedValue({
+      hash: 'BLockHashWithOrigination',
+      header: { level: 777 },
+      operations: [
+        [],
+        [],
+        [],
+        [
+          {
+            hash: 'opRaceIncludedBeforeWatcher',
+            contents: [
+              {
+                kind: 'origination',
+                script: {
+                  storage: {
+                    string: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+                  },
+                },
+                metadata: {
+                  operation_result: {
+                    status: 'applied',
+                    originated_contracts: [originatedAddress],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      ],
+    });
+
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+    await walletModule.connectShadownetWallet('temple');
+
+    const result = await Promise.race([
+      walletModule.originateWithConnectedWallet(
+        'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
+        'Unit',
+      ),
+      new Promise<never>((_resolve, reject) => {
+        setTimeout(() => reject(new Error('timed out waiting for RPC fallback')), 25);
+      }),
+    ]);
+
+    expect(result).toEqual({
+      hash: 'opRaceIncludedBeforeWatcher',
+      contractAddress: originatedAddress,
+      level: 777,
     });
   });
 
