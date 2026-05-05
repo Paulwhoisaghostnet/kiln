@@ -14,6 +14,7 @@ export interface WalletSignatureVerificationInput {
   walletAddress: string;
   message: string;
   messageBytes: string;
+  networkId?: KilnNetworkId;
   signature: string;
   publicKey?: string;
 }
@@ -164,6 +165,12 @@ function buildChallengeMessage(input: {
   ].join('\n');
 }
 
+export function buildTezosMichelineSigningPayload(message: string): string {
+  const messageBytes = stringToBytes(message);
+  const byteLength = messageBytes.length / 2;
+  return `0501${byteLength.toString(16).padStart(8, '0')}${messageBytes}`;
+}
+
 function parseAccessList(raw?: string): Array<{ walletKind?: WalletKind; address: string }> {
   if (!raw?.trim()) {
     return [];
@@ -217,7 +224,19 @@ export async function defaultWalletSignatureVerifier(
       if (pkh !== input.walletAddress) {
         return false;
       }
-      return verifySignature(input.messageBytes, input.publicKey, input.signature);
+      for (const payload of [
+        input.messageBytes,
+        buildTezosMichelineSigningPayload(input.message),
+      ]) {
+        try {
+          if (verifySignature(payload, input.publicKey, input.signature)) {
+            return true;
+          }
+        } catch {
+          /* Try the next supported Beacon payload shape. */
+        }
+      }
+      return false;
     }
 
     if (!/^0x[0-9a-fA-F]{40}$/.test(input.walletAddress)) {
@@ -317,6 +336,7 @@ export class KilnUserStore {
       const verified = await this.walletSignatureVerifier({
         walletKind: challenge.walletKind,
         walletAddress: challenge.walletAddress,
+        networkId: challenge.networkId,
         message: challenge.message,
         messageBytes: challenge.messageBytes,
         signature: input.signature,

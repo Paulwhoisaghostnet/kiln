@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface MockAccount {
   address: string;
+  publicKey?: string;
+  scopes?: string[];
   network?: {
     type?: string;
     name?: string;
@@ -64,6 +66,7 @@ const mocks = vi.hoisted(() => {
     requestPermissions: ReturnType<typeof vi.fn>;
     clearActiveAccount: ReturnType<typeof vi.fn>;
     getActiveAccount: ReturnType<typeof vi.fn>;
+    requestSignPayload: ReturnType<typeof vi.fn>;
     subscribeToEvent: ReturnType<typeof vi.fn>;
     originate: ReturnType<typeof vi.fn>;
     getBlock: ReturnType<typeof vi.fn>;
@@ -92,6 +95,7 @@ const mocks = vi.hoisted(() => {
       state.activeAccount = null;
     }),
     getActiveAccount: vi.fn(async () => state.activeAccount),
+    requestSignPayload: vi.fn(async () => ({ signature: 'edsigKilnAuth' })),
     subscribeToEvent: vi.fn(
       async (
         event: string,
@@ -116,6 +120,7 @@ const mocks = vi.hoisted(() => {
   class MockBeaconWallet {
     client = {
       getActiveAccount: state.getActiveAccount,
+      requestSignPayload: state.requestSignPayload,
       subscribeToEvent: state.subscribeToEvent,
     };
 
@@ -125,6 +130,7 @@ const mocks = vi.hoisted(() => {
 
     requestPermissions = state.requestPermissions;
     clearActiveAccount = state.clearActiveAccount;
+    getPK = vi.fn(async () => state.activeAccount?.publicKey ?? '');
   }
 
   class MockTezosToolkit {
@@ -150,6 +156,9 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@taquito/beacon-wallet', () => ({
+  BeaconEvent: {
+    ACTIVE_ACCOUNT_SET: 'ACTIVE_ACCOUNT_SET',
+  },
   BeaconWallet: mocks.MockBeaconWallet,
 }));
 
@@ -157,15 +166,21 @@ vi.mock('@taquito/taquito', () => ({
   TezosToolkit: mocks.MockTezosToolkit,
 }));
 
-vi.mock('@airgap/beacon-dapp', () => ({
-  BeaconEvent: {
-    ACTIVE_ACCOUNT_SET: 'ACTIVE_ACCOUNT_SET',
-  },
+vi.mock('@taquito/beacon-wallet/types', () => ({
   NetworkType: {
     MAINNET: 'mainnet',
     GHOSTNET: 'ghostnet',
     SHADOWNET: 'shadownet',
     CUSTOM: 'custom',
+  },
+  PermissionScope: {
+    OPERATION_REQUEST: 'operation_request',
+    SIGN: 'sign',
+  },
+  SigningType: {
+    MICHELINE: 'micheline',
+    OPERATION: 'operation',
+    RAW: 'raw',
   },
 }));
 
@@ -199,6 +214,8 @@ beforeEach(() => {
   mocks.state.activeAccount = null;
   mocks.state.grantedAccount = {
     address: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+    publicKey: 'edpkTestPublicKey',
+    scopes: ['operation_request', 'sign'],
     network: {
       name: 'shadownet',
       rpcUrl: 'https://rpc.shadownet.teztnets.com',
@@ -216,6 +233,7 @@ beforeEach(() => {
   mocks.state.requestPermissions.mockClear();
   mocks.state.clearActiveAccount.mockClear();
   mocks.state.getActiveAccount.mockClear();
+  mocks.state.requestSignPayload.mockClear();
   mocks.state.subscribeToEvent.mockClear();
   mocks.state.originate.mockClear();
   mocks.state.getBlock.mockClear();
@@ -340,6 +358,41 @@ describe('shadownet-wallet', () => {
     await walletModule.disconnectShadownetWallet();
 
     expect(mocks.state.clearActiveAccount).toHaveBeenCalledTimes(2);
+  });
+
+  it('signs Kiln auth challenges with a Beacon Micheline payload first', async () => {
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+    await walletModule.connectShadownetWallet('temple');
+
+    const signed = await walletModule.signKilnAuthChallenge('hello');
+
+    expect(signed).toEqual({
+      signature: 'edsigKilnAuth',
+      publicKey: 'edpkTestPublicKey',
+      messageBytes: '68656c6c6f',
+    });
+    expect(mocks.state.requestSignPayload).toHaveBeenCalledWith({
+      signingType: 'micheline',
+      payload: '05010000000568656c6c6f',
+      sourceAddress: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+    });
+  });
+
+  it('falls back to raw Beacon signing when a wallet rejects Micheline login payloads', async () => {
+    mocks.state.requestSignPayload
+      .mockRejectedValueOnce(new Error('micheline not supported'))
+      .mockResolvedValueOnce({ signature: 'edsigRawKilnAuth' });
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+    await walletModule.connectShadownetWallet('temple');
+
+    const signed = await walletModule.signKilnAuthChallenge('hello');
+
+    expect(signed.signature).toBe('edsigRawKilnAuth');
+    expect(mocks.state.requestSignPayload).toHaveBeenNthCalledWith(2, {
+      signingType: 'raw',
+      payload: '68656c6c6f',
+      sourceAddress: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+    });
   });
 
   it('originates with connected wallet and returns KT1 from operation contract()', async () => {

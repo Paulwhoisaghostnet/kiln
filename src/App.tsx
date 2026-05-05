@@ -1070,12 +1070,7 @@ export default function App() {
       authSession.user.lastLoginNetworkId === networkId
         ? authSession.user.walletAddress
         : null;
-    if (!verifiedWallet) {
-      throw new Error(
-        `Verify the ${network.label} Tezos deployment wallet in Settings before deploying.`,
-      );
-    }
-    if (verifiedWallet !== connectedWallet.address) {
+    if (verifiedWallet && verifiedWallet !== connectedWallet.address) {
       await disconnectWallet();
       throw new Error(
         `Connected wallet ${connectedWallet.address} does not match verified ${network.label} deployment wallet ${verifiedWallet}. Reconnect the correct wallet.`,
@@ -2588,16 +2583,16 @@ function DeployTab({
     );
   }
 
+  const connectedWalletMatchesVerifiedSigner =
+    !connectedWallet ||
+    !verifiedTezosWalletAddress ||
+    connectedWallet.address === verifiedTezosWalletAddress;
   const deployReady =
     Boolean(lastWorkflow) &&
     Boolean(clearanceId) &&
     (deployMode === 'puppet'
       ? canPuppet
-      : Boolean(
-          connectedWallet &&
-            verifiedTezosWalletAddress &&
-            connectedWallet.address === verifiedTezosWalletAddress,
-        ));
+      : Boolean(connectedWallet && connectedWalletMatchesVerifiedSigner));
 
   return (
     <div className="space-y-4">
@@ -2711,16 +2706,27 @@ function DeployTab({
           <span className="opacity-60">Deployment signer: </span>
           <span
             className={
-              deployMode === 'connected' && verifiedTezosWalletAddress
+              deployMode === 'connected' && connectedWallet && connectedWalletMatchesVerifiedSigner
                 ? 'font-mono text-success'
                 : 'text-warning'
             }
           >
             {deployMode === 'connected'
-              ? verifiedTezosWalletAddress ?? 'verify in Settings'
+              ? connectedWallet?.address ?? 'connect wallet'
               : 'Bert puppet wallet'}
           </span>
         </div>
+        {deployMode === 'connected' && connectedWallet && !verifiedTezosWalletAddress ? (
+          <div className="text-info">
+            Settings signature not required for deploy; Kiln will re-check wallet network before
+            the origination request.
+          </div>
+        ) : null}
+        {deployMode === 'connected' && connectedWallet && !connectedWalletMatchesVerifiedSigner ? (
+          <div className="text-error">
+            Connected wallet does not match the verified Settings signer.
+          </div>
+        ) : null}
         {network.tier === 'mainnet' ? (
           <div className="text-error">
             Mainnet deploy — double-check admin address and storage before signing.

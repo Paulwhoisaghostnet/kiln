@@ -1,5 +1,5 @@
-import { BeaconEvent, NetworkType, SigningType } from '@airgap/beacon-dapp';
-import { BeaconWallet } from '@taquito/beacon-wallet';
+import { BeaconEvent, BeaconWallet } from '@taquito/beacon-wallet';
+import { NetworkType, PermissionScope, SigningType } from '@taquito/beacon-wallet/types';
 import { TezosToolkit } from '@taquito/taquito';
 import { stringToBytes } from '@taquito/utils';
 import {
@@ -49,6 +49,8 @@ type BeaconAccountNetwork = {
 
 type BeaconAccountLike = {
   address?: string;
+  publicKey?: string;
+  scopes?: string[];
   network?: BeaconAccountNetwork | null;
 };
 
@@ -589,6 +591,36 @@ function formatOriginationFailure(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export function buildTezosMichelineSigningPayload(message: string): string {
+  const messageBytes = stringToBytes(message);
+  const byteLength = messageBytes.length / 2;
+  return `0501${byteLength.toString(16).padStart(8, '0')}${messageBytes}`;
+}
+
+function accountHasScope(account: BeaconAccountLike | null | undefined, scope: string): boolean {
+  return Array.isArray(account?.scopes) && account.scopes.includes(scope);
+}
+
+async function ensureSignPermission(handle: TezosWalletHandle): Promise<BeaconAccountLike> {
+  let activeAccount = (await handle.wallet.client.getActiveAccount()) as
+    | BeaconAccountLike
+    | null;
+
+  if (!activeAccount?.address || !accountHasScope(activeAccount, PermissionScope.SIGN)) {
+    await handle.wallet.requestPermissions({
+      scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
+    });
+    activeAccount = (await handle.wallet.client.getActiveAccount()) as
+      | BeaconAccountLike
+      | null;
+  }
+
+  if (!activeAccount?.address) {
+    throw new Error('Wallet connected but no active account address was returned.');
+  }
+  return activeAccount;
+}
+
 export async function connectShadownetWallet(
   _target: WalletConnectTarget = 'beacon',
   networkId: KilnNetworkId = getDefaultNetworkId(),
@@ -628,20 +660,49 @@ export async function signKilnAuthChallenge(
   const handle = await ensureToolkit(networkId);
   await assertExpectedNetwork(handle, networkId);
 
-  const publicKey = await handle.wallet.getPK();
+  const activeAccount = await ensureSignPermission(handle);
+  await assertExpectedNetwork(handle, networkId);
+
+  const publicKey = activeAccount.publicKey || (await handle.wallet.getPK());
+  if (!publicKey) {
+    throw new Error(
+      'The connected wallet did not expose a Tezos public key for signature verification. Reconnect the wallet and approve sign permissions.',
+    );
+  }
   const messageBytes = stringToBytes(message);
   const client = handle.wallet.client as unknown as {
     requestSignPayload(input: {
       signingType: SigningType;
       payload: string;
+      sourceAddress?: string;
     }): Promise<{ signature: string }>;
   };
-  const { signature } = await client.requestSignPayload({
-    signingType: SigningType.RAW,
-    payload: messageBytes,
-  });
+  const signRequests = [
+    {
+      signingType: SigningType.MICHELINE,
+      payload: buildTezosMichelineSigningPayload(message),
+    },
+    {
+      signingType: SigningType.RAW,
+      payload: messageBytes,
+    },
+  ];
+  let lastError: unknown;
+  for (const request of signRequests) {
+    try {
+      const { signature } = await client.requestSignPayload({
+        ...request,
+        sourceAddress: activeAccount.address,
+      });
+      return { signature, publicKey, messageBytes };
+    } catch (error) {
+      lastError = error;
+    }
+  }
 
-  return { signature, publicKey, messageBytes };
+  throw new Error(
+    `Wallet did not sign the Kiln verification challenge: ${formatOriginationFailure(lastError)}`,
+  );
 }
 
 export async function disconnectShadownetWallet(): Promise<void> {

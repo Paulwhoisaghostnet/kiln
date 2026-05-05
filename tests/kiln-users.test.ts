@@ -2,7 +2,12 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createKilnUserStore } from '../src/lib/kiln-users.js';
+import {
+  buildTezosMichelineSigningPayload,
+  createKilnUserStore,
+  defaultWalletSignatureVerifier,
+} from '../src/lib/kiln-users.js';
+import { stringToBytes } from '@taquito/utils';
 
 const tempDirs: string[] = [];
 
@@ -27,6 +32,23 @@ afterEach(async () => {
 });
 
 describe('KilnUserStore', () => {
+  it('verifies Beacon Micheline signed Tezos login payloads', async () => {
+    const message = 'hello';
+    expect(buildTezosMichelineSigningPayload(message)).toBe('05010000000568656c6c6f');
+
+    const verified = await defaultWalletSignatureVerifier({
+      walletKind: 'tezos',
+      walletAddress: 'tz1aXPHYxQrXmsDigEJKDF7PyB8FvUTtGyfn',
+      message,
+      messageBytes: stringToBytes(message),
+      publicKey: 'edpkvKGguLyTmpUGy1EERyMEv9oxrFfnjpavZakV2ZRmBHmDQCbvMv',
+      signature:
+        'sigf9LeXMu58ac69eebM7v16JQ56VYsBHaUg96DRuHFWgmX4WYMuTj5XrFmPmv4U5955nVVYqvDt4poq64DSuyv3jXMaahQV',
+    });
+
+    expect(verified).toBe(true);
+  });
+
   it('approves verified wallets even when an accesslist is configured', async () => {
     const store = createKilnUserStore({
       env: baseEnv({
