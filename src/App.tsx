@@ -193,6 +193,27 @@ function safeParseJsonArray(raw: string): unknown[] {
   return parsed;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isBrowserNetworkError(error: unknown): boolean {
+  const message = errorMessage(error);
+  return (
+    error instanceof TypeError ||
+    /failed to fetch|load failed|networkerror|network changed|name_not_resolved|err_network_changed|err_name_not_resolved/i.test(
+      message,
+    )
+  );
+}
+
+function describeBrowserNetworkError(action: string, error: unknown): string {
+  if (!isBrowserNetworkError(error)) {
+    return errorMessage(error);
+  }
+  return `${action} could not reach the network from this browser session. Chrome reported a DNS/network change; check Wi-Fi/VPN/DNS and retry once the connection settles.`;
+}
+
 function looksLikeSmartPy(source: string): boolean {
   const normalized = source.toLowerCase();
   return (
@@ -588,7 +609,10 @@ export default function App() {
       addLog(`Connected wallet ${wallet.address} on ${network.label}.`, 'success');
     } catch (error) {
       addLog(
-        `Wallet connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Wallet connection failed: ${describeBrowserNetworkError(
+          'Beacon wallet connection',
+          error,
+        )}`,
         'error',
       );
     } finally {
@@ -999,7 +1023,7 @@ export default function App() {
       return payload;
     } catch (error) {
       addLog(
-        `Workflow error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Workflow error: ${describeBrowserNetworkError('Workflow validation', error)}`,
         'error',
       );
       return null;
