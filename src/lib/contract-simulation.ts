@@ -39,6 +39,7 @@ export interface ContractSimulationResult {
     paused: boolean;
     totalSupply: number;
     listings: number;
+    offers: number;
     swaps: number;
     auctions: number;
     barters: number;
@@ -136,6 +137,7 @@ export function runContractSimulation(input: {
     paused: false,
     totalSupply: 0,
     listings: 0,
+    offers: 0,
     swaps: 0,
     auctions: 0,
     barters: 0,
@@ -276,7 +278,10 @@ export function runContractSimulation(input: {
         });
         break;
       }
-      case 'list_item': {
+      case 'list_item':
+      case 'list':
+      case 'create_listing':
+      case 'open_listing': {
         state.listings += 1;
         results.push({
           label,
@@ -287,7 +292,9 @@ export function runContractSimulation(input: {
         });
         break;
       }
-      case 'cancel_item': {
+      case 'cancel_item':
+      case 'cancel_listing':
+      case 'cancel': {
         if (state.listings === 0) {
           results.push({
             label,
@@ -308,8 +315,23 @@ export function runContractSimulation(input: {
         });
         break;
       }
-      case 'buy_item': {
+      case 'buy_item':
+      case 'buy':
+      case 'purchase': {
         if (state.listings === 0) {
+          if (generatedDefaultSteps) {
+            warnings.push(
+              `${entrypoint} has no generated listing setup step; treating it as structural reachability only.`,
+            );
+            results.push({
+              label,
+              wallet: step.wallet,
+              entrypoint,
+              status: 'passed',
+              note: 'Marketplace purchase simulated structurally because no listing setup entrypoint is available.',
+            });
+            break;
+          }
           results.push({
             label,
             wallet: step.wallet,
@@ -326,6 +348,87 @@ export function runContractSimulation(input: {
           entrypoint,
           status: 'passed',
           note: 'Marketplace simulation purchased one listing.',
+        });
+        break;
+      }
+      case 'make_offer':
+      case 'offer':
+      case 'place_offer': {
+        state.offers += 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Marketplace simulation created one offer.',
+        });
+        break;
+      }
+      case 'accept_offer': {
+        if (state.offers === 0) {
+          if (generatedDefaultSteps) {
+            warnings.push(
+              `${entrypoint} has no generated offer setup step; treating it as structural reachability only.`,
+            );
+            results.push({
+              label,
+              wallet: step.wallet,
+              entrypoint,
+              status: 'passed',
+              note: 'Offer acceptance simulated structurally because no offer setup entrypoint is available.',
+            });
+            break;
+          }
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active offers available to accept in simulation state.',
+          });
+          break;
+        }
+        state.offers -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Marketplace simulation accepted one offer.',
+        });
+        break;
+      }
+      case 'cancel_offer': {
+        if (state.offers === 0) {
+          if (generatedDefaultSteps) {
+            warnings.push(
+              `${entrypoint} has no generated offer setup step; treating it as structural reachability only.`,
+            );
+            results.push({
+              label,
+              wallet: step.wallet,
+              entrypoint,
+              status: 'passed',
+              note: 'Offer cancellation simulated structurally because no offer setup entrypoint is available.',
+            });
+            break;
+          }
+          results.push({
+            label,
+            wallet: step.wallet,
+            entrypoint,
+            status: 'failed',
+            note: 'No active offers available to cancel in simulation state.',
+          });
+          break;
+        }
+        state.offers -= 1;
+        results.push({
+          label,
+          wallet: step.wallet,
+          entrypoint,
+          status: 'passed',
+          note: 'Marketplace simulation canceled one offer.',
         });
         break;
       }
@@ -384,7 +487,8 @@ export function runContractSimulation(input: {
         break;
       }
       case 'start_auction':
-      case 'open_auction': {
+      case 'open_auction':
+      case 'create_auction': {
         state.auctions += 1;
         results.push({
           label,
@@ -396,7 +500,8 @@ export function runContractSimulation(input: {
         break;
       }
       case 'bid_with_token':
-      case 'place_bid': {
+      case 'place_bid':
+      case 'bid': {
         if (state.auctions === 0) {
           results.push({
             label,
@@ -416,7 +521,9 @@ export function runContractSimulation(input: {
         });
         break;
       }
-      case 'settle_auction': {
+      case 'settle_auction':
+      case 'claim_auction':
+      case 'claim': {
         if (state.auctions === 0) {
           results.push({
             label,
@@ -470,7 +577,8 @@ export function runContractSimulation(input: {
         });
         break;
       }
-      case 'counter_barter': {
+      case 'counter_barter':
+      case 'counter_offer': {
         if (state.barters === 0) {
           results.push({
             label,

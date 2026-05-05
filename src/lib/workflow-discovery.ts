@@ -153,10 +153,40 @@ function sampleArgsForEntrypoint(entrypoint: string): unknown[] {
     case 'transfer':
     case 'token_metadata':
     case 'cancel_item':
+    case 'cancel':
     case 'buy_item':
+    case 'buy':
+    case 'purchase':
     case 'cancel_listing':
     case 'set_fee_bps':
+    case 'set_fee':
+    case 'set_market_fee':
     case 'set_royalty_bps':
+    case 'make_offer':
+    case 'offer':
+    case 'place_offer':
+    case 'accept_offer':
+    case 'cancel_offer':
+    case 'open_swap':
+    case 'create_swap':
+    case 'accept_swap':
+    case 'cancel_swap':
+    case 'start_auction':
+    case 'open_auction':
+    case 'create_auction':
+    case 'bid_with_token':
+    case 'place_bid':
+    case 'bid':
+    case 'settle_auction':
+    case 'claim_auction':
+    case 'claim':
+    case 'cancel_auction':
+    case 'open_barter':
+    case 'create_barter':
+    case 'counter_barter':
+    case 'counter_offer':
+    case 'accept_barter':
+    case 'cancel_barter':
       return [entrypoint.includes('bps') ? 250 : 1];
     case 'update_operators':
       return [0];

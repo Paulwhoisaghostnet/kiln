@@ -151,6 +151,21 @@ describe('runContractSimulation', () => {
     expect(result.steps[2]?.status).toBe('failed');
   });
 
+  it('simulates marketplace alias lifecycle without opaque warnings', () => {
+    const result = runContractSimulation({
+      entrypoints: ['list', 'purchase'],
+      steps: [],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.steps.map((step) => step.entrypoint)).toEqual(
+      expect.arrayContaining(['list', 'purchase']),
+    );
+    expect(result.warnings).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('Opaque simulation for purchase')]),
+    );
+  });
+
   it('falls back to opaque simulation when no domain model is registered', () => {
     const result = runContractSimulation({
       entrypoints: ['custom_action'],

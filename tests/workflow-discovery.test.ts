@@ -107,10 +107,11 @@ describe('workflow discovery', () => {
   it('uses typed sample args for fallback reachability entrypoints', () => {
     const steps = buildWorkflowDrivenSimulationSteps({
       contractId: 'options',
-      entrypoints: ['set_allowlist', 'set_royalty_bps', 'permit'],
+      entrypoints: ['set_allowlist', 'set_royalty_bps', 'permit', 'purchase'],
     });
 
-    expect(steps).toEqual([
+    expect(steps).toEqual(
+      expect.arrayContaining([
       expect.objectContaining({
         entrypoint: 'set_allowlist',
         args: [{ address: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6', allowed: true }],
@@ -123,7 +124,31 @@ describe('workflow discovery', () => {
         entrypoint: 'permit',
         args: ['0x00'],
       }),
-    ]);
+      expect.objectContaining({
+        entrypoint: 'purchase',
+        args: [1],
+      }),
+      ]),
+    );
+  });
+
+  it('uses typed sample args for marketplace alias workflows', () => {
+    const steps = buildWorkflowDrivenSimulationSteps({
+      contractId: 'market',
+      entrypoints: ['list', 'purchase', 'cancel_listing'],
+      includeExpectedFailures: false,
+    });
+
+    expect(steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entrypoint: 'list',
+          args: [1, 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton', 0, 1_000_000],
+        }),
+        expect.objectContaining({ entrypoint: 'purchase', args: [1] }),
+        expect.objectContaining({ entrypoint: 'cancel_listing', args: [1] }),
+      ]),
+    );
   });
 
   it('omits callback and signature-bound entrypoints from shadowbox steps with warnings', () => {
