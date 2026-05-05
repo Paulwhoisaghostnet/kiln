@@ -24,8 +24,10 @@ print(json.dumps({
   "ignoredTypeCandidates": module.build_arg_candidates("some_entrypoint", "bert", [1], "pair nat nat string"),
   "providedPairCandidates": module.build_arg_candidates("some_entrypoint", "bert", [1], None, ['(Pair 1 1 "from-ts")']),
   "externalKt1s": module.extract_external_kt1_addresses('(Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" (Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" "KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE"))'),
+  "contractKt1s": module.extract_contract_kt1_addresses('code { PUSH address "KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE" }', '"KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton"'),
   "rewrittenStorage": module.replace_external_kt1_addresses('(Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" "KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE")', {'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton': 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg'}),
   "needsFa2Fixture": module.source_needs_fa2_fixture('code { CONTRACT %transfer (list (pair address unit)) ; DROP }', '(Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" 0)'),
+  "sourceOnlyPlanKind": module.infer_dependency_fixture_plan('code { PUSH address "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" ; CONTRACT %ping string ; DROP }', 'Unit').kind,
   "dependencyRequirements": [
     {"entrypoint": item.entrypoint, "parameterType": item.parameter_type}
     for item in module.extract_contract_entrypoint_requirements('code { CONTRACT %transfer (list (pair address unit)) ; DROP ; CONTRACT %ping string ; DROP }')
@@ -53,8 +55,10 @@ print(json.dumps({
     ignoredTypeCandidates: string[];
     providedPairCandidates: string[];
     externalKt1s: string[];
+    contractKt1s: string[];
     rewrittenStorage: [string, number];
     needsFa2Fixture: boolean;
+    sourceOnlyPlanKind: string;
     dependencyRequirements: Array<{ entrypoint: string; parameterType: string }>;
     genericPlanKind: string;
     addressSinkPlanKind: string;
@@ -99,11 +103,16 @@ describe('Flextesa shadowbox runner argument compatibility', () => {
       'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
       'KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE',
     ]);
+    expect(expressions.contractKt1s).toEqual([
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE',
+    ]);
     expect(expressions.rewrittenStorage).toEqual([
       '(Pair "KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg" "KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE")',
       1,
     ]);
     expect(expressions.needsFa2Fixture).toBe(true);
+    expect(expressions.sourceOnlyPlanKind).toBe('generic');
     expect(expressions.dependencyRequirements).toEqual([
       { entrypoint: 'transfer', parameterType: '(list (pair address unit))' },
       { entrypoint: 'ping', parameterType: 'string' },

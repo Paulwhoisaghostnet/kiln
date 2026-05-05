@@ -318,7 +318,7 @@ def extract_contract_entrypoint_requirements(source: str) -> list[ContractEntryp
 
 
 def infer_dependency_fixture_plan(source: str, initial_storage: str) -> DependencyFixturePlan | None:
-    if not extract_external_kt1_addresses(initial_storage):
+    if not extract_contract_kt1_addresses(source, initial_storage):
         return None
 
     requirements = tuple(extract_contract_entrypoint_requirements(source))
@@ -373,6 +373,15 @@ def extract_external_kt1_addresses(initial_storage: str) -> list[str]:
     for address in KT1_RE.findall(initial_storage):
         if address not in unique:
             unique.append(address)
+    return unique
+
+
+def extract_contract_kt1_addresses(source: str, initial_storage: str) -> list[str]:
+    unique: list[str] = []
+    for text in [initial_storage, source]:
+        for address in KT1_RE.findall(text):
+            if address not in unique:
+                unique.append(address)
     return unique
 
 
@@ -949,7 +958,7 @@ def main(argv: list[str]) -> int:
             dependency_plan = infer_dependency_fixture_plan(contract_source, initial_storage)
             if dependency_plan:
                 replacements: dict[str, str] = {}
-                for external_address in extract_external_kt1_addresses(initial_storage):
+                for external_address in extract_contract_kt1_addresses(contract_source, initial_storage):
                     fixture = dependency_fixture_by_external_address.get(external_address)
                     if not fixture:
                         fixture_index = len(dependency_fixture_by_external_address) + 1
@@ -982,10 +991,15 @@ def main(argv: list[str]) -> int:
 
                     replacements[external_address] = fixture["address"]
 
-                initial_storage, replacement_count = replace_external_kt1_addresses(
+                initial_storage, storage_replacement_count = replace_external_kt1_addresses(
                     initial_storage,
                     replacements,
                 )
+                contract_source, source_replacement_count = replace_external_kt1_addresses(
+                    contract_source,
+                    replacements,
+                )
+                replacement_count = storage_replacement_count + source_replacement_count
                 if replacement_count > 0:
                     mapping = ", ".join(
                         f"{source} -> {target}" for source, target in replacements.items()
