@@ -82,6 +82,7 @@
 ### WTF
 - Security-audit-first discipline for marketplace contracts is reusable.
 - Simple scripted SmartPy test+compile workflow is a good baseline for contract CI automation.
+- Entrypoint naming can intentionally separate domains: use `purchase` for in-app/internal purchase flows when they should not be confused with broader Tezos marketplace `buy` flows. Treat the deployed entrypoint name as canonical, and make validation/tooling support the distinction instead of auto-renaming it.
 
 ### album packager
 - Export fidelity pattern: preview should render the same standalone payload used for final export.

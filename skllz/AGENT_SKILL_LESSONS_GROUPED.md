@@ -26,6 +26,14 @@
   - Track residual risk and remediation in dedicated audit docs.
 - Sources: `Bowers`, `WTF`, `color wars` (audit discipline pattern).
 
+### `skill_marketplace_entrypoint_semantics`
+- Concern: marketplace-like entrypoint names can blur product boundaries.
+- Helpful items:
+  - Keep `purchase` available for in-app/internal purchase flows when those interactions should not be confused with broader Tezos marketplace `buy` flows.
+  - Treat deployed entrypoint names as canonical and immutable; adapt tooling/validation to the ABI rather than silently renaming contract APIs.
+  - Version marketplace entrypoint dictionaries by contract role/address so `buy`, `purchase`, `collect`, and `fulfill_ask` do not get collapsed into one semantic bucket.
+- Sources: `WTF`, `Kiln Shadowbox compatibility work`.
+
 ## 2) Tezos Wallet and Origination Reliability Skills
 
 ### `skill_tezos_wallet_origination_reliability`
