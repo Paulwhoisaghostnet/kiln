@@ -434,11 +434,13 @@ def build_arg_candidates(
     wallet: str,
     args: list[Any],
     parameter_type: str | None = None,
+    provided_candidates: list[str] | None = None,
 ) -> list[str]:
     if entrypoint == "update_operators":
         return build_update_operators_args(wallet, args)
     arg = build_arg(entrypoint, wallet, args)
     candidates = [arg] if arg is not None else []
+    candidates.extend(provided_candidates or [])
     candidates.extend(build_type_arg_candidates(parameter_type, wallet))
     flexible_reachability_entrypoints = {
         "buy",
@@ -519,6 +521,14 @@ def main(argv: list[str]) -> int:
             for key, value in entrypoint_types_in.items()
             if str(key).strip() and str(value).strip()
         }
+    entrypoint_arg_candidates_in = payload.get("entrypointArgCandidates", {})
+    entrypoint_arg_candidates: dict[str, list[str]] = {}
+    if isinstance(entrypoint_arg_candidates_in, dict):
+        for key, value in entrypoint_arg_candidates_in.items():
+            if isinstance(value, list):
+                candidates = [str(item) for item in value if str(item).strip()]
+                if str(key).strip() and candidates:
+                    entrypoint_arg_candidates[str(key)] = candidates
 
     container_name = f"kiln-shadowbox-{uuid.uuid4().hex[:12]}"
     port = random.randint(24000, 28999)
@@ -818,6 +828,7 @@ def main(argv: list[str]) -> int:
                 wallet,
                 step_args,
                 entrypoint_types.get(entrypoint),
+                entrypoint_arg_candidates.get(entrypoint),
             )
             if not arg_exprs:
                 step_results.append(

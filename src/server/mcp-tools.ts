@@ -474,6 +474,11 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
             .filter((entry) => entry.parameterType)
             .map((entry) => [entry.name, entry.parameterType as string]),
         );
+        const entrypointArgCandidates = Object.fromEntries(
+          parsedEntrypoints
+            .filter((entry) => (entry.sampleArgs?.length ?? 0) > 0)
+            .map((entry) => [entry.name, entry.sampleArgs as string[]]),
+        );
         const codeHash = hashContractCode(injectedCode);
         const shadowbox = await services.runShadowbox({
           sourceType: source.sourceType,
@@ -481,6 +486,7 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
           initialStorage,
           entrypoints,
           entrypointTypes,
+          entrypointArgCandidates,
           steps: mapSimulationSteps(payload.simulationSteps),
           codeHash,
           requestId: context.requestId,

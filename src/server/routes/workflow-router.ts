@@ -297,6 +297,11 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
             .filter((entry) => entry.parameterType)
             .map((entry) => [entry.name, entry.parameterType as string]),
         );
+        const entrypointArgCandidates = Object.fromEntries(
+          parsedEntrypoints
+            .filter((entry) => (entry.sampleArgs?.length ?? 0) > 0)
+            .map((entry) => [entry.name, entry.sampleArgs as string[]]),
+        );
         const codeHash = hashContractCode(injectedCode);
         const shadowbox = await services.runShadowbox({
           sourceType: source.sourceType,
@@ -304,6 +309,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           initialStorage,
           entrypoints,
           entrypointTypes,
+          entrypointArgCandidates,
           steps: mapSimulationSteps(payload.data.simulationSteps),
           codeHash,
           requestId: res.locals.requestId as string | undefined,

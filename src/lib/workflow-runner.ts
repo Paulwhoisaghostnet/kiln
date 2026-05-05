@@ -123,6 +123,7 @@ export async function runContractWorkflow(
       initialStorage: string;
       entrypoints: string[];
       entrypointTypes?: Record<string, string>;
+      entrypointArgCandidates?: Record<string, string[]>;
       steps: SimulationStepInput[];
       codeHash: string;
       requestId?: string;
@@ -159,6 +160,11 @@ export async function runContractWorkflow(
     parsedEntrypoints
       .filter((entry) => entry.parameterType)
       .map((entry) => [entry.name, entry.parameterType as string]),
+  );
+  const entrypointArgCandidates = Object.fromEntries(
+    parsedEntrypoints
+      .filter((entry) => (entry.sampleArgs?.length ?? 0) > 0)
+      .map((entry) => [entry.name, entry.sampleArgs as string[]]),
   );
   const issues: string[] = [];
   const warnings: string[] = [];
@@ -234,6 +240,7 @@ export async function runContractWorkflow(
           initialStorage,
           entrypoints,
           entrypointTypes,
+          entrypointArgCandidates,
           steps: shadowboxSteps,
           codeHash,
         });

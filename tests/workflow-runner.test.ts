@@ -266,6 +266,7 @@ describe('runContractWorkflow', () => {
     let shadowboxStepCount = -1;
     let shadowboxSteps: Array<{ entrypoint: string; args: unknown[] }> = [];
     let shadowboxEntrypointTypes: Record<string, string> | undefined;
+    let shadowboxArgCandidates: Record<string, string[]> | undefined;
 
     const result = await runContractWorkflow(
       {
@@ -294,6 +295,7 @@ describe('runContractWorkflow', () => {
         runShadowbox: async (input) => {
           shadowboxStepCount = input.steps.length;
           shadowboxEntrypointTypes = input.entrypointTypes;
+          shadowboxArgCandidates = input.entrypointArgCandidates;
           shadowboxSteps = input.steps.map((step) => ({
             entrypoint: step.entrypoint,
             args: step.args,
@@ -336,6 +338,13 @@ describe('runContractWorkflow', () => {
       pause: 'bool',
       set_admin: 'address',
       confirm_admin: 'unit',
+    });
+    expect(shadowboxArgCandidates).toMatchObject({
+      mint: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
+      transfer: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
+      pause: ['True', 'False'],
+      set_admin: ['"tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb"'],
+      confirm_admin: ['Unit'],
     });
     expect(shadowboxSteps).toEqual(
       expect.arrayContaining([

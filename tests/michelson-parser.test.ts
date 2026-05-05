@@ -15,8 +15,13 @@ describe('parseEntrypointsFromMichelson', () => {
     const result = parseEntrypointsFromMichelson(michelson);
 
     expect(result).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit' },
-      { name: 'transfer', args: [], parameterType: 'pair address nat' },
+      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
+      {
+        name: 'transfer',
+        args: [],
+        parameterType: 'pair address nat',
+        sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
+      },
     ]);
   });
 
@@ -36,8 +41,8 @@ describe('parseEntrypointsFromMichelson', () => {
     `;
 
     expect(parseEntrypointsFromMichelson(michelson)).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit' },
-      { name: 'transfer', args: [], parameterType: 'unit' },
+      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
+      { name: 'transfer', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
     ]);
   });
 
@@ -52,8 +57,18 @@ describe('parseEntrypointsFromMichelson', () => {
     `;
 
     expect(parseEntrypointsFromMichelson(michelson)).toEqual([
-      { name: 'purchase', args: [], parameterType: 'pair nat nat string' },
-      { name: 'settle', args: [], parameterType: 'pair nat (pair nat string)' },
+      {
+        name: 'purchase',
+        args: [],
+        parameterType: 'pair nat nat string',
+        sampleArgs: ['(Pair 1 1 "shadowbox")', '(Pair 1 (Pair 1 "shadowbox"))'],
+      },
+      {
+        name: 'settle',
+        args: [],
+        parameterType: 'pair nat (pair nat string)',
+        sampleArgs: ['(Pair 1 (Pair 1 "shadowbox"))'],
+      },
     ]);
   });
 });

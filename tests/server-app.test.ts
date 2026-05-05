@@ -911,8 +911,13 @@ describe('createApiApp', () => {
       minimalFeeMutez: 45_000,
     });
     expect(response.body.entrypoints).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit' },
-      { name: 'transfer', args: [], parameterType: 'pair address nat' },
+      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
+      {
+        name: 'transfer',
+        args: [],
+        parameterType: 'pair address nat',
+        sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
+      },
     ]);
     expect(response.body.injectedCode).toContain(tokenAddresses.bronze);
     expect(calls.validate).toEqual([
@@ -1057,8 +1062,13 @@ describe('createApiApp', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.contractAddress).toBe(contractAddress);
     expect(response.body.entrypoints).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit' },
-      { name: 'transfer', args: [], parameterType: 'pair address nat' },
+      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
+      {
+        name: 'transfer',
+        args: [],
+        parameterType: 'pair address nat',
+        sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
+      },
     ]);
     expect(calls.originate).toHaveLength(1);
     const [origination] = calls.originate;

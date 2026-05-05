@@ -9,6 +9,7 @@ export interface AbiEntrypoint {
   name: string;
   args: AbiArg[];
   parameterType?: string;
+  sampleArgs?: string[];
 }
 
 export interface ContractCallResult {
