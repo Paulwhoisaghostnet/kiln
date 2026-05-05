@@ -300,7 +300,24 @@ def build_arg_candidates(entrypoint: str, wallet: str, args: list[Any]) -> list[
     if entrypoint == "update_operators":
         return build_update_operators_args(wallet, args)
     arg = build_arg(entrypoint, wallet, args)
-    return [arg] if arg is not None else []
+    candidates = [arg] if arg is not None else []
+    flexible_reachability_entrypoints = {
+        "buy",
+        "buy_item",
+        "collect",
+        "fulfill_ask",
+        "purchase",
+    }
+    if entrypoint in flexible_reachability_entrypoints:
+        candidates.extend(["Unit", "1"])
+    if len(args) == 1 and isinstance(args[0], (int, str)) and str(args[0]).strip().lstrip("-").isdigit():
+        candidates.append("Unit")
+
+    unique: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in unique:
+            unique.append(candidate)
+    return unique
 
 
 def parse_contract_address(text: str) -> str | None:

@@ -51,6 +51,13 @@ export interface WorkflowSummary {
     reason?: string;
     summary: { total: number; passed: number; failed: number };
     warnings: string[];
+    steps?: Array<{
+      label: string;
+      wallet: 'bert' | 'ernie' | 'user';
+      entrypoint: string;
+      status: 'passed' | 'failed';
+      note: string;
+    }>;
   };
   clearance: {
     approved: boolean;
@@ -122,6 +129,9 @@ export function WorkflowResultsPanel({
   const shadowboxMessages = [
     ...(summary.shadowbox?.reason ? [summary.shadowbox.reason] : []),
     ...(summary.shadowbox?.warnings ?? []),
+    ...(summary.shadowbox?.steps
+      ?.filter((step) => step.status === 'failed')
+      .map((step) => `${step.entrypoint}: ${step.note}`) ?? []),
   ];
 
   return (
