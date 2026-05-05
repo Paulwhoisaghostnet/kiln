@@ -53,7 +53,14 @@ describe('Flextesa shadowbox runner argument compatibility', () => {
         '{ Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" (Pair "tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6" 0) }',
       ]),
     );
-    expect(expressions.purchaseCandidates).toEqual(['1', 'Unit']);
+    expect(expressions.purchaseCandidates).toEqual([
+      '1',
+      '(Pair 1 1 "shadowbox")',
+      '(Pair 1 (Pair 1 "shadowbox"))',
+      '(Pair 0 1 "shadowbox")',
+      '(Pair 0 (Pair 1 "shadowbox"))',
+      'Unit',
+    ]);
     expect(expressions.allowlist).toBe(
       '(Pair "tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6" True)',
     );

@@ -258,6 +258,15 @@ def build_update_operators_args(wallet: str, args: list[Any]) -> list[str]:
     ]
 
 
+def build_purchase_arg_candidates() -> list[str]:
+    return [
+        '(Pair 1 1 "shadowbox")',
+        '(Pair 1 (Pair 1 "shadowbox"))',
+        '(Pair 0 1 "shadowbox")',
+        '(Pair 0 (Pair 1 "shadowbox"))',
+    ]
+
+
 def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
     if entrypoint == "update_operators":
         return build_update_operators_args(wallet, args)[0]
@@ -308,6 +317,8 @@ def build_arg_candidates(entrypoint: str, wallet: str, args: list[Any]) -> list[
         "fulfill_ask",
         "purchase",
     }
+    if entrypoint == "purchase":
+        candidates.extend(build_purchase_arg_candidates())
     if entrypoint in flexible_reachability_entrypoints:
         candidates.extend(["Unit", "1"])
     if len(args) == 1 and isinstance(args[0], (int, str)) and str(args[0]).strip().lstrip("-").isdigit():
