@@ -252,7 +252,8 @@ def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
         len(args) == 1
         and isinstance(args[0], (int, str))
         and str(args[0]).strip().lstrip("-").isdigit()
-        and entrypoint in {"mint", "mint_tokens", "create_token", "mint_editions"}
+        and entrypoint
+        in {"mint", "mint_tokens", "create_token", "mint_editions", "burn", "burn_tokens"}
     ):
         return f'(Pair {escape_michelson_string(wallet_address(wallet))} {str(args[0]).strip()})'
 
