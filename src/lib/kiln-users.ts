@@ -28,6 +28,7 @@ export interface KilnUser {
   walletAddress: string;
   normalizedWalletAddress: string;
   publicKey?: string;
+  lastLoginNetworkId?: KilnNetworkId;
   createdAt: string;
   lastLoginAt: string;
   access: {
@@ -344,6 +345,7 @@ export class KilnUserStore {
         db.users.push(user);
       }
       user.walletAddress = challenge.walletAddress;
+      user.lastLoginNetworkId = challenge.networkId;
       user.lastLoginAt = now.toISOString();
       if (input.publicKey) {
         user.publicKey = input.publicKey;
@@ -411,28 +413,16 @@ export class KilnUserStore {
         return { ...user.access };
       }
 
-      const accessListRequired = this.accessList.length > 0;
-      const allowed =
-        !accessListRequired ||
-        this.accessList.some((entry) =>
-          accessEntryMatches(entry, user.walletKind, user.normalizedWalletAddress),
-        );
-      if (!allowed) {
-        user.access = {
-          ...user.access,
-          status: 'blocked',
-          reason: 'Wallet is not present on the MCP accesslist.',
-        };
-        this.revokeUserTokens(db, user.id, now.toISOString());
-        return { ...user.access };
-      }
+      const matchedAccessList = this.accessList.some((entry) =>
+        accessEntryMatches(entry, user.walletKind, user.normalizedWalletAddress),
+      );
 
       user.access = {
         ...user.access,
         status: 'approved',
-        reason: accessListRequired
+        reason: matchedAccessList
           ? 'Wallet matched the MCP accesslist.'
-          : 'No MCP accesslist configured and wallet is not blocked.',
+          : 'Wallet is verified and not present on the MCP blocklist.',
       };
       return { ...user.access };
     });

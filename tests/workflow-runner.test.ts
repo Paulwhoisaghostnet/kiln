@@ -264,12 +264,13 @@ describe('runContractWorkflow', () => {
 
   it('passes generated default workflow steps into shadowbox runtime', async () => {
     let shadowboxStepCount = -1;
+    let shadowboxSteps: Array<{ entrypoint: string; args: unknown[] }> = [];
 
     const result = await runContractWorkflow(
       {
         sourceType: 'michelson',
         source: `
-          parameter (or (pair %mint address nat) (pair %transfer address nat));
+          parameter (or (pair %mint address nat) (or (pair %transfer address nat) (or (pair %balance_of (list (pair address nat)) (contract (list (pair (pair address nat) nat)))) (or (bool %pause) (or (address %set_admin) (unit %confirm_admin))))));
           storage unit;
           code { CAR ; NIL operation ; PAIR };
         `,
@@ -291,6 +292,10 @@ describe('runContractWorkflow', () => {
         }),
         runShadowbox: async (input) => {
           shadowboxStepCount = input.steps.length;
+          shadowboxSteps = input.steps.map((step) => ({
+            entrypoint: step.entrypoint,
+            args: step.args,
+          }));
           return {
             enabled: true,
             requiredForClearance: true,
@@ -323,6 +328,19 @@ describe('runContractWorkflow', () => {
 
     expect(shadowboxStepCount).toBeGreaterThan(0);
     expect(result.shadowbox.summary.total).toBe(shadowboxStepCount);
+    expect(shadowboxSteps).toEqual(
+      expect.arrayContaining([
+        { entrypoint: 'mint', args: [1] },
+        { entrypoint: 'transfer', args: [1] },
+        { entrypoint: 'pause', args: [true] },
+        {
+          entrypoint: 'set_admin',
+          args: ['tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6'],
+        },
+        { entrypoint: 'confirm_admin', args: [] },
+      ]),
+    );
+    expect(shadowboxSteps.some((step) => step.entrypoint === 'balance_of')).toBe(false);
     expect(result.clearance.approved).toBe(true);
   });
 });

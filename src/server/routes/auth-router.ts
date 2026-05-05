@@ -45,6 +45,7 @@ function publicUser(user: KilnUser) {
     id: user.id,
     walletKind: user.walletKind,
     walletAddress: user.walletAddress,
+    lastLoginNetworkId: user.lastLoginNetworkId,
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
     access: user.access,

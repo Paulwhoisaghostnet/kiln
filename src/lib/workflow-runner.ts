@@ -9,7 +9,7 @@ import {
 import { parseEntrypointsFromMichelson } from './michelson-parser.js';
 import type { ShadowboxRunResult } from './shadowbox-runtime.js';
 import type { SmartPyCompilationResult } from './smartpy-compiler.js';
-import { buildWorkflowDrivenSimulationSteps } from './workflow-discovery.js';
+import { buildWorkflowDrivenShadowboxSteps } from './workflow-discovery.js';
 
 export type WorkflowSourceType = 'auto' | 'michelson' | 'smartpy';
 
@@ -192,7 +192,7 @@ export async function runContractWorkflow(
   const shadowboxSteps =
     input.simulationSteps.length > 0
       ? input.simulationSteps
-      : buildWorkflowDrivenSimulationSteps({
+      : buildWorkflowDrivenShadowboxSteps({
           contractId: 'contract',
           entrypoints,
           includeExpectedFailures: false,

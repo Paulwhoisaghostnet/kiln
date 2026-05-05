@@ -115,6 +115,47 @@ function compactEntries(entries: Array<string | undefined>): string[] {
   return unique(entries.filter((entry): entry is string => Boolean(entry)));
 }
 
+const SAMPLE_TEZOS_ADDRESS = 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6';
+const SAMPLE_TEZOS_CONTRACT = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
+
+const SHADOWBOX_CALLBACK_ENTRYPOINTS = new Set([
+  'balance_of',
+  'get_balance',
+]);
+
+function sampleArgsForEntrypoint(entrypoint: string): unknown[] {
+  switch (entrypoint) {
+    case 'mint':
+    case 'mint_tokens':
+    case 'create_token':
+    case 'burn':
+    case 'burn_tokens':
+    case 'transfer':
+    case 'token_metadata':
+    case 'cancel_item':
+    case 'buy_item':
+    case 'cancel_listing':
+    case 'set_fee_bps':
+    case 'set_royalty_bps':
+      return [entrypoint.includes('bps') ? 250 : 1];
+    case 'pause':
+      return [true];
+    case 'set_admin':
+      return [SAMPLE_TEZOS_ADDRESS];
+    case 'set_allowlist':
+      return [{ address: SAMPLE_TEZOS_ADDRESS, allowed: true }];
+    case 'permit':
+      return ['0x00'];
+    case 'list_item':
+    case 'list':
+    case 'create_listing':
+    case 'open_listing':
+      return [1, SAMPLE_TEZOS_CONTRACT, 0, 1_000_000];
+    default:
+      return [];
+  }
+}
+
 function step(
   contractId: string,
   label: string,
@@ -130,7 +171,7 @@ function step(
       label: `${contractId}: ${label}`,
       wallet,
       entrypoint,
-      args: [],
+      args: sampleArgsForEntrypoint(entrypoint),
       expectFailure,
     },
   ];
@@ -552,6 +593,16 @@ export function buildWorkflowDrivenSimulationSteps(input: {
       args: plannedStep.args,
       expectFailure: plannedStep.expectFailure ?? false,
     }));
+}
+
+export function buildWorkflowDrivenShadowboxSteps(input: {
+  contractId?: string;
+  entrypoints: string[];
+  includeExpectedFailures?: boolean;
+}): SimulationStepInput[] {
+  return buildWorkflowDrivenSimulationSteps(input).filter(
+    (step) => !SHADOWBOX_CALLBACK_ENTRYPOINTS.has(step.entrypoint),
+  );
 }
 
 export function buildWorkflowDrivenE2ESteps(input: {

@@ -55,7 +55,7 @@ type LogType = 'info' | 'error' | 'success';
 type DeployMode = 'connected' | 'puppet';
 type ContractSourceType = 'michelson' | 'smartpy' | 'solidity';
 
-type TabKey = 'setup' | 'settings' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
+type TabKey = 'settings' | 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
 
 interface LogEntry {
   time: string;
@@ -127,6 +127,7 @@ interface KilnAuthUser {
   id: string;
   walletKind: KilnWalletKind;
   walletAddress: string;
+  lastLoginNetworkId?: string;
   access: {
     status: 'none' | 'pending' | 'approved' | 'blocked';
     requestedAt?: string;
@@ -292,10 +293,10 @@ export default function App() {
   const [isGeneratingMcpToken, setIsGeneratingMcpToken] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window === 'undefined') {
-      return 'setup';
+      return 'settings';
     }
     const hash = window.location.hash.replace('#', '');
-    return isTabKey(hash) ? hash : 'setup';
+    return isTabKey(hash) ? hash : 'settings';
   });
   const [terminalOpen, setTerminalOpen] = useState(() => {
     if (typeof window === 'undefined') {
@@ -1040,6 +1041,22 @@ export default function App() {
     if (!connectedWallet) {
       throw new Error('Connect a Tezos wallet before deploying.');
     }
+    const verifiedWallet =
+      authSession?.user.walletKind === 'tezos' &&
+      authSession.user.lastLoginNetworkId === networkId
+        ? authSession.user.walletAddress
+        : null;
+    if (!verifiedWallet) {
+      throw new Error(
+        `Verify the ${network.label} Tezos deployment wallet in Settings before deploying.`,
+      );
+    }
+    if (verifiedWallet !== connectedWallet.address) {
+      await disconnectWallet();
+      throw new Error(
+        `Connected wallet ${connectedWallet.address} does not match verified ${network.label} deployment wallet ${verifiedWallet}. Reconnect the correct wallet.`,
+      );
+    }
     const {
       assignConnectedWalletAsAdmin,
       originateWithConnectedWallet,
@@ -1245,6 +1262,12 @@ export default function App() {
   // Tab guard logic
   const verifiedEvmWalletAddress =
     isEvm && authSession?.user.walletKind === 'evm' ? authSession.user.walletAddress : null;
+  const verifiedTezosWalletAddress =
+    isTezos &&
+    authSession?.user.walletKind === 'tezos' &&
+    authSession.user.lastLoginNetworkId === networkId
+      ? authSession.user.walletAddress
+      : null;
 
   const tabs = useMemo<
     Array<{
@@ -1262,20 +1285,20 @@ export default function App() {
     const hasMcpAccess = authSession?.user.access.status === 'approved';
     return [
       {
+        key: 'settings',
+        label: 'Settings',
+        icon: <Settings className="w-4 h-4" />,
+        tipKey: 'tabSetupLabel',
+        ready: true,
+        done: Boolean(verifiedTezosWalletAddress || verifiedEvmWalletAddress || hasMcpAccess),
+      },
+      {
         key: 'setup',
         label: t('tabSetupLabel'),
         icon: <Globe className="w-4 h-4" />,
         tipKey: 'tabSetupLabel',
         ready: true,
         done: true,
-      },
-      {
-        key: 'settings',
-        label: 'Settings',
-        icon: <Settings className="w-4 h-4" />,
-        tipKey: 'tabSetupLabel',
-        ready: true,
-        done: hasMcpAccess,
       },
       {
         key: 'build',
@@ -1327,6 +1350,8 @@ export default function App() {
     contractAddress,
     lastWorkflow,
     authSession,
+    verifiedTezosWalletAddress,
+    verifiedEvmWalletAddress,
     t,
   ]);
 
@@ -1446,9 +1471,12 @@ export default function App() {
                 isTezos={isTezos}
                 isEvm={isEvm}
                 connectedWallet={connectedWallet}
+                onConnect={connectWallet}
+                onDisconnect={disconnectWallet}
                 authSession={authSession}
                 mcpToken={mcpToken}
                 isMcpLoggingIn={isMcpLoggingIn}
+                isConnectingWallet={isConnectingWallet}
                 isRequestingMcpAccess={isRequestingMcpAccess}
                 isGeneratingMcpToken={isGeneratingMcpToken}
                 onLogin={startMcpWalletLogin}
@@ -1506,6 +1534,7 @@ export default function App() {
                 useConnectedWalletAsContractAdmin={useConnectedWalletAsContractAdmin}
                 setUseConnectedWalletAsContractAdmin={setUseConnectedWalletAsContractAdmin}
                 connectedWallet={connectedWallet}
+                verifiedTezosWalletAddress={verifiedTezosWalletAddress}
                 clearanceId={clearanceId}
                 lastWorkflow={lastWorkflow}
                 solidityResult={lastSolidityCompile}
@@ -1514,7 +1543,7 @@ export default function App() {
                 isValidating={isValidating}
                 onTezosDeploy={handleTezosDeploy}
                 canPuppet={can('puppetWallets')}
-                onReconnect={() => setActiveTab('setup')}
+                onReconnect={() => setActiveTab('settings')}
               />
             ) : null}
             {activeTab === 'test' ? (
@@ -1933,9 +1962,12 @@ function SettingsTab({
   isTezos,
   isEvm,
   connectedWallet,
+  onConnect,
+  onDisconnect,
   authSession,
   mcpToken,
   isMcpLoggingIn,
+  isConnectingWallet,
   isRequestingMcpAccess,
   isGeneratingMcpToken,
   onLogin,
@@ -1946,9 +1978,12 @@ function SettingsTab({
   isTezos: boolean;
   isEvm: boolean;
   connectedWallet: ConnectedWalletState | null;
+  onConnect: () => Promise<void>;
+  onDisconnect: () => Promise<void>;
   authSession: KilnAuthSession | null;
   mcpToken: string | null;
   isMcpLoggingIn: boolean;
+  isConnectingWallet: boolean;
   isRequestingMcpAccess: boolean;
   isGeneratingMcpToken: boolean;
   onLogin: (target?: EvmWalletTarget) => Promise<void>;
@@ -1961,6 +1996,10 @@ function SettingsTab({
   const tokenMeta = authSession?.user.currentMcpToken;
   const walletLabel = authSession?.user.walletAddress ?? connectedWallet?.address ?? 'No wallet login';
   const walletKindLabel = authSession?.user.walletKind ?? (isEvm ? 'evm' : 'tezos');
+  const { network } = useKilnNetwork();
+  const walletVerifiedForNetwork =
+    authSession?.user.lastLoginNetworkId === network.id &&
+    (!connectedWallet || authSession.user.walletAddress === connectedWallet.address);
   const canRequestAccess = Boolean(authSession) && !isRequestingMcpAccess;
   const canGenerateToken =
     Boolean(authSession) && accessStatus === 'approved' && !isGeneratingMcpToken;
@@ -1973,7 +2012,7 @@ function SettingsTab({
           Settings
         </h2>
             <p className="text-sm text-base-content/60 mt-1">
-          Verify wallet ownership, request MCP access, then generate a 24-hour agent token.
+          Connect and verify the wallet Kiln is allowed to use for this network, then generate agent access when needed.
         </p>
       </div>
 
@@ -1986,27 +2025,68 @@ function SettingsTab({
             </h3>
             <p className="text-xs text-base-content/60 mt-1">
               {isTezos
-                ? 'Uses the currently connected Beacon wallet from Setup.'
+                ? `Stores the exact Beacon wallet allowed to deploy on ${network.label}.`
                 : 'Uses Temple, MetaMask, or another EIP-1193 wallet for Etherlink.'}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-primary gap-2"
-            disabled={isMcpLoggingIn}
-            onClick={() => {
-              void onLogin();
-            }}
-          >
-            <KeyRound className="w-4 h-4" />
-            {isMcpLoggingIn ? 'Signing…' : authSession ? 'Re-verify' : 'Sign wallet'}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {isTezos ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  disabled={isConnectingWallet}
+                  onClick={() => {
+                    void onConnect();
+                  }}
+                >
+                  {isConnectingWallet ? 'Connecting…' : connectedWallet ? 'Reconnect' : 'Connect'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={!connectedWallet}
+                  onClick={() => {
+                    void onDisconnect();
+                  }}
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn-sm btn-primary gap-2"
+              disabled={isMcpLoggingIn || (isTezos && !connectedWallet)}
+              onClick={() => {
+                void onLogin();
+              }}
+            >
+              <KeyRound className="w-4 h-4" />
+              {isMcpLoggingIn ? 'Signing…' : authSession ? 'Re-verify' : 'Sign wallet'}
+            </button>
+          </div>
         </div>
         <div className="rounded-lg bg-base-200/50 border border-base-300 p-3 text-xs font-mono break-all">
+          {isTezos ? <div>Connected: {connectedWallet?.address ?? 'none'}</div> : null}
           <div>Wallet: {walletLabel}</div>
           <div>Kind: {walletKindLabel}</div>
+          <div>Network: {authSession?.user.lastLoginNetworkId ?? 'not verified'}</div>
           {authSession ? <div>Session expires: {new Date(authSession.expiresAt).toLocaleString()}</div> : null}
         </div>
+        {authSession ? (
+          <div
+            className={`alert text-xs ${
+              walletVerifiedForNetwork ? 'alert-success' : 'alert-warning'
+            }`}
+          >
+            <span>
+              {walletVerifiedForNetwork
+                ? `Deployment wallet verified for ${network.label}.`
+                : `Wallet login is not verified for the active ${network.label} signer.`}
+            </span>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
@@ -2017,7 +2097,7 @@ function SettingsTab({
               MCP access
             </h3>
             <p className="text-xs text-base-content/60 mt-1">
-              Kiln checks the accesslist and blocklist before enabling agent access.
+              Kiln allows verified wallets unless they are on the blocklist; rate limits still apply.
             </p>
           </div>
           <button
@@ -2408,6 +2488,7 @@ function DeployTab({
   useConnectedWalletAsContractAdmin,
   setUseConnectedWalletAsContractAdmin,
   connectedWallet,
+  verifiedTezosWalletAddress,
   clearanceId,
   lastWorkflow,
   solidityResult,
@@ -2424,6 +2505,7 @@ function DeployTab({
   useConnectedWalletAsContractAdmin: boolean;
   setUseConnectedWalletAsContractAdmin: (next: boolean) => void;
   connectedWallet: ConnectedWalletState | null;
+  verifiedTezosWalletAddress: string | null;
   clearanceId: string | null;
   lastWorkflow: WorkflowRunResponse | null;
   solidityResult: SolidityCompileResult | null;
@@ -2485,7 +2567,13 @@ function DeployTab({
   const deployReady =
     Boolean(lastWorkflow) &&
     Boolean(clearanceId) &&
-    (deployMode === 'puppet' ? canPuppet : Boolean(connectedWallet));
+    (deployMode === 'puppet'
+      ? canPuppet
+      : Boolean(
+          connectedWallet &&
+            verifiedTezosWalletAddress &&
+            connectedWallet.address === verifiedTezosWalletAddress,
+        ));
 
   return (
     <div className="space-y-4">
@@ -2516,8 +2604,12 @@ function DeployTab({
             Beacon origination from your Temple/Kukai wallet. Required on mainnet.
           </p>
           {connectedWallet ? (
-            <div className="text-[0.65rem] font-mono mt-2 text-base-content/60">
-              {connectedWallet.address}
+            <div className="text-[0.65rem] font-mono mt-2 text-base-content/60 space-y-1">
+              <div>Connected: {connectedWallet.address}</div>
+              <div>
+                Verified:{' '}
+                {verifiedTezosWalletAddress ? verifiedTezosWalletAddress : 'not signed'}
+              </div>
             </div>
           ) : (
             <button
@@ -2590,6 +2682,20 @@ function DeployTab({
         <div>
           <span className="opacity-60">Network: </span>
           {network.label}
+        </div>
+        <div>
+          <span className="opacity-60">Deployment signer: </span>
+          <span
+            className={
+              deployMode === 'connected' && verifiedTezosWalletAddress
+                ? 'font-mono text-success'
+                : 'text-warning'
+            }
+          >
+            {deployMode === 'connected'
+              ? verifiedTezosWalletAddress ?? 'verify in Settings'
+              : 'Bert puppet wallet'}
+          </span>
         </div>
         {network.tier === 'mainnet' ? (
           <div className="text-error">
