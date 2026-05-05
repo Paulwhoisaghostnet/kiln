@@ -151,130 +151,6 @@ def pair_chain(values: list[str]) -> str:
     return expr
 
 
-def comb_pair(values: list[str]) -> str:
-    return f"(Pair {' '.join(values)})"
-
-
-def tokenize_type_expression(source: str) -> list[str]:
-    return re.findall(r"\(|\)|[^\s()]+", source)
-
-
-def parse_type_expression(source: str) -> Any:
-    tokens = tokenize_type_expression(source)
-    index = 0
-
-    def parse_node() -> Any:
-        nonlocal index
-        if index >= len(tokens):
-            return None
-        token = tokens[index]
-        index += 1
-        if token == "(":
-            children: list[Any] = []
-            while index < len(tokens) and tokens[index] != ")":
-                child = parse_node()
-                if child is not None:
-                    children.append(child)
-            if index < len(tokens) and tokens[index] == ")":
-                index += 1
-            return children
-        if token == ")":
-            return None
-        return token
-
-    nodes: list[Any] = []
-    while index < len(tokens):
-        node = parse_node()
-        if node is not None:
-            nodes.append(node)
-    if len(nodes) == 1:
-        return nodes[0]
-    return nodes
-
-
-def type_head(node: Any) -> str | None:
-    if isinstance(node, str):
-        return node.lower()
-    if isinstance(node, list) and node and isinstance(node[0], str):
-        return node[0].lower()
-    return None
-
-
-def type_args(node: Any) -> list[Any]:
-    if not isinstance(node, list):
-        return []
-    return [
-        child
-        for child in node[1:]
-        if not (isinstance(child, str) and (child.startswith("%") or child.startswith("@") or child.startswith(":")))
-    ]
-
-
-def sample_args_for_type_node(node: Any, wallet: str) -> list[str]:
-    head = type_head(node)
-    if not head:
-        return []
-
-    if isinstance(node, str):
-        if head == "unit":
-            return ["Unit"]
-        if head in {"nat", "int", "mutez"}:
-            return ["1"]
-        if head == "bool":
-            return ["True"]
-        if head == "string":
-            return [escape_michelson_string("shadowbox")]
-        if head == "bytes":
-            return ["0x00"]
-        if head in {"address", "key_hash"}:
-            return [escape_michelson_string(wallet_address(wallet))]
-        if head == "timestamp":
-            return [escape_michelson_string("1970-01-01T00:00:00Z")]
-        if head == "chain_id":
-            return [escape_michelson_string("NetXsqzbfFenSTS")]
-        return []
-
-    args = type_args(node)
-    if head == "pair":
-        child_samples = [sample_args_for_type_node(child, wallet) for child in args]
-        if any(not samples for samples in child_samples):
-            return []
-        values = [samples[0] for samples in child_samples]
-        if len(values) < 2:
-            return values
-        candidates = [comb_pair(values)]
-        nested = pair_chain(values)
-        if nested not in candidates:
-            candidates.append(nested)
-        return candidates
-    if head == "or" and len(args) >= 2:
-        left = sample_args_for_type_node(args[0], wallet)
-        right = sample_args_for_type_node(args[1], wallet)
-        candidates: list[str] = []
-        if left:
-            candidates.append(f"(Left {left[0]})")
-        if right:
-            candidates.append(f"(Right {right[0]})")
-        return candidates
-    if head == "option" and args:
-        inner = sample_args_for_type_node(args[0], wallet)
-        return [f"(Some {inner[0]})", "None"] if inner else ["None"]
-    if head in {"list", "set"} and args:
-        inner = sample_args_for_type_node(args[0], wallet)
-        return [f"{{ {inner[0]} }}", "{}"] if inner else ["{}"]
-    if head in {"map", "big_map"} and len(args) >= 2:
-        key = sample_args_for_type_node(args[0], wallet)
-        value = sample_args_for_type_node(args[1], wallet)
-        return [f"{{ Elt {key[0]} {value[0]} }}", "{}"] if key and value else ["{}"]
-    return []
-
-
-def build_type_arg_candidates(parameter_type: str | None, wallet: str) -> list[str]:
-    if not parameter_type:
-        return []
-    return sample_args_for_type_node(parse_type_expression(parameter_type), wallet)
-
-
 def to_michelson_literal(value: Any) -> str | None:
     if value is None:
         return "Unit"
@@ -436,12 +312,15 @@ def build_arg_candidates(
     parameter_type: str | None = None,
     provided_candidates: list[str] | None = None,
 ) -> list[str]:
+    del parameter_type
     if entrypoint == "update_operators":
         return build_update_operators_args(wallet, args)
     arg = build_arg(entrypoint, wallet, args)
-    candidates = [arg] if arg is not None else []
-    candidates.extend(provided_candidates or [])
-    candidates.extend(build_type_arg_candidates(parameter_type, wallet))
+    using_provided_candidates = bool(provided_candidates)
+    candidates = [*(provided_candidates or [])]
+    if not using_provided_candidates and arg is not None:
+        candidates.append(arg)
+
     flexible_reachability_entrypoints = {
         "buy",
         "buy_item",
@@ -449,11 +328,16 @@ def build_arg_candidates(
         "fulfill_ask",
         "purchase",
     }
-    if entrypoint == "purchase":
+    if not using_provided_candidates and entrypoint == "purchase":
         candidates.extend(build_purchase_arg_candidates())
-    if entrypoint in flexible_reachability_entrypoints:
+    if not using_provided_candidates and entrypoint in flexible_reachability_entrypoints:
         candidates.extend(["Unit", "1"])
-    if len(args) == 1 and isinstance(args[0], (int, str)) and str(args[0]).strip().lstrip("-").isdigit():
+    if (
+        not using_provided_candidates
+        and len(args) == 1
+        and isinstance(args[0], (int, str))
+        and str(args[0]).strip().lstrip("-").isdigit()
+    ):
         candidates.append("Unit")
 
     unique: list[str] = []
@@ -845,6 +729,7 @@ def main(argv: list[str]) -> int:
             account = wallet_alias(wallet)
             call_result: subprocess.CompletedProcess[str] | None = None
             last_error_text = ""
+            failed_arg_exprs: list[str] = []
             timed_out = False
             for arg_expr in arg_exprs:
                 try:
@@ -872,8 +757,10 @@ def main(argv: list[str]) -> int:
                     )
                     break
                 except subprocess.CalledProcessError as error:
+                    failed_arg_exprs.append(arg_expr)
                     last_error_text = f"{error.stdout}\n{error.stderr}".strip()
                 except subprocess.TimeoutExpired:
+                    failed_arg_exprs.append(arg_expr)
                     timed_out = True
                     last_error_text = "Entrypoint call timed out."
                     break
@@ -898,7 +785,7 @@ def main(argv: list[str]) -> int:
                         "wallet": wallet,
                         "entrypoint": entrypoint,
                         "status": "failed",
-                        "note": last_error_text,
+                        "note": f"Tried arg candidates: {', '.join(failed_arg_exprs)}\n{last_error_text}",
                     }
                 )
             else:
@@ -908,7 +795,10 @@ def main(argv: list[str]) -> int:
                         "wallet": wallet,
                         "entrypoint": entrypoint,
                         "status": "failed",
-                        "note": last_error_text or "Entrypoint call failed.",
+                        "note": (
+                            f"Tried arg candidates: {', '.join(failed_arg_exprs)}\n"
+                            f"{last_error_text or 'Entrypoint call failed.'}"
+                        ),
                     }
                 )
 

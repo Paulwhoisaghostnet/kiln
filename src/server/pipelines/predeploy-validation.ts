@@ -1,7 +1,7 @@
 import type { AbiEntrypoint, WalletType } from '../../lib/types.js';
 import type { AppEnv } from '../../lib/env.js';
 import { injectKilnTokens } from '../../lib/kiln-injector.js';
-import { parseEntrypointsFromMichelson } from '../../lib/michelson-parser.js';
+import { readMichelsonEntrypoints } from '../../lib/taquito-michelson.js';
 import type {
   OriginationValidationResult,
   TezosServiceLike,
@@ -45,7 +45,7 @@ export async function runPredeployValidation(
   },
   dependencies: PredeployValidationDependencies,
 ): Promise<PredeployValidationResult> {
-  const entrypoints = parseEntrypointsFromMichelson(input.code);
+  const entrypoints = readMichelsonEntrypoints(input.code);
   const checks = {
     hasParameterSection: hasMichelsonSection(input.code, 'parameter'),
     hasStorageSection: hasMichelsonSection(input.code, 'storage'),

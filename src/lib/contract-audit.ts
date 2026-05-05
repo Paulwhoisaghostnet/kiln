@@ -1,4 +1,4 @@
-import { parseEntrypointsFromMichelson } from './michelson-parser.js';
+import { readMichelsonEntrypoints } from './taquito-michelson.js';
 
 export type AuditSeverity = 'info' | 'warning' | 'error';
 
@@ -41,7 +41,7 @@ function calculateScore(findings: AuditFinding[]): number {
 export function auditMichelsonContract(code: string): ContractAuditReport {
   const source = code.trim();
   const findings: AuditFinding[] = [];
-  const entrypoints = parseEntrypointsFromMichelson(source).map((entry) => entry.name);
+  const entrypoints = readMichelsonEntrypoints(source).map((entry) => entry.name);
 
   if (source.length === 0) {
     addFinding(findings, {

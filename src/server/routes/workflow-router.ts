@@ -11,7 +11,7 @@ import {
 } from '../../lib/contract-simulation.js';
 import { selectNetworkForRequest } from '../../lib/ecosystem-resolver.js';
 import { injectKilnTokens } from '../../lib/kiln-injector.js';
-import { parseEntrypointsFromMichelson } from '../../lib/michelson-parser.js';
+import { readMichelsonEntrypoints } from '../../lib/taquito-michelson.js';
 import {
   resolveSmartPyInitialStorage,
   runContractWorkflow,
@@ -220,7 +220,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           scenario: payload.data.scenario,
           compileSmartPy: services.compileSmartPy,
         });
-        const entrypoints = parseEntrypointsFromMichelson(source.michelson).map(
+        const entrypoints = readMichelsonEntrypoints(source.michelson).map(
           (entry) => entry.name,
         );
         const simulation = runContractSimulation({
@@ -290,7 +290,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           compiledInitialStorage: source.compiled?.initialStorage,
         }).initialStorage;
         const injectedCode = injectKilnTokens(source.michelson, services.env);
-        const parsedEntrypoints = parseEntrypointsFromMichelson(injectedCode);
+        const parsedEntrypoints = readMichelsonEntrypoints(injectedCode);
         const entrypoints = parsedEntrypoints.map((entry) => entry.name);
         const entrypointTypes = Object.fromEntries(
           parsedEntrypoints

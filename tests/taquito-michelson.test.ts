@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parseEntrypointsFromMichelson } from '../src/lib/michelson-parser.js';
+import { readMichelsonEntrypoints } from '../src/lib/taquito-michelson.js';
 
-describe('parseEntrypointsFromMichelson', () => {
+describe('readMichelsonEntrypoints', () => {
   it('extracts unique parameter annotations into entrypoints', () => {
     const michelson = `
       parameter
@@ -12,7 +12,7 @@ describe('parseEntrypointsFromMichelson', () => {
       code { CAR ; NIL operation ; PAIR };
     `;
 
-    const result = parseEntrypointsFromMichelson(michelson);
+    const result = readMichelsonEntrypoints(michelson);
 
     expect(result).toEqual([
       { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
@@ -26,7 +26,7 @@ describe('parseEntrypointsFromMichelson', () => {
   });
 
   it('returns empty array when no annotations are present', () => {
-    const result = parseEntrypointsFromMichelson(
+    const result = readMichelsonEntrypoints(
       'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
     );
 
@@ -40,7 +40,7 @@ describe('parseEntrypointsFromMichelson', () => {
       code { CAR ; NIL operation ; PAIR };
     `;
 
-    expect(parseEntrypointsFromMichelson(michelson)).toEqual([
+    expect(readMichelsonEntrypoints(michelson)).toEqual([
       { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
       { name: 'transfer', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
     ]);
@@ -56,7 +56,7 @@ describe('parseEntrypointsFromMichelson', () => {
       code { CAR ; NIL operation ; PAIR };
     `;
 
-    expect(parseEntrypointsFromMichelson(michelson)).toEqual([
+    expect(readMichelsonEntrypoints(michelson)).toEqual([
       {
         name: 'purchase',
         args: [],

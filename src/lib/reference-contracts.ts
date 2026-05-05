@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseEntrypointsFromMichelson } from './michelson-parser.js';
+import { readMichelsonEntrypoints } from './taquito-michelson.js';
 
 interface ReferenceIndexRow {
   slug: string;
@@ -179,7 +179,7 @@ async function parseEntrypointsFromFile(
       return parseEntrypointsFromMichelineJson(source);
     }
     return uniqueSorted(
-      parseEntrypointsFromMichelson(source).map((entrypoint) => entrypoint.name),
+      readMichelsonEntrypoints(source).map((entrypoint) => entrypoint.name),
     );
   } catch {
     return [];

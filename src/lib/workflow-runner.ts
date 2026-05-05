@@ -6,7 +6,7 @@ import {
   type DeploymentClearanceStore,
   type SimulationStepInput,
 } from './contract-simulation.js';
-import { parseEntrypointsFromMichelson } from './michelson-parser.js';
+import { readMichelsonEntrypoints } from './taquito-michelson.js';
 import type { ShadowboxRunResult } from './shadowbox-runtime.js';
 import type { SmartPyCompilationResult } from './smartpy-compiler.js';
 import {
@@ -154,7 +154,7 @@ export async function runContractWorkflow(
     }
   }
 
-  const parsedEntrypoints = parseEntrypointsFromMichelson(michelson);
+  const parsedEntrypoints = readMichelsonEntrypoints(michelson);
   const entrypoints = parsedEntrypoints.map((entry) => entry.name);
   const entrypointTypes = Object.fromEntries(
     parsedEntrypoints

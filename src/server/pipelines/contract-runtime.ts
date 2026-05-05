@@ -9,7 +9,7 @@ import {
 } from '../../lib/contract-simulation.js';
 import type { AppEnv } from '../../lib/env.js';
 import { injectKilnTokens } from '../../lib/kiln-injector.js';
-import { parseEntrypointsFromMichelson } from '../../lib/michelson-parser.js';
+import { readMichelsonEntrypoints } from '../../lib/taquito-michelson.js';
 import type { WalletType } from '../../lib/types.js';
 import type { TezosServiceLike } from '../../lib/tezos-service.js';
 import {
@@ -34,7 +34,7 @@ export async function deployContract(
   contractAddress: string;
   injectedCode: string;
   codeHash: string;
-  entrypoints: ReturnType<typeof parseEntrypointsFromMichelson>;
+  entrypoints: ReturnType<typeof readMichelsonEntrypoints>;
 }> {
   const injectedCode = injectKilnTokens(payload.code, dependencies.env);
   const codeHash = hashContractCode(injectedCode);
@@ -69,7 +69,7 @@ export async function deployContract(
     contractAddress,
     injectedCode,
     codeHash,
-    entrypoints: parseEntrypointsFromMichelson(payload.code),
+    entrypoints: readMichelsonEntrypoints(payload.code),
   };
 }
 

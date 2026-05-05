@@ -25,7 +25,7 @@ import {
 } from '../lib/ecosystem-resolver.js';
 import { injectKilnTokens } from '../lib/kiln-injector.js';
 import type { KilnUser } from '../lib/kiln-users.js';
-import { parseEntrypointsFromMichelson } from '../lib/michelson-parser.js';
+import { readMichelsonEntrypoints } from '../lib/taquito-michelson.js';
 import { listNetworkCatalog, listNetworkProfiles } from '../lib/networks.js';
 import { buildOpenApiSpec } from '../lib/openapi.js';
 import { buildGuidedContractDraft } from '../lib/guided-contracts.js';
@@ -413,7 +413,7 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
           scenario: payload.scenario,
           compileSmartPy: services.compileSmartPy,
         });
-        const entrypoints = parseEntrypointsFromMichelson(source.michelson).map(
+        const entrypoints = readMichelsonEntrypoints(source.michelson).map(
           (entry) => entry.name,
         );
         const simulation = runContractSimulation({
@@ -467,7 +467,7 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
           compiledInitialStorage: source.compiled?.initialStorage,
         }).initialStorage;
         const injectedCode = injectKilnTokens(source.michelson, services.env);
-        const parsedEntrypoints = parseEntrypointsFromMichelson(injectedCode);
+        const parsedEntrypoints = readMichelsonEntrypoints(injectedCode);
         const entrypoints = parsedEntrypoints.map((entry) => entry.name);
         const entrypointTypes = Object.fromEntries(
           parsedEntrypoints

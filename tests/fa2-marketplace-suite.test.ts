@@ -4,7 +4,7 @@ import {
   buildSuiteE2ESteps,
   buildSuiteWorkflowSteps,
 } from '../src/lib/fa2-marketplace-suite.js';
-import { parseEntrypointsFromMichelson } from '../src/lib/michelson-parser.js';
+import { readMichelsonEntrypoints } from '../src/lib/taquito-michelson.js';
 import { buildEntrypointCoverage } from '../src/lib/workflow-coverage.js';
 
 describe('FA2 marketplace suite fixture', () => {
@@ -35,7 +35,7 @@ describe('FA2 marketplace suite fixture', () => {
     const suite = buildFa2MarketplaceSuite();
 
     for (const contract of suite.contracts) {
-      expect(parseEntrypointsFromMichelson(contract.michelson).map((entry) => entry.name)).toEqual(
+      expect(readMichelsonEntrypoints(contract.michelson).map((entry) => entry.name)).toEqual(
         contract.entrypoints,
       );
       expect(contract.initialStorage).toContain(suite.placeholders.adminAddress);
