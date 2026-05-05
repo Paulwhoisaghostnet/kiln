@@ -26,6 +26,13 @@ print(json.dumps({
   "externalKt1s": module.extract_external_kt1_addresses('(Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" (Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" "KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE"))'),
   "rewrittenStorage": module.replace_external_kt1_addresses('(Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" "KT1JYEAg9FSC6mY9KHNR7Z7kpHpwsDnjKkKE")', {'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton': 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg'}),
   "needsFa2Fixture": module.source_needs_fa2_fixture('code { CONTRACT %transfer (list (pair address unit)) ; DROP }', '(Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" 0)'),
+  "dependencyRequirements": [
+    {"entrypoint": item.entrypoint, "parameterType": item.parameter_type}
+    for item in module.extract_contract_entrypoint_requirements('code { CONTRACT %transfer (list (pair address unit)) ; DROP ; CONTRACT %ping string ; DROP }')
+  ],
+  "genericPlanKind": module.infer_dependency_fixture_plan('code { CONTRACT %ping string ; DROP }', '"KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton"').kind,
+  "addressSinkPlanKind": module.infer_dependency_fixture_plan('code { DROP }', '"KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton"').kind,
+  "genericFixture": module.build_generic_fixture_contract_source(tuple(module.extract_contract_entrypoint_requirements('code { CONTRACT %ping string ; DROP }'))),
   "createTokenArg": module.build_fa2_fixture_create_token_arg(1),
   "mintArg": module.build_fa2_fixture_mint_arg("ernie", [0, 1]),
   "operatorArg": module.build_fa2_fixture_operator_arg("ernie", "KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg", [0, 1]),
@@ -48,6 +55,10 @@ print(json.dumps({
     externalKt1s: string[];
     rewrittenStorage: [string, number];
     needsFa2Fixture: boolean;
+    dependencyRequirements: Array<{ entrypoint: string; parameterType: string }>;
+    genericPlanKind: string;
+    addressSinkPlanKind: string;
+    genericFixture: string;
     createTokenArg: string;
     mintArg: string;
     operatorArg: string;
@@ -93,6 +104,13 @@ describe('Flextesa shadowbox runner argument compatibility', () => {
       1,
     ]);
     expect(expressions.needsFa2Fixture).toBe(true);
+    expect(expressions.dependencyRequirements).toEqual([
+      { entrypoint: 'transfer', parameterType: '(list (pair address unit))' },
+      { entrypoint: 'ping', parameterType: 'string' },
+    ]);
+    expect(expressions.genericPlanKind).toBe('generic');
+    expect(expressions.addressSinkPlanKind).toBe('address-sink');
+    expect(expressions.genericFixture).toContain('(string %ping)');
     expect(expressions.createTokenArg).toBe(
       '{ Pair 1 (Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" (Pair 1000000 {})) }',
     );

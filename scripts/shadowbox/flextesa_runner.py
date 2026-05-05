@@ -39,6 +39,20 @@ BURN_PLACEHOLDER_ADDRESS = "tz1burnburnburnburnburnburnburjAYjjX"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FA2_FIXTURE_CONTRACT_PATH = PROJECT_ROOT / "contracts" / "tokens" / "test-silver.tz"
 FA2_FIXTURE_STORAGE_PATH = PROJECT_ROOT / "contracts" / "tokens" / "test-silver.storage.tz"
+FA2_FIXTURE_ENTRYPOINTS = {
+    "admin",
+    "assets",
+    "balance_of",
+    "burn_tokens",
+    "confirm_admin",
+    "create_token",
+    "mint_tokens",
+    "pause",
+    "set_admin",
+    "tokens",
+    "transfer",
+    "update_operators",
+}
 
 
 @dataclass
@@ -49,6 +63,18 @@ class RuntimeConfig:
     rpc_wait_seconds: int
     start_timeout_seconds: int
     docker_bin: str
+
+
+@dataclass(frozen=True)
+class ContractEntrypointRequirement:
+    entrypoint: str
+    parameter_type: str
+
+
+@dataclass(frozen=True)
+class DependencyFixturePlan:
+    kind: str
+    requirements: tuple[ContractEntrypointRequirement, ...]
 
 
 def env_int(name: str, default: int) -> int:
@@ -157,6 +183,179 @@ def originate_shadowbox_contract(
     )
 
 
+def tokenize_michelson(source: str) -> list[str]:
+    tokens: list[str] = []
+    index = 0
+    while index < len(source):
+        char = source[index]
+        if char.isspace():
+            index += 1
+            continue
+        if char == "#":
+            while index < len(source) and source[index] != "\n":
+                index += 1
+            continue
+        if char == '"':
+            start = index
+            index += 1
+            while index < len(source):
+                if source[index] == "\\":
+                    index += 2
+                    continue
+                if source[index] == '"':
+                    index += 1
+                    break
+                index += 1
+            tokens.append(source[start:index])
+            continue
+        if char in "(){};":
+            tokens.append(char)
+            index += 1
+            continue
+
+        start = index
+        while (
+            index < len(source)
+            and not source[index].isspace()
+            and source[index] not in '(){};"#'
+        ):
+            index += 1
+        tokens.append(source[start:index])
+    return tokens
+
+
+def tokens_to_michelson(tokens: list[str]) -> str:
+    text = " ".join(tokens)
+    return (
+        text.replace("( ", "(")
+        .replace(" )", ")")
+        .replace("{ ", "{")
+        .replace(" }", "}")
+        .replace(" ;", ";")
+    )
+
+
+def tokens_have_single_outer_parens(tokens: list[str]) -> bool:
+    if len(tokens) < 2 or tokens[0] != "(" or tokens[-1] != ")":
+        return False
+
+    depth = 0
+    for index, token in enumerate(tokens):
+        if token == "(":
+            depth += 1
+        elif token == ")":
+            depth -= 1
+            if depth == 0 and index != len(tokens) - 1:
+                return False
+    return depth == 0
+
+
+def entrypoint_branch_type(parameter_type: str, entrypoint: str) -> str:
+    tokens = tokenize_michelson(parameter_type)
+    if tokens_have_single_outer_parens(tokens):
+        tokens = tokens[1:-1]
+    if not tokens:
+        tokens = ["unit"]
+
+    primitive = tokens[0]
+    if primitive.startswith("%"):
+        tokens = ["unit", *tokens]
+        primitive = "unit"
+    return tokens_to_michelson(["(", primitive, f"%{entrypoint}", *tokens[1:], ")"])
+
+
+def build_or_type(branches: list[str]) -> str:
+    if not branches:
+        return "unit"
+    expr = branches[-1]
+    for branch in reversed(branches[:-1]):
+        expr = f"(or {branch} {expr})"
+    return expr
+
+
+def extract_contract_entrypoint_requirements(source: str) -> list[ContractEntrypointRequirement]:
+    tokens = tokenize_michelson(source)
+    requirements: list[ContractEntrypointRequirement] = []
+    seen: set[tuple[str, str]] = set()
+    index = 0
+    while index < len(tokens):
+        if tokens[index] != "CONTRACT":
+            index += 1
+            continue
+
+        entrypoint = "default"
+        type_start = index + 1
+        if type_start < len(tokens) and tokens[type_start].startswith("%"):
+            entrypoint = tokens[type_start][1:]
+            type_start += 1
+
+        type_tokens: list[str] = []
+        depth = 0
+        cursor = type_start
+        while cursor < len(tokens):
+            token = tokens[cursor]
+            if token == ";" and depth == 0:
+                break
+            if token in {"(", "{"}:
+                depth += 1
+            elif token in {")", "}"}:
+                depth -= 1
+            type_tokens.append(token)
+            cursor += 1
+
+        parameter_type = tokens_to_michelson(type_tokens).strip()
+        key = (entrypoint, parameter_type)
+        if entrypoint and parameter_type and key not in seen:
+            requirements.append(
+                ContractEntrypointRequirement(
+                    entrypoint=entrypoint,
+                    parameter_type=parameter_type,
+                )
+            )
+            seen.add(key)
+        index = max(cursor + 1, index + 1)
+    return requirements
+
+
+def infer_dependency_fixture_plan(source: str, initial_storage: str) -> DependencyFixturePlan | None:
+    if not extract_external_kt1_addresses(initial_storage):
+        return None
+
+    requirements = tuple(extract_contract_entrypoint_requirements(source))
+    if not requirements:
+        return DependencyFixturePlan(kind="address-sink", requirements=())
+
+    required_entrypoints = {item.entrypoint.lower() for item in requirements}
+    if required_entrypoints <= FA2_FIXTURE_ENTRYPOINTS:
+        return DependencyFixturePlan(kind="fa2", requirements=requirements)
+
+    return DependencyFixturePlan(kind="generic", requirements=requirements)
+
+
+def build_generic_fixture_contract_source(
+    requirements: tuple[ContractEntrypointRequirement, ...],
+) -> str:
+    branches: list[str] = []
+    default_requirement = next(
+        (item for item in requirements if item.entrypoint.lower() == "default"),
+        None,
+    )
+    if default_requirement:
+        branches.append(entrypoint_branch_type(default_requirement.parameter_type, "default"))
+    else:
+        branches.append("(unit %default)")
+
+    for requirement in requirements:
+        if requirement.entrypoint.lower() == "default":
+            continue
+        branch = entrypoint_branch_type(requirement.parameter_type, requirement.entrypoint)
+        if branch not in branches:
+            branches.append(branch)
+
+    parameter_type = build_or_type(branches)
+    return f"parameter {parameter_type};\nstorage unit;\ncode {{ CDR ; NIL operation ; PAIR }};\n"
+
+
 def contract_source_uses_entrypoint(source: str, entrypoint: str) -> bool:
     return any(
         match.group(1).lower() == entrypoint.lower()
@@ -165,10 +364,8 @@ def contract_source_uses_entrypoint(source: str, entrypoint: str) -> bool:
 
 
 def source_needs_fa2_fixture(source: str, initial_storage: str) -> bool:
-    return bool(extract_external_kt1_addresses(initial_storage)) and contract_source_uses_entrypoint(
-        source,
-        "transfer",
-    )
+    plan = infer_dependency_fixture_plan(source, initial_storage)
+    return bool(plan and plan.kind == "fa2")
 
 
 def extract_external_kt1_addresses(initial_storage: str) -> list[str]:
@@ -302,6 +499,55 @@ def approve_fa2_fixture_operator(
             entrypoint="update_operators",
             arg=build_fa2_fixture_operator_arg(owner_wallet, operator_address, [0, 1]),
         )
+
+
+def originate_dependency_fixture(
+    config: RuntimeConfig,
+    container_name: str,
+    tmp_files: list[Path],
+    *,
+    fixture_index: int,
+    external_address: str,
+    plan: DependencyFixturePlan,
+) -> dict[str, str]:
+    fixture_alias = f"shadowbox_dep_{fixture_index}"
+    if plan.kind == "fa2":
+        source = read_fa2_fixture_contract_source()
+        initial_storage = read_fa2_fixture_initial_storage()
+    else:
+        source = build_generic_fixture_contract_source(plan.requirements)
+        initial_storage = "Unit"
+
+    fixture_remote_path = copy_source_to_container(
+        config,
+        container_name,
+        source,
+        tmp_files,
+        alias=fixture_alias,
+    )
+    fixture_origination = originate_shadowbox_contract(
+        config,
+        container_name,
+        alias=fixture_alias,
+        remote_path=fixture_remote_path,
+        initial_storage=initial_storage,
+    )
+    fixture_address = parse_contract_address(
+        f"{fixture_origination.stdout}\n{fixture_origination.stderr}",
+    )
+    if not fixture_address:
+        raise RuntimeError(f"Could not parse KT1 address from {fixture_alias} fixture origination output.")
+
+    if plan.kind == "fa2":
+        seed_fa2_fixture_balances(config, container_name, fixture_address)
+
+    return {
+        "id": f"shadowbox:dependency:{fixture_index}",
+        "address": fixture_address,
+        "externalAddress": external_address,
+        "kind": plan.kind,
+        "entrypoints": ",".join(item.entrypoint for item in plan.requirements),
+    }
 
 
 def wait_for_rpc(port: int, timeout_seconds: int) -> bool:
@@ -692,7 +938,7 @@ def main(argv: list[str]) -> int:
 
         originated_contracts: list[dict[str, str]] = []
         support_contracts: list[dict[str, str]] = []
-        fa2_fixture_by_external_address: dict[str, dict[str, str]] = {}
+        dependency_fixture_by_external_address: dict[str, dict[str, str]] = {}
 
         for contract_index, contract_spec in enumerate(contract_specs):
             alias = f"shadowbox_{contract_index + 1}"
@@ -700,54 +946,38 @@ def main(argv: list[str]) -> int:
             contract_source = contract_spec["michelson"]
             initial_storage = contract_spec["initialStorage"]
 
-            if source_needs_fa2_fixture(contract_source, initial_storage):
+            dependency_plan = infer_dependency_fixture_plan(contract_source, initial_storage)
+            if dependency_plan:
                 replacements: dict[str, str] = {}
                 for external_address in extract_external_kt1_addresses(initial_storage):
-                    fixture = fa2_fixture_by_external_address.get(external_address)
+                    fixture = dependency_fixture_by_external_address.get(external_address)
                     if not fixture:
-                        fixture_index = len(fa2_fixture_by_external_address) + 1
-                        fixture_alias = f"shadowbox_fa2_{fixture_index}"
+                        fixture_index = len(dependency_fixture_by_external_address) + 1
                         try:
-                            fixture_remote_path = copy_source_to_container(
+                            fixture = originate_dependency_fixture(
                                 config,
                                 container_name,
-                                read_fa2_fixture_contract_source(),
                                 tmp_files,
-                                alias=fixture_alias,
+                                fixture_index=fixture_index,
+                                external_address=external_address,
+                                plan=dependency_plan,
                             )
-                            fixture_origination = originate_shadowbox_contract(
-                                config,
-                                container_name,
-                                alias=fixture_alias,
-                                remote_path=fixture_remote_path,
-                                initial_storage=read_fa2_fixture_initial_storage(),
-                            )
-                            fixture_address = parse_contract_address(
-                                f"{fixture_origination.stdout}\n{fixture_origination.stderr}",
-                            )
-                            if not fixture_address:
-                                warnings.append(
-                                    f"Could not parse KT1 address from {fixture_alias} fixture origination output.",
-                                )
-                                write_output(output_path, runner_output)
-                                return 0
-                            seed_fa2_fixture_balances(config, container_name, fixture_address)
-                        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                        except (
+                            OSError,
+                            RuntimeError,
+                            subprocess.CalledProcessError,
+                            subprocess.TimeoutExpired,
+                        ) as error:
                             error_text = (
                                 f"{getattr(error, 'stdout', '')}\n{getattr(error, 'stderr', '')}"
                             ).strip()
                             warnings.append(
-                                f"FA2 fixture setup failed for external dependency {external_address}: {error_text or error}",
+                                f"Dependency fixture setup failed for external KT1 {external_address}: {error_text or error}",
                             )
                             write_output(output_path, runner_output)
                             return 0
 
-                        fixture = {
-                            "id": f"shadowbox:fa2:{fixture_index}",
-                            "address": fixture_address,
-                            "externalAddress": external_address,
-                        }
-                        fa2_fixture_by_external_address[external_address] = fixture
+                        dependency_fixture_by_external_address[external_address] = fixture
                         support_contracts.append(fixture)
 
                     replacements[external_address] = fixture["address"]
@@ -760,8 +990,14 @@ def main(argv: list[str]) -> int:
                     mapping = ", ".join(
                         f"{source} -> {target}" for source, target in replacements.items()
                     )
+                    entrypoints = ", ".join(item.entrypoint for item in dependency_plan.requirements)
+                    detail = (
+                        f" using {dependency_plan.kind} fixture(s)"
+                        if not entrypoints
+                        else f" using {dependency_plan.kind} fixture(s) for {entrypoints}"
+                    )
                     warnings.append(
-                        f"{contract_spec['id']}: mapped {replacement_count} external FA2 KT1 reference(s) into Flextesa fixtures: {mapping}.",
+                        f"{contract_spec['id']}: mapped {replacement_count} external KT1 reference(s) into Flextesa{detail}: {mapping}.",
                     )
 
             with tempfile.NamedTemporaryFile(
@@ -900,10 +1136,15 @@ def main(argv: list[str]) -> int:
             write_output(output_path, runner_output)
             return 0
 
-        if fa2_fixture_by_external_address:
+        fa2_fixtures = [
+            fixture
+            for fixture in dependency_fixture_by_external_address.values()
+            if fixture.get("kind") == "fa2"
+        ]
+        if fa2_fixtures:
             try:
                 for target_contract in originated_contracts:
-                    for fixture in fa2_fixture_by_external_address.values():
+                    for fixture in fa2_fixtures:
                         approve_fa2_fixture_operator(
                             config,
                             container_name,
