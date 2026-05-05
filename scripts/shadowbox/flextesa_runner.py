@@ -34,6 +34,11 @@ HEX_RE = re.compile(r"^0x[0-9a-fA-F]+$")
 KT1_RE = re.compile(r"(KT1[1-9A-HJ-NP-Za-km-z]{33})")
 OPHASH_RE = re.compile(r"\b(o[pn][A-Za-z0-9]{30,})\b")
 LEVEL_RE = re.compile(r"level[:\s]+(\d+)", re.IGNORECASE)
+CONTRACT_ENTRYPOINT_RE = re.compile(r"\bCONTRACT\s+%([A-Za-z0-9_]+)\b", re.IGNORECASE)
+BURN_PLACEHOLDER_ADDRESS = "tz1burnburnburnburnburnburnburjAYjjX"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+FA2_FIXTURE_CONTRACT_PATH = PROJECT_ROOT / "contracts" / "tokens" / "test-silver.tz"
+FA2_FIXTURE_STORAGE_PATH = PROJECT_ROOT / "contracts" / "tokens" / "test-silver.storage.tz"
 
 
 @dataclass
@@ -92,6 +97,211 @@ def docker_exec(
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     return run([config.docker_bin, "exec", container_name, *args], timeout=timeout, check=check)
+
+
+def copy_source_to_container(
+    config: RuntimeConfig,
+    container_name: str,
+    source: str,
+    tmp_files: list[Path],
+    *,
+    alias: str,
+) -> str:
+    remote_path = f"/tmp/{alias}.tz"
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".tz",
+        prefix="kiln-shadowbox-",
+        delete=False,
+        encoding="utf-8",
+    ) as handle:
+        handle.write(source)
+        tmp_file = Path(handle.name)
+        tmp_files.append(tmp_file)
+
+    run([config.docker_bin, "cp", str(tmp_file), f"{container_name}:{remote_path}"], timeout=15)
+    return remote_path
+
+
+def originate_shadowbox_contract(
+    config: RuntimeConfig,
+    container_name: str,
+    *,
+    alias: str,
+    remote_path: str,
+    initial_storage: str,
+) -> subprocess.CompletedProcess[str]:
+    return docker_exec(
+        config,
+        container_name,
+        [
+            "octez-client",
+            "-M",
+            "client",
+            "originate",
+            "contract",
+            alias,
+            "transferring",
+            "0",
+            "from",
+            "alice",
+            "running",
+            remote_path,
+            "--init",
+            initial_storage,
+            "--burn-cap",
+            "10",
+            "--force",
+        ],
+        timeout=75,
+    )
+
+
+def contract_source_uses_entrypoint(source: str, entrypoint: str) -> bool:
+    return any(
+        match.group(1).lower() == entrypoint.lower()
+        for match in CONTRACT_ENTRYPOINT_RE.finditer(source)
+    )
+
+
+def source_needs_fa2_fixture(source: str, initial_storage: str) -> bool:
+    return bool(extract_external_kt1_addresses(initial_storage)) and contract_source_uses_entrypoint(
+        source,
+        "transfer",
+    )
+
+
+def extract_external_kt1_addresses(initial_storage: str) -> list[str]:
+    unique: list[str] = []
+    for address in KT1_RE.findall(initial_storage):
+        if address not in unique:
+            unique.append(address)
+    return unique
+
+
+def replace_external_kt1_addresses(
+    initial_storage: str,
+    replacements: dict[str, str],
+) -> tuple[str, int]:
+    replaced_count = 0
+
+    def replace_match(match: re.Match[str]) -> str:
+        nonlocal replaced_count
+        original = match.group(1)
+        replacement = replacements.get(original)
+        if not replacement:
+            return original
+        replaced_count += 1
+        return replacement
+
+    return KT1_RE.sub(replace_match, initial_storage), replaced_count
+
+
+def read_fa2_fixture_contract_source() -> str:
+    return FA2_FIXTURE_CONTRACT_PATH.read_text(encoding="utf-8")
+
+
+def read_fa2_fixture_initial_storage() -> str:
+    return FA2_FIXTURE_STORAGE_PATH.read_text(encoding="utf-8").strip().replace(
+        BURN_PLACEHOLDER_ADDRESS,
+        wallet_address("bert"),
+    )
+
+
+def build_fa2_fixture_create_token_arg(token_id: int) -> str:
+    owner = escape_michelson_string(wallet_address("bert"))
+    return f"{{ Pair {token_id} (Pair {owner} (Pair 1000000 {{}})) }}"
+
+
+def build_fa2_fixture_mint_arg(wallet: str, token_ids: list[int]) -> str:
+    receiver = escape_michelson_string(wallet_address(wallet))
+    items = "; ".join(f"Pair {token_id} (Pair {receiver} 1000000)" for token_id in token_ids)
+    return f"{{ {items} }}"
+
+
+def build_fa2_fixture_operator_arg(owner_wallet: str, operator_address: str, token_ids: list[int]) -> str:
+    owner = escape_michelson_string(wallet_address(owner_wallet))
+    operator = escape_michelson_string(operator_address)
+    items = "; ".join(
+        f"Left (Pair {owner} (Pair {operator} {token_id}))" for token_id in token_ids
+    )
+    return f"{{ {items} }}"
+
+
+def transfer_to_contract(
+    config: RuntimeConfig,
+    container_name: str,
+    *,
+    source_alias: str,
+    target_address: str,
+    entrypoint: str,
+    arg: str,
+    amount_tez: str = "0",
+    burn_cap: str = "2",
+) -> subprocess.CompletedProcess[str]:
+    return docker_exec(
+        config,
+        container_name,
+        [
+            "octez-client",
+            "-M",
+            "client",
+            "transfer",
+            amount_tez,
+            "from",
+            source_alias,
+            "to",
+            target_address,
+            "--entrypoint",
+            entrypoint,
+            "--arg",
+            arg,
+            "--burn-cap",
+            burn_cap,
+        ],
+        timeout=75,
+    )
+
+
+def seed_fa2_fixture_balances(
+    config: RuntimeConfig,
+    container_name: str,
+    fixture_address: str,
+) -> None:
+    transfer_to_contract(
+        config,
+        container_name,
+        source_alias="alice",
+        target_address=fixture_address,
+        entrypoint="create_token",
+        arg=build_fa2_fixture_create_token_arg(1),
+    )
+    transfer_to_contract(
+        config,
+        container_name,
+        source_alias="alice",
+        target_address=fixture_address,
+        entrypoint="mint_tokens",
+        arg=build_fa2_fixture_mint_arg("ernie", [0, 1]),
+    )
+
+
+def approve_fa2_fixture_operator(
+    config: RuntimeConfig,
+    container_name: str,
+    *,
+    fixture_address: str,
+    operator_address: str,
+) -> None:
+    for owner_wallet in ["bert", "ernie"]:
+        transfer_to_contract(
+            config,
+            container_name,
+            source_alias=wallet_alias(owner_wallet),
+            target_address=fixture_address,
+            entrypoint="update_operators",
+            arg=build_fa2_fixture_operator_arg(owner_wallet, operator_address, [0, 1]),
+        )
 
 
 def wait_for_rpc(port: int, timeout_seconds: int) -> bool:
@@ -481,11 +691,78 @@ def main(argv: list[str]) -> int:
             )
 
         originated_contracts: list[dict[str, str]] = []
+        support_contracts: list[dict[str, str]] = []
+        fa2_fixture_by_external_address: dict[str, dict[str, str]] = {}
 
         for contract_index, contract_spec in enumerate(contract_specs):
             alias = f"shadowbox_{contract_index + 1}"
             remote_path = f"/tmp/{alias}.tz"
             contract_source = contract_spec["michelson"]
+            initial_storage = contract_spec["initialStorage"]
+
+            if source_needs_fa2_fixture(contract_source, initial_storage):
+                replacements: dict[str, str] = {}
+                for external_address in extract_external_kt1_addresses(initial_storage):
+                    fixture = fa2_fixture_by_external_address.get(external_address)
+                    if not fixture:
+                        fixture_index = len(fa2_fixture_by_external_address) + 1
+                        fixture_alias = f"shadowbox_fa2_{fixture_index}"
+                        try:
+                            fixture_remote_path = copy_source_to_container(
+                                config,
+                                container_name,
+                                read_fa2_fixture_contract_source(),
+                                tmp_files,
+                                alias=fixture_alias,
+                            )
+                            fixture_origination = originate_shadowbox_contract(
+                                config,
+                                container_name,
+                                alias=fixture_alias,
+                                remote_path=fixture_remote_path,
+                                initial_storage=read_fa2_fixture_initial_storage(),
+                            )
+                            fixture_address = parse_contract_address(
+                                f"{fixture_origination.stdout}\n{fixture_origination.stderr}",
+                            )
+                            if not fixture_address:
+                                warnings.append(
+                                    f"Could not parse KT1 address from {fixture_alias} fixture origination output.",
+                                )
+                                write_output(output_path, runner_output)
+                                return 0
+                            seed_fa2_fixture_balances(config, container_name, fixture_address)
+                        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                            error_text = (
+                                f"{getattr(error, 'stdout', '')}\n{getattr(error, 'stderr', '')}"
+                            ).strip()
+                            warnings.append(
+                                f"FA2 fixture setup failed for external dependency {external_address}: {error_text or error}",
+                            )
+                            write_output(output_path, runner_output)
+                            return 0
+
+                        fixture = {
+                            "id": f"shadowbox:fa2:{fixture_index}",
+                            "address": fixture_address,
+                            "externalAddress": external_address,
+                        }
+                        fa2_fixture_by_external_address[external_address] = fixture
+                        support_contracts.append(fixture)
+
+                    replacements[external_address] = fixture["address"]
+
+                initial_storage, replacement_count = replace_external_kt1_addresses(
+                    initial_storage,
+                    replacements,
+                )
+                if replacement_count > 0:
+                    mapping = ", ".join(
+                        f"{source} -> {target}" for source, target in replacements.items()
+                    )
+                    warnings.append(
+                        f"{contract_spec['id']}: mapped {replacement_count} external FA2 KT1 reference(s) into Flextesa fixtures: {mapping}.",
+                    )
 
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -518,7 +795,7 @@ def main(argv: list[str]) -> int:
                         "running",
                         remote_path,
                         "--init",
-                        contract_spec["initialStorage"],
+                        initial_storage,
                         "--burn-cap",
                         "10",
                         "--force",
@@ -559,7 +836,7 @@ def main(argv: list[str]) -> int:
                                     "running",
                                     remote_path,
                                     "--init",
-                                    contract_spec["initialStorage"],
+                                    initial_storage,
                                     "--burn-cap",
                                     "10",
                                     "--force",
@@ -623,10 +900,32 @@ def main(argv: list[str]) -> int:
             write_output(output_path, runner_output)
             return 0
 
+        if fa2_fixture_by_external_address:
+            try:
+                for target_contract in originated_contracts:
+                    for fixture in fa2_fixture_by_external_address.values():
+                        approve_fa2_fixture_operator(
+                            config,
+                            container_name,
+                            fixture_address=fixture["address"],
+                            operator_address=target_contract["address"],
+                        )
+                warnings.append(
+                    "Shadowbox FA2 fixtures preloaded token_ids 0 and 1 for Bert/Ernie and approved originated target contracts as operators.",
+                )
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                error_text = (
+                    f"{getattr(error, 'stdout', '')}\n{getattr(error, 'stderr', '')}"
+                ).strip()
+                warnings.append(f"FA2 fixture operator setup failed: {error_text or error}")
+                write_output(output_path, runner_output)
+                return 0
+
         contract_address = originated_contracts[0]["address"]
+        all_contracts = [*originated_contracts, *support_contracts]
         runner_output["contractAddress"] = contract_address
-        runner_output["contracts"] = originated_contracts
-        address_by_id = {item["id"]: item["address"] for item in originated_contracts}
+        runner_output["contracts"] = all_contracts
+        address_by_id = {item["id"]: item["address"] for item in all_contracts}
 
         for index, raw_step in enumerate(steps_in):
             if not isinstance(raw_step, dict):
