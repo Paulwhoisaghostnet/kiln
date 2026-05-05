@@ -41,6 +41,12 @@ type TezosWalletHandle = {
   networkId: KilnNetworkId;
 };
 
+type BeaconAccountNetwork = {
+  type?: string;
+  name?: string;
+  rpcUrl?: string;
+};
+
 let activeHandle: TezosWalletHandle | null = null;
 let initializingFor: KilnNetworkId | null = null;
 let initializing: Promise<TezosWalletHandle> | null = null;
@@ -85,6 +91,86 @@ function clearStaleBeaconStorage(): void {
 function normalizedBeaconNetworkName(networkId: KilnNetworkId): string {
   const profile = getNetworkProfile(networkId);
   return profile.beaconNetworkName ?? profile.id.replace('tezos-', '');
+}
+
+function normalizedNetworkValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim()
+    ? value.trim().toLowerCase()
+    : null;
+}
+
+function normalizedRpcUrl(value: string | null): string | null {
+  return value ? value.replace(/\/+$/, '').toLowerCase() : null;
+}
+
+function describeBeaconAccountNetwork(network: BeaconAccountNetwork | null): string {
+  if (!network) {
+    return 'an unknown network';
+  }
+
+  const parts = [
+    normalizedNetworkValue(network.type),
+    normalizedNetworkValue(network.name),
+    normalizedRpcUrl(network.rpcUrl ?? null),
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? parts.join(' / ') : 'an unknown network';
+}
+
+function beaconNetworkLooksLikeExpected(
+  network: BeaconAccountNetwork,
+  networkId: KilnNetworkId,
+): boolean {
+  const profile = getNetworkProfile(networkId);
+  const expectedType = normalizedNetworkValue(resolveBeaconNetworkType(networkId));
+  const expectedName = normalizedBeaconNetworkName(networkId).toLowerCase();
+  const expectedRpcUrl = normalizedRpcUrl(profile.defaultRpcUrl);
+  const actualType = normalizedNetworkValue(network.type);
+  const actualName = normalizedNetworkValue(network.name);
+  const actualRpcUrl = normalizedRpcUrl(network.rpcUrl ?? null);
+
+  if (!actualType && !actualName && !actualRpcUrl) {
+    return false;
+  }
+
+  if (actualType) {
+    if (actualType === expectedType) {
+      return true;
+    }
+
+    return (
+      actualType === 'custom' &&
+      profile.tier !== 'mainnet' &&
+      (actualName?.includes(expectedName) || actualRpcUrl === expectedRpcUrl)
+    );
+  }
+
+  if (actualName) {
+    return profile.tier === 'mainnet'
+      ? actualName === expectedName
+      : actualName.includes(expectedName);
+  }
+
+  return actualRpcUrl === expectedRpcUrl;
+}
+
+async function assertNetworkRpcChainId(
+  network: BeaconAccountNetwork,
+  networkId: KilnNetworkId,
+): Promise<void> {
+  const profile = getNetworkProfile(networkId);
+  const rpcUrl = network.rpcUrl;
+  if (!profile.chainId || !rpcUrl) {
+    return;
+  }
+
+  const verifier = new TezosToolkit(rpcUrl);
+  const chainId = await verifier.rpc.getChainId();
+  if (chainId !== profile.chainId) {
+    throw new Error(
+      `Wallet RPC chain mismatch: expected ${profile.chainId} (${profile.label}), got ${chainId}.`,
+    );
+  }
 }
 
 /**
@@ -148,25 +234,19 @@ async function assertExpectedNetwork(
   networkId: KilnNetworkId,
 ): Promise<void> {
   const profile = getNetworkProfile(networkId);
-  const expectedName = normalizedBeaconNetworkName(networkId);
 
   const account = await handle.wallet.client.getActiveAccount();
-  const accountNetworkName = account?.network?.name?.toLowerCase() ?? null;
+  const accountNetwork = (account?.network ?? null) as BeaconAccountNetwork | null;
 
-  // Shadownet/ghostnet need a substring match to allow custom labels (e.g.
-  // `shadownet-test-rc1`). Mainnet must be an exact match to prevent someone
-  // accidentally signing on the wrong chain.
-  if (profile.tier === 'mainnet') {
-    if (accountNetworkName && accountNetworkName !== expectedName) {
-      throw new Error(
-        `Wallet is on ${accountNetworkName}. Switch to Tezos Mainnet and reconnect.`,
-      );
-    }
-  } else if (accountNetworkName && !accountNetworkName.includes(expectedName)) {
+  if (!accountNetwork || !beaconNetworkLooksLikeExpected(accountNetwork, networkId)) {
     throw new Error(
-      `Wallet connected to ${accountNetworkName}. Please switch to ${profile.label} and reconnect.`,
+      `Wallet connected to ${describeBeaconAccountNetwork(
+        accountNetwork,
+      )}. Please switch to ${profile.label} and reconnect.`,
     );
   }
+
+  await assertNetworkRpcChainId(accountNetwork, networkId);
 
   if (!profile.chainId) {
     return;
@@ -175,7 +255,7 @@ async function assertExpectedNetwork(
   const chainId = await handle.toolkit.rpc.getChainId();
   if (chainId !== profile.chainId) {
     throw new Error(
-      `Chain mismatch: expected ${profile.chainId} (${profile.label}), got ${chainId}.`,
+      `Kiln RPC chain mismatch: expected ${profile.chainId} (${profile.label}), got ${chainId}.`,
     );
   }
 }
@@ -468,6 +548,7 @@ export async function getConnectedShadownetWallet(
   if (!activeAccount?.address) {
     return null;
   }
+  await assertExpectedNetwork(handle, networkId);
 
   return {
     address: activeAccount.address,

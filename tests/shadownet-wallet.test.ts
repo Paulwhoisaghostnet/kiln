@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 interface MockAccount {
   address: string;
   network?: {
+    type?: string;
     name?: string;
     rpcUrl?: string;
   };
@@ -261,7 +262,7 @@ describe('shadownet-wallet', () => {
     const walletModule = await import('../src/lib/shadownet-wallet.js');
 
     await expect(walletModule.connectShadownetWallet('temple')).rejects.toThrow(
-      /Chain mismatch: expected NetXsqzbfFenSTS \(Tezos Shadownet\), got NetWrongChain\./,
+      /Wallet RPC chain mismatch: expected NetXsqzbfFenSTS \(Tezos Shadownet\), got NetWrongChain\./,
     );
   });
 
@@ -397,6 +398,26 @@ describe('shadownet-wallet', () => {
       contractAddress: originatedAddress,
       level: 777,
     });
+  });
+
+  it('blocks connected-wallet origination when Beacon active account is mainnet without a name', async () => {
+    mocks.state.activeAccount = {
+      address: 'tz1cVRngZw42KZ42VQF2ZCy2CJSPNG3H7Cgt',
+      network: {
+        type: 'mainnet',
+      },
+    };
+
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+
+    await expect(
+      walletModule.originateWithConnectedWallet(
+        'parameter unit; storage unit; code { CAR ; NIL operation ; PAIR }',
+        'Unit',
+        'tezos-shadownet',
+      ),
+    ).rejects.toThrow(/Wallet connected to mainnet/);
+    expect(mocks.state.originate).not.toHaveBeenCalled();
   });
 
   it('replaces burn placeholder with connected wallet address in initial storage', async () => {
