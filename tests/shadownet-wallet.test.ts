@@ -64,10 +64,15 @@ const mocks = vi.hoisted(() => {
     requestPermissions: ReturnType<typeof vi.fn>;
     clearActiveAccount: ReturnType<typeof vi.fn>;
     getActiveAccount: ReturnType<typeof vi.fn>;
+    subscribeToEvent: ReturnType<typeof vi.fn>;
     originate: ReturnType<typeof vi.fn>;
     getBlock: ReturnType<typeof vi.fn>;
     open: ReturnType<typeof vi.fn>;
     beaconWalletOptions: unknown[];
+    beaconEventHandlers: Map<
+      string,
+      (account: MockAccount | undefined) => Promise<void> | void
+    >;
   } = {
     activeAccount: null,
     grantedAccount: null,
@@ -87,6 +92,14 @@ const mocks = vi.hoisted(() => {
       state.activeAccount = null;
     }),
     getActiveAccount: vi.fn(async () => state.activeAccount),
+    subscribeToEvent: vi.fn(
+      async (
+        event: string,
+        handler: (account: MockAccount | undefined) => Promise<void> | void,
+      ) => {
+        state.beaconEventHandlers.set(event, handler);
+      },
+    ),
     originate: vi.fn(() => ({
       send: async () => state.operation,
     })),
@@ -97,11 +110,13 @@ const mocks = vi.hoisted(() => {
     })),
     open: vi.fn(),
     beaconWalletOptions: [],
+    beaconEventHandlers: new Map(),
   };
 
   class MockBeaconWallet {
     client = {
       getActiveAccount: state.getActiveAccount,
+      subscribeToEvent: state.subscribeToEvent,
     };
 
     constructor(options: unknown) {
@@ -143,6 +158,9 @@ vi.mock('@taquito/taquito', () => ({
 }));
 
 vi.mock('@airgap/beacon-dapp', () => ({
+  BeaconEvent: {
+    ACTIVE_ACCOUNT_SET: 'ACTIVE_ACCOUNT_SET',
+  },
   NetworkType: {
     MAINNET: 'mainnet',
     GHOSTNET: 'ghostnet',
@@ -198,10 +216,12 @@ beforeEach(() => {
   mocks.state.requestPermissions.mockClear();
   mocks.state.clearActiveAccount.mockClear();
   mocks.state.getActiveAccount.mockClear();
+  mocks.state.subscribeToEvent.mockClear();
   mocks.state.originate.mockClear();
   mocks.state.getBlock.mockClear();
   mocks.state.open.mockClear();
   mocks.state.beaconWalletOptions = [];
+  mocks.state.beaconEventHandlers = new Map();
 
   setupBrowserStubs();
 });
@@ -238,6 +258,43 @@ describe('shadownet-wallet', () => {
         rpcUrl: 'https://rpc.shadownet.teztnets.com',
       },
     });
+  });
+
+  it('subscribes to Beacon active account changes before reading cached sessions', async () => {
+    mocks.state.activeAccount = {
+      address: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+      network: {
+        type: 'shadownet',
+        name: 'shadownet',
+        rpcUrl: 'https://rpc.shadownet.teztnets.com',
+      },
+    };
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+
+    await walletModule.getConnectedShadownetWallet();
+
+    expect(mocks.state.subscribeToEvent).toHaveBeenCalledWith(
+      'ACTIVE_ACCOUNT_SET',
+      expect.any(Function),
+    );
+  });
+
+  it('notifies listeners when Beacon clears the active account', async () => {
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+    const sessionUpdates: unknown[] = [];
+    const unsubscribe = walletModule.subscribeToShadownetWalletSession((session) => {
+      sessionUpdates.push(session);
+    });
+
+    await walletModule.connectShadownetWallet('temple');
+    const handler = mocks.state.beaconEventHandlers.get('ACTIVE_ACCOUNT_SET');
+    expect(handler).toBeTypeOf('function');
+
+    mocks.state.activeAccount = null;
+    await handler?.(undefined);
+
+    expect(sessionUpdates).toEqual([null]);
+    unsubscribe();
   });
 
   it('lets Beacon handle Kukai selection and blocks non-shadownet RPC account', async () => {

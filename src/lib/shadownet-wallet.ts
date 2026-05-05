@@ -1,4 +1,4 @@
-import { NetworkType, SigningType } from '@airgap/beacon-dapp';
+import { BeaconEvent, NetworkType, SigningType } from '@airgap/beacon-dapp';
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { TezosToolkit } from '@taquito/taquito';
 import { stringToBytes } from '@taquito/utils';
@@ -47,9 +47,48 @@ type BeaconAccountNetwork = {
   rpcUrl?: string;
 };
 
+type BeaconAccountLike = {
+  address?: string;
+  network?: BeaconAccountNetwork | null;
+};
+
+type WalletSessionListener = (session: ConnectedWalletState | null) => void;
+
 let activeHandle: TezosWalletHandle | null = null;
 let initializingFor: KilnNetworkId | null = null;
 let initializing: Promise<TezosWalletHandle> | null = null;
+const walletSessionListeners = new Set<WalletSessionListener>();
+
+export function subscribeToShadownetWalletSession(
+  listener: WalletSessionListener,
+): () => void {
+  walletSessionListeners.add(listener);
+  return () => {
+    walletSessionListeners.delete(listener);
+  };
+}
+
+function emitWalletSession(session: ConnectedWalletState | null): void {
+  for (const listener of walletSessionListeners) {
+    listener(session);
+  }
+}
+
+function connectedWalletStateFromAccount(
+  account: BeaconAccountLike,
+  networkId: KilnNetworkId,
+): ConnectedWalletState | null {
+  if (!account.address) {
+    return null;
+  }
+
+  return {
+    address: account.address,
+    networkName: account.network?.name ?? null,
+    networkId,
+    rpcUrl: account.network?.rpcUrl ?? null,
+  };
+}
 
 function resolveBeaconNetworkType(networkId: KilnNetworkId): NetworkType {
   const typedNetworkType = NetworkType as unknown as {
@@ -173,6 +212,35 @@ async function assertNetworkRpcChainId(
   }
 }
 
+async function handleBeaconActiveAccountChange(
+  handle: TezosWalletHandle,
+  account: unknown,
+): Promise<void> {
+  if (activeHandle && activeHandle !== handle) {
+    return;
+  }
+
+  if (!account || typeof account !== 'object') {
+    emitWalletSession(null);
+    return;
+  }
+
+  const accountLike = account as BeaconAccountLike;
+  if (!accountLike.address) {
+    emitWalletSession(null);
+    return;
+  }
+
+  try {
+    await assertExpectedNetwork(handle, handle.networkId);
+  } catch {
+    emitWalletSession(null);
+    return;
+  }
+
+  emitWalletSession(connectedWalletStateFromAccount(accountLike, handle.networkId));
+}
+
 /**
  * Ensures a Beacon-backed TezosToolkit exists for the given network. If the
  * user changed networks since last call, the previous wallet is cleared and a
@@ -218,8 +286,13 @@ async function ensureToolkit(networkId: KilnNetworkId): Promise<TezosWalletHandl
 
     const toolkit = new TezosToolkit(profile.defaultRpcUrl);
     toolkit.setWalletProvider(wallet);
+    const handle = { toolkit, wallet, networkId };
 
-    activeHandle = { toolkit, wallet, networkId };
+    void wallet.client.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, (account) =>
+      handleBeaconActiveAccountChange(handle, account),
+    );
+
+    activeHandle = handle;
     return activeHandle;
   })().finally(() => {
     initializing = null;
@@ -532,12 +605,7 @@ export async function connectShadownetWallet(
     throw new Error('Wallet connected but no active account address was returned.');
   }
 
-  return {
-    address: activeAccount.address,
-    networkName: activeAccount.network?.name ?? null,
-    networkId,
-    rpcUrl: activeAccount.network?.rpcUrl ?? null,
-  };
+  return connectedWalletStateFromAccount(activeAccount, networkId) as ConnectedWalletState;
 }
 
 export async function getConnectedShadownetWallet(
@@ -550,12 +618,7 @@ export async function getConnectedShadownetWallet(
   }
   await assertExpectedNetwork(handle, networkId);
 
-  return {
-    address: activeAccount.address,
-    networkName: activeAccount.network?.name ?? null,
-    networkId,
-    rpcUrl: activeAccount.network?.rpcUrl ?? null,
-  };
+  return connectedWalletStateFromAccount(activeAccount, networkId);
 }
 
 export async function signKilnAuthChallenge(
@@ -586,6 +649,7 @@ export async function disconnectShadownetWallet(): Promise<void> {
     return;
   }
   await activeHandle.wallet.clearActiveAccount();
+  emitWalletSession(null);
 }
 
 export async function originateWithConnectedWallet(

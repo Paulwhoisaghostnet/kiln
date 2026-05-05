@@ -307,6 +307,8 @@ export default function App() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const contractUploadInputRef = useRef<HTMLInputElement>(null);
   const keepWorkflowAfterStorageSyncRef = useRef(false);
+  const connectedWalletRef = useRef<ConnectedWalletState | null>(null);
+  const suppressWalletSessionEndedLogRef = useRef(false);
   const apiToken = getApiToken();
 
   const buildHeaders = (includeJson = false): HeadersInit => {
@@ -323,6 +325,21 @@ export default function App() {
   const addLog = (msg: string, type: LogType = 'info') => {
     setLogs((prev) => [...prev, { time: new Date().toLocaleTimeString(), msg, type }]);
   };
+
+  const clearWalletSessionState = (message?: string) => {
+    const hadWallet = Boolean(connectedWalletRef.current);
+    connectedWalletRef.current = null;
+    setConnectedWallet(null);
+    setAuthSession(null);
+    setMcpToken(null);
+    if (message && hadWallet) {
+      addLog(message, 'info');
+    }
+  };
+
+  useEffect(() => {
+    connectedWalletRef.current = connectedWallet;
+  }, [connectedWallet]);
 
   // Scroll terminal to bottom on new logs.
   useEffect(() => {
@@ -363,13 +380,49 @@ export default function App() {
     setAbi([]);
     setLastWorkflow(null);
     setLastSolidityCompile(null);
-    setAuthSession(null);
-    setMcpToken(null);
+    clearWalletSessionState();
     setBalances(null);
     void fetchBalances();
     void hydrateConnectedWallet();
     addLog(`Switched to ${network.label} (${network.ecosystem}).`, 'info');
   }, [networkId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isTezos) {
+      return;
+    }
+
+    let disposed = false;
+    let unsubscribe = () => {};
+    void import('./lib/shadownet-wallet').then(({ subscribeToShadownetWalletSession }) => {
+      if (disposed) {
+        return;
+      }
+      unsubscribe = subscribeToShadownetWalletSession((session) => {
+        if (!session || session.networkId !== networkId) {
+          clearWalletSessionState(
+            suppressWalletSessionEndedLogRef.current
+              ? undefined
+              : 'Wallet session ended or moved networks. Reconnect before signing.',
+          );
+          return;
+        }
+        const next = {
+          address: session.address,
+          networkName: session.networkName,
+          rpcUrl: session.rpcUrl,
+          target: 'beacon' as const,
+        };
+        connectedWalletRef.current = next;
+        setConnectedWallet(next);
+      });
+    });
+
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [isTezos, networkId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the source type aligned with the ecosystem. Moving to EVM should switch
   // the Build tab into Solidity mode unless the user explicitly typed Solidity.
@@ -398,19 +451,26 @@ export default function App() {
 
   const hydrateConnectedWallet = async () => {
     if (!isTezos) {
-      setConnectedWallet(null);
+      clearWalletSessionState();
       return;
     }
     try {
       const { getConnectedShadownetWallet } = await import('./lib/shadownet-wallet');
       const wallet = await getConnectedShadownetWallet(networkId);
       if (!wallet) {
-        setConnectedWallet(null);
+        clearWalletSessionState();
         return;
       }
-      setConnectedWallet({ ...wallet, target: 'beacon' });
+      const next = {
+        address: wallet.address,
+        networkName: wallet.networkName,
+        rpcUrl: wallet.rpcUrl,
+        target: 'beacon' as const,
+      };
+      connectedWalletRef.current = next;
+      setConnectedWallet(next);
     } catch {
-      setConnectedWallet(null);
+      clearWalletSessionState();
     }
   };
 
@@ -516,7 +576,14 @@ export default function App() {
     try {
       const { connectShadownetWallet } = await import('./lib/shadownet-wallet');
       const wallet = await connectShadownetWallet('beacon', networkId);
-      setConnectedWallet({ ...wallet, target: 'beacon' });
+      const next = {
+        address: wallet.address,
+        networkName: wallet.networkName,
+        rpcUrl: wallet.rpcUrl,
+        target: 'beacon' as const,
+      };
+      connectedWalletRef.current = next;
+      setConnectedWallet(next);
       addLog(`Connected wallet ${wallet.address} on ${network.label}.`, 'success');
     } catch (error) {
       addLog(
@@ -529,16 +596,19 @@ export default function App() {
   };
 
   const disconnectWallet = async () => {
+    suppressWalletSessionEndedLogRef.current = true;
     try {
       const { disconnectShadownetWallet } = await import('./lib/shadownet-wallet');
       await disconnectShadownetWallet();
-      setConnectedWallet(null);
+      clearWalletSessionState();
       addLog('Disconnected wallet session.', 'info');
     } catch (error) {
       addLog(
         `Wallet disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'error',
       );
+    } finally {
+      suppressWalletSessionEndedLogRef.current = false;
     }
   };
 
