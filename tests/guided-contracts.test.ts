@@ -150,6 +150,24 @@ describe('buildGuidedContractDraft', () => {
       expect.arrayContaining(['operator_support', 'allowlist_gate', 'permit_hook']),
     );
     expect(draft.code).toContain('def update_operators');
+    expect(draft.code).toContain('case add_operator(operator)');
     expect(draft.code).toContain('def set_allowlist');
+  });
+
+  it('uses standard FA2 update_operators payload shape in Michelson stubs', () => {
+    const draft = buildGuidedContractDraft({
+      contractType: 'nft_collection',
+      projectName: 'Operator Collection',
+      includeMint: true,
+      includeBurn: true,
+      includePause: true,
+      includeAdminTransfer: true,
+      selectedElements: ['operator_support'],
+      outputFormat: 'michelson_stub',
+    });
+
+    expect(draft.code).toContain('%update_operators');
+    expect(draft.code).toContain('%add_operator');
+    expect(draft.code).toContain('%remove_operator');
   });
 });

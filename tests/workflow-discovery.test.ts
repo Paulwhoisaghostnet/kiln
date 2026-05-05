@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildShadowboxSkippedEntrypointWarnings,
   buildWorkflowDrivenE2ESteps,
+  buildWorkflowDrivenShadowboxSteps,
   buildWorkflowDrivenSimulationSteps,
   discoverContractWorkflows,
 } from '../src/lib/workflow-discovery.js';
@@ -100,6 +102,43 @@ describe('workflow discovery', () => {
         entrypoint: 'claim_magic',
       }),
     ]);
+  });
+
+  it('uses typed sample args for fallback reachability entrypoints', () => {
+    const steps = buildWorkflowDrivenSimulationSteps({
+      contractId: 'options',
+      entrypoints: ['set_allowlist', 'set_royalty_bps', 'permit'],
+    });
+
+    expect(steps).toEqual([
+      expect.objectContaining({
+        entrypoint: 'set_allowlist',
+        args: [{ address: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6', allowed: true }],
+      }),
+      expect.objectContaining({
+        entrypoint: 'set_royalty_bps',
+        args: [250],
+      }),
+      expect.objectContaining({
+        entrypoint: 'permit',
+        args: ['0x00'],
+      }),
+    ]);
+  });
+
+  it('omits callback and signature-bound entrypoints from shadowbox steps with warnings', () => {
+    const steps = buildWorkflowDrivenShadowboxSteps({
+      contractId: 'token',
+      entrypoints: ['mint', 'balance_of', 'permit', 'set_allowlist'],
+    });
+
+    expect(steps.map((step) => step.entrypoint)).toEqual(['mint', 'set_allowlist']);
+    expect(buildShadowboxSkippedEntrypointWarnings(['balance_of', 'permit'])).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('balance_of'),
+        expect.stringContaining('permit'),
+      ]),
+    );
   });
 
   it('orders admin controls so role-sensitive checks can pass', () => {

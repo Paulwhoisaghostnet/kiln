@@ -141,7 +141,8 @@ function buildMichelsonStub(
     pause: '(bool %pause)',
     set_admin: '(address %set_admin)',
     confirm_admin: '(unit %confirm_admin)',
-    update_operators: '(list %update_operators (pair address (pair address nat)))',
+    update_operators:
+      '(list %update_operators (or (pair %add_operator (address %owner) (pair (address %operator) (nat %token_id))) (pair %remove_operator (address %owner) (pair (address %operator) (nat %token_id)))))',
     permit: '(bytes %permit)',
     set_allowlist: '(pair %set_allowlist address bool)',
     token_metadata: '(nat %token_metadata)',
@@ -244,15 +245,16 @@ ${includeBurn ? `
 ${includeOperatorSupport ? `
         @sp.entrypoint
         def update_operators(self, params):
-            sp.cast(params, sp.list[sp.record(owner=sp.address, operator=sp.address, token_id=sp.nat, add=sp.bool)])
+            sp.cast(params, sp.list[sp.variant(add_operator=sp.record(owner=sp.address, operator=sp.address, token_id=sp.nat).layout(("owner", ("operator", "token_id"))), remove_operator=sp.record(owner=sp.address, operator=sp.address, token_id=sp.nat).layout(("owner", ("operator", "token_id")))).layout(("add_operator", "remove_operator"))])
             for action in params:
-                assert action.owner == sp.sender, "NOT_OWNER"
-                key = sp.record(owner=action.owner, operator=action.operator, token_id=action.token_id)
-                if action.add:
-                    self.data.operators[key] = sp.unit
-                else:
-                    if self.data.operators.contains(key):
-                        del self.data.operators[key]
+                match action:
+                    case add_operator(operator):
+                        assert operator.owner == sp.sender, "NOT_OWNER"
+                        self.data.operators[operator] = ()
+                    case remove_operator(operator):
+                        assert operator.owner == sp.sender, "NOT_OWNER"
+                        if operator in self.data.operators:
+                            del self.data.operators[operator]
 ` : ''}
 ${includePermitHook ? `
         @sp.entrypoint
@@ -358,15 +360,16 @@ ${includeBurn ? `
 ${includeOperatorSupport ? `
         @sp.entrypoint
         def update_operators(self, params):
-            sp.cast(params, sp.list[sp.record(owner=sp.address, operator=sp.address, token_id=sp.nat, add=sp.bool)])
+            sp.cast(params, sp.list[sp.variant(add_operator=sp.record(owner=sp.address, operator=sp.address, token_id=sp.nat).layout(("owner", ("operator", "token_id"))), remove_operator=sp.record(owner=sp.address, operator=sp.address, token_id=sp.nat).layout(("owner", ("operator", "token_id")))).layout(("add_operator", "remove_operator"))])
             for action in params:
-                assert action.owner == sp.sender, "NOT_OWNER"
-                key = sp.record(owner=action.owner, operator=action.operator, token_id=action.token_id)
-                if action.add:
-                    self.data.operators[key] = sp.unit
-                else:
-                    if self.data.operators.contains(key):
-                        del self.data.operators[key]
+                match action:
+                    case add_operator(operator):
+                        assert operator.owner == sp.sender, "NOT_OWNER"
+                        self.data.operators[operator] = ()
+                    case remove_operator(operator):
+                        assert operator.owner == sp.sender, "NOT_OWNER"
+                        if operator in self.data.operators:
+                            del self.data.operators[operator]
 ` : ''}
 ${includePermitHook ? `
         @sp.entrypoint

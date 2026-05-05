@@ -118,10 +118,30 @@ function compactEntries(entries: Array<string | undefined>): string[] {
 const SAMPLE_TEZOS_ADDRESS = 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6';
 const SAMPLE_TEZOS_CONTRACT = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
 
-const SHADOWBOX_CALLBACK_ENTRYPOINTS = new Set([
-  'balance_of',
-  'get_balance',
-]);
+const SHADOWBOX_SKIPPED_ENTRYPOINT_REASONS: Record<string, string> = {
+  balance_of:
+    'balance_of requires a callback contract payload, so Shadowbox skips it and covers it through static entrypoint detection.',
+  get_balance:
+    'get_balance requires a callback/view-style payload, so Shadowbox skips it and covers it through static entrypoint detection.',
+  permit:
+    'permit requires a signed off-chain payload, so Shadowbox skips it instead of blocking validation with an invalid sample signature.',
+};
+
+function shadowboxSkipReasonForEntrypoint(entrypoint: string): string | undefined {
+  return SHADOWBOX_SKIPPED_ENTRYPOINT_REASONS[entrypoint];
+}
+
+export function buildShadowboxSkippedEntrypointWarnings(entrypoints: string[]): string[] {
+  const seen = new Set<string>();
+  return entrypoints.flatMap((entrypoint) => {
+    if (seen.has(entrypoint)) {
+      return [];
+    }
+    seen.add(entrypoint);
+    const reason = shadowboxSkipReasonForEntrypoint(entrypoint);
+    return reason ? [`Shadowbox skipped ${entrypoint}: ${reason}`] : [];
+  });
+}
 
 function sampleArgsForEntrypoint(entrypoint: string): unknown[] {
   switch (entrypoint) {
@@ -138,6 +158,8 @@ function sampleArgsForEntrypoint(entrypoint: string): unknown[] {
     case 'set_fee_bps':
     case 'set_royalty_bps':
       return [entrypoint.includes('bps') ? 250 : 1];
+    case 'update_operators':
+      return [0];
     case 'pause':
       return [true];
     case 'set_admin':
@@ -517,7 +539,7 @@ function reachabilityWorkflow(
       label: `${contractId}: reach ${entrypoint}`,
       wallet: index % 2 === 0 ? 'bert' : 'ernie',
       entrypoint,
-      args: [],
+      args: sampleArgsForEntrypoint(entrypoint),
     })),
   };
 }
@@ -601,7 +623,7 @@ export function buildWorkflowDrivenShadowboxSteps(input: {
   includeExpectedFailures?: boolean;
 }): SimulationStepInput[] {
   return buildWorkflowDrivenSimulationSteps(input).filter(
-    (step) => !SHADOWBOX_CALLBACK_ENTRYPOINTS.has(step.entrypoint),
+    (step) => !shadowboxSkipReasonForEntrypoint(step.entrypoint),
   );
 }
 

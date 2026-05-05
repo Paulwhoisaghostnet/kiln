@@ -9,7 +9,10 @@ import {
 import { parseEntrypointsFromMichelson } from './michelson-parser.js';
 import type { ShadowboxRunResult } from './shadowbox-runtime.js';
 import type { SmartPyCompilationResult } from './smartpy-compiler.js';
-import { buildWorkflowDrivenShadowboxSteps } from './workflow-discovery.js';
+import {
+  buildShadowboxSkippedEntrypointWarnings,
+  buildWorkflowDrivenShadowboxSteps,
+} from './workflow-discovery.js';
 
 export type WorkflowSourceType = 'auto' | 'michelson' | 'smartpy';
 
@@ -197,8 +200,10 @@ export async function runContractWorkflow(
           entrypoints,
           includeExpectedFailures: false,
         });
+  const shadowboxCompatibilityWarnings =
+    input.simulationSteps.length > 0 ? [] : buildShadowboxSkippedEntrypointWarnings(entrypoints);
   const codeHash = hashContractCode(injectedCode);
-  const shadowbox =
+  let shadowbox =
     deps.runShadowbox === undefined
       ? {
           enabled: false,
@@ -224,6 +229,12 @@ export async function runContractWorkflow(
           steps: shadowboxSteps,
           codeHash,
         });
+  if (shadowboxCompatibilityWarnings.length > 0) {
+    shadowbox = {
+      ...shadowbox,
+      warnings: [...shadowbox.warnings, ...shadowboxCompatibilityWarnings],
+    };
+  }
   const shadowboxGatePassed = deps.shadowboxRequiredForClearance
     ? shadowbox.executed && shadowbox.passed
     : true;

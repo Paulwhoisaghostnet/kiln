@@ -203,7 +203,7 @@ def to_michelson_literal(value: Any) -> str | None:
         return pair_chain(values)
     if isinstance(value, list):
         if not value:
-            return "Unit"
+            return "{}"
         values: list[str] = []
         for item in value:
             literal = to_michelson_literal(item)
@@ -244,7 +244,24 @@ def mutez_to_tez_string(value: Any) -> str | None:
     return f"{whole}.{str(frac).zfill(6).rstrip('0')}"
 
 
+def build_update_operators_args(wallet: str, args: list[Any]) -> list[str]:
+    token_id = "0"
+    if args and isinstance(args[0], (int, str)) and str(args[0]).strip().lstrip("-").isdigit():
+        token_id = str(args[0]).strip()
+    owner = escape_michelson_string(wallet_address(wallet))
+    operator = escape_michelson_string(
+        wallet_address("ernie" if wallet != "ernie" else "bert"),
+    )
+    return [
+        f"{{ Left (Pair {owner} (Pair {operator} {token_id})) }}",
+        f"{{ Pair {owner} (Pair {operator} {token_id}) }}",
+    ]
+
+
 def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
+    if entrypoint == "update_operators":
+        return build_update_operators_args(wallet, args)[0]
+
     if not args:
         return "Unit"
 
@@ -277,6 +294,13 @@ def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
             return None
         literals.append(literal)
     return pair_chain(literals)
+
+
+def build_arg_candidates(entrypoint: str, wallet: str, args: list[Any]) -> list[str]:
+    if entrypoint == "update_operators":
+        return build_update_operators_args(wallet, args)
+    arg = build_arg(entrypoint, wallet, args)
+    return [arg] if arg is not None else []
 
 
 def parse_contract_address(text: str) -> str | None:
@@ -623,8 +647,8 @@ def main(argv: list[str]) -> int:
                 )
                 continue
 
-            arg_expr = build_arg(entrypoint, wallet, step_args)
-            if arg_expr is None:
+            arg_exprs = build_arg_candidates(entrypoint, wallet, step_args)
+            if not arg_exprs:
                 step_results.append(
                     {
                         "label": label,
@@ -637,30 +661,43 @@ def main(argv: list[str]) -> int:
                 continue
 
             account = wallet_alias(wallet)
-            try:
-                call = docker_exec(
-                    config,
-                    container_name,
-                    [
-                        "octez-client",
-                        "-M",
-                        "client",
-                        "transfer",
-                        amount_tez,
-                        "from",
-                        account,
-                        "to",
-                        target_contract_address,
-                        "--entrypoint",
-                        entrypoint,
-                        "--arg",
-                        arg_expr,
-                        "--burn-cap",
-                        "2",
-                    ],
-                    timeout=75,
-                )
-                call_text = f"{call.stdout}\n{call.stderr}"
+            call_result: subprocess.CompletedProcess[str] | None = None
+            last_error_text = ""
+            timed_out = False
+            for arg_expr in arg_exprs:
+                try:
+                    call_result = docker_exec(
+                        config,
+                        container_name,
+                        [
+                            "octez-client",
+                            "-M",
+                            "client",
+                            "transfer",
+                            amount_tez,
+                            "from",
+                            account,
+                            "to",
+                            target_contract_address,
+                            "--entrypoint",
+                            entrypoint,
+                            "--arg",
+                            arg_expr,
+                            "--burn-cap",
+                            "2",
+                        ],
+                        timeout=75,
+                    )
+                    break
+                except subprocess.CalledProcessError as error:
+                    last_error_text = f"{error.stdout}\n{error.stderr}".strip()
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+                    last_error_text = "Entrypoint call timed out."
+                    break
+
+            if call_result is not None:
+                call_text = f"{call_result.stdout}\n{call_result.stderr}"
                 step_results.append(
                     {
                         "label": label,
@@ -672,25 +709,24 @@ def main(argv: list[str]) -> int:
                         "level": parse_level(call_text),
                     }
                 )
-            except subprocess.CalledProcessError as error:
-                error_text = f"{error.stdout}\n{error.stderr}".strip()
+            elif timed_out:
                 step_results.append(
                     {
                         "label": label,
                         "wallet": wallet,
                         "entrypoint": entrypoint,
                         "status": "failed",
-                        "note": error_text or "Entrypoint call failed.",
+                        "note": last_error_text,
                     }
                 )
-            except subprocess.TimeoutExpired:
+            else:
                 step_results.append(
                     {
                         "label": label,
                         "wallet": wallet,
                         "entrypoint": entrypoint,
                         "status": "failed",
-                        "note": "Entrypoint call timed out.",
+                        "note": last_error_text or "Entrypoint call failed.",
                     }
                 )
 

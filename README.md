@@ -301,8 +301,17 @@ Clearance gate behavior:
 
 Built-in command runner:
 - `scripts/shadowbox/run-flextesa.sh`
-- Uses Docker image `oxheadalpha/flextesa:latest` by default
+- Uses Docker image `oxheadalpha/flextesa:latest` by default; production should pin
+  `KILN_SHADOWBOX_FLEXTESA_IMAGE` to the tested digest after each compatibility
+  run so upstream tag movement cannot change validation behavior.
 - One disposable container per job, auto-cleaned after completion
+- Supports single-contract and multi-contract command payloads.
+- Generated validation skips callback/signature-bound entrypoints
+  (`balance_of`, `get_balance`, `permit`) and reports an explicit warning instead
+  of blocking deployment clearance with unusable sample payloads.
+- Generated reachability steps include typed Michelson sample arguments for guided
+  token, NFT, and marketplace entrypoints, including FA2 `update_operators`,
+  allowlist pairs, nat setters, bool toggles, and marketplace listing tuples.
 - Tunables: `KILN_SHADOWBOX_FLEXTESA_IMAGE`, `KILN_SHADOWBOX_FLEXTESA_BOX_SCRIPT`,
   `KILN_SHADOWBOX_FLEXTESA_RPC_WAIT_SECONDS`, `KILN_SHADOWBOX_FLEXTESA_START_TIMEOUT_SECONDS`
 

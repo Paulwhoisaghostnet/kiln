@@ -341,6 +341,9 @@ describe('runContractWorkflow', () => {
       ]),
     );
     expect(shadowboxSteps.some((step) => step.entrypoint === 'balance_of')).toBe(false);
+    expect(result.shadowbox.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Shadowbox skipped balance_of')]),
+    );
     expect(result.clearance.approved).toBe(true);
   });
 });
