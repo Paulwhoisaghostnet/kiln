@@ -265,6 +265,7 @@ describe('runContractWorkflow', () => {
   it('passes generated default workflow steps into shadowbox runtime', async () => {
     let shadowboxStepCount = -1;
     let shadowboxSteps: Array<{ entrypoint: string; args: unknown[] }> = [];
+    let shadowboxEntrypointTypes: Record<string, string> | undefined;
 
     const result = await runContractWorkflow(
       {
@@ -292,6 +293,7 @@ describe('runContractWorkflow', () => {
         }),
         runShadowbox: async (input) => {
           shadowboxStepCount = input.steps.length;
+          shadowboxEntrypointTypes = input.entrypointTypes;
           shadowboxSteps = input.steps.map((step) => ({
             entrypoint: step.entrypoint,
             args: step.args,
@@ -328,6 +330,13 @@ describe('runContractWorkflow', () => {
 
     expect(shadowboxStepCount).toBeGreaterThan(0);
     expect(result.shadowbox.summary.total).toBe(shadowboxStepCount);
+    expect(shadowboxEntrypointTypes).toMatchObject({
+      mint: 'pair address nat',
+      transfer: 'pair address nat',
+      pause: 'bool',
+      set_admin: 'address',
+      confirm_admin: 'unit',
+    });
     expect(shadowboxSteps).toEqual(
       expect.arrayContaining([
         { entrypoint: 'mint', args: [1] },

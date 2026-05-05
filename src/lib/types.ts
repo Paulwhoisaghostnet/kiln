@@ -8,6 +8,7 @@ export interface AbiArg {
 export interface AbiEntrypoint {
   name: string;
   args: AbiArg[];
+  parameterType?: string;
 }
 
 export interface ContractCallResult {

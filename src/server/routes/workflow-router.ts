@@ -290,8 +290,12 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           compiledInitialStorage: source.compiled?.initialStorage,
         }).initialStorage;
         const injectedCode = injectKilnTokens(source.michelson, services.env);
-        const entrypoints = parseEntrypointsFromMichelson(injectedCode).map(
-          (entry) => entry.name,
+        const parsedEntrypoints = parseEntrypointsFromMichelson(injectedCode);
+        const entrypoints = parsedEntrypoints.map((entry) => entry.name);
+        const entrypointTypes = Object.fromEntries(
+          parsedEntrypoints
+            .filter((entry) => entry.parameterType)
+            .map((entry) => [entry.name, entry.parameterType as string]),
         );
         const codeHash = hashContractCode(injectedCode);
         const shadowbox = await services.runShadowbox({
@@ -299,6 +303,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           michelson: injectedCode,
           initialStorage,
           entrypoints,
+          entrypointTypes,
           steps: mapSimulationSteps(payload.data.simulationSteps),
           codeHash,
           requestId: res.locals.requestId as string | undefined,

@@ -21,6 +21,7 @@ print(json.dumps({
   "updateOperators": module.build_arg("update_operators", "bert", [0]),
   "updateOperatorCandidates": module.build_arg_candidates("update_operators", "bert", [0]),
   "purchaseCandidates": module.build_arg_candidates("purchase", "bert", [1]),
+  "typedPairCandidates": module.build_arg_candidates("some_entrypoint", "bert", [1], "pair nat nat string"),
   "allowlist": module.build_arg("set_allowlist", "bert", [{"address": "tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6", "allowed": True}]),
   "permit": module.build_arg("permit", "bert", ["0x00"]),
   "emptyList": module.to_michelson_literal([]),
@@ -35,6 +36,7 @@ print(json.dumps({
     updateOperators: string;
     updateOperatorCandidates: string[];
     purchaseCandidates: string[];
+    typedPairCandidates: string[];
     allowlist: string;
     permit: string;
     emptyList: string;
@@ -59,6 +61,12 @@ describe('Flextesa shadowbox runner argument compatibility', () => {
       '(Pair 1 (Pair 1 "shadowbox"))',
       '(Pair 0 1 "shadowbox")',
       '(Pair 0 (Pair 1 "shadowbox"))',
+      'Unit',
+    ]);
+    expect(expressions.typedPairCandidates).toEqual([
+      '1',
+      '(Pair 1 1 "shadowbox")',
+      '(Pair 1 (Pair 1 "shadowbox"))',
       'Unit',
     ]);
     expect(expressions.allowlist).toBe(

@@ -37,6 +37,7 @@ export interface ShadowboxRunInput {
     initialStorage: string;
   }>;
   entrypoints: string[];
+  entrypointTypes?: Record<string, string>;
   steps: SimulationStepInput[];
   codeHash: string;
   requestId?: string;

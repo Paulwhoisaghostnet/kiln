@@ -15,8 +15,8 @@ describe('parseEntrypointsFromMichelson', () => {
     const result = parseEntrypointsFromMichelson(michelson);
 
     expect(result).toEqual([
-      { name: 'mint', args: [] },
-      { name: 'transfer', args: [] },
+      { name: 'mint', args: [], parameterType: 'unit' },
+      { name: 'transfer', args: [], parameterType: 'pair address nat' },
     ]);
   });
 
@@ -36,8 +36,24 @@ describe('parseEntrypointsFromMichelson', () => {
     `;
 
     expect(parseEntrypointsFromMichelson(michelson)).toEqual([
-      { name: 'mint', args: [] },
-      { name: 'transfer', args: [] },
+      { name: 'mint', args: [], parameterType: 'unit' },
+      { name: 'transfer', args: [], parameterType: 'unit' },
+    ]);
+  });
+
+  it('preserves comb and nested parameter types for runtime argument generation', () => {
+    const michelson = `
+      parameter
+        (or
+          (pair %purchase nat nat string)
+          (pair %settle nat (pair nat string)));
+      storage unit;
+      code { CAR ; NIL operation ; PAIR };
+    `;
+
+    expect(parseEntrypointsFromMichelson(michelson)).toEqual([
+      { name: 'purchase', args: [], parameterType: 'pair nat nat string' },
+      { name: 'settle', args: [], parameterType: 'pair nat (pair nat string)' },
     ]);
   });
 });

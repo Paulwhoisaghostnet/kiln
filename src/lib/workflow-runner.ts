@@ -122,6 +122,7 @@ export async function runContractWorkflow(
       michelson: string;
       initialStorage: string;
       entrypoints: string[];
+      entrypointTypes?: Record<string, string>;
       steps: SimulationStepInput[];
       codeHash: string;
       requestId?: string;
@@ -152,7 +153,13 @@ export async function runContractWorkflow(
     }
   }
 
-  const entrypoints = parseEntrypointsFromMichelson(michelson).map((entry) => entry.name);
+  const parsedEntrypoints = parseEntrypointsFromMichelson(michelson);
+  const entrypoints = parsedEntrypoints.map((entry) => entry.name);
+  const entrypointTypes = Object.fromEntries(
+    parsedEntrypoints
+      .filter((entry) => entry.parameterType)
+      .map((entry) => [entry.name, entry.parameterType as string]),
+  );
   const issues: string[] = [];
   const warnings: string[] = [];
 
@@ -226,6 +233,7 @@ export async function runContractWorkflow(
           michelson: injectedCode,
           initialStorage,
           entrypoints,
+          entrypointTypes,
           steps: shadowboxSteps,
           codeHash,
         });

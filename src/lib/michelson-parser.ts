@@ -1,8 +1,21 @@
+import {
+  Parser,
+  contractSection,
+  emitMicheline,
+} from '@taquito/michel-codec';
+import type { Expr } from '@taquito/michel-codec';
 import type { AbiEntrypoint } from './types.js';
 
 type MichelsonNode = string | MichelsonNode[];
+type MichelineLikeNode = {
+  prim?: string;
+  args?: unknown[];
+  annots?: string[];
+  [key: string]: unknown;
+};
 
 const annotationPattern = /^%([a-zA-Z][a-zA-Z0-9_]*)$/;
+const michelsonParser = new Parser();
 
 function extractParameterSection(code: string): string {
   const parameterMatch = /\bparameter\b/i.exec(code);
@@ -82,7 +95,28 @@ function directEntrypointAnnotations(node: MichelsonNode): string[] {
     .filter((name): name is string => Boolean(name) && name !== 'default');
 }
 
-function collectEntrypointsFromParameterNode(node: MichelsonNode): string[] {
+function serializeTypeNode(node: MichelsonNode, topLevel = true): string {
+  if (typeof node === 'string') {
+    return node.toLowerCase();
+  }
+
+  const parts = node
+    .filter((child) => {
+      if (typeof child !== 'string') {
+        return true;
+      }
+      return !annotationPattern.test(child) && !child.startsWith('@') && !child.startsWith(':');
+    })
+    .map((child) => serializeTypeNode(child, false))
+    .filter(Boolean);
+
+  const serialized = parts.join(' ');
+  return topLevel ? serialized : `(${serialized})`;
+}
+
+function collectEntrypointsFromParameterNode(
+  node: MichelsonNode,
+): Array<{ name: string; parameterType: string }> {
   if (nodeHead(node) === 'or' && Array.isArray(node)) {
     return node
       .slice(1)
@@ -90,19 +124,119 @@ function collectEntrypointsFromParameterNode(node: MichelsonNode): string[] {
       .flatMap((child) => collectEntrypointsFromParameterNode(child));
   }
 
-  return directEntrypointAnnotations(node);
+  return directEntrypointAnnotations(node).map((name) => ({
+    name,
+    parameterType: serializeTypeNode(node),
+  }));
 }
 
-export function parseEntrypointsFromMichelson(code: string): AbiEntrypoint[] {
-  const names = new Set<string>();
+function isMichelineObject(node: unknown): node is MichelineLikeNode {
+  return Boolean(node) && typeof node === 'object' && !Array.isArray(node);
+}
+
+function stripMichelineAnnotations(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map(stripMichelineAnnotations);
+  }
+  if (!isMichelineObject(node)) {
+    return node;
+  }
+
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key !== 'annots') {
+      clean[key] = stripMichelineAnnotations(value);
+    }
+  }
+  return clean;
+}
+
+function normalizeMichelsonType(node: unknown): string {
+  const emitted = emitMicheline(stripMichelineAnnotations(node) as Expr, {
+    indent: '',
+    newline: '',
+  }).trim();
+  return emitted.startsWith('(') && emitted.endsWith(')')
+    ? emitted.slice(1, -1)
+    : emitted;
+}
+
+function collectTaquitoEntrypointsFromType(
+  node: unknown,
+): Array<{ name: string; parameterType: string }> {
+  if (!isMichelineObject(node)) {
+    return [];
+  }
+
+  if (node.prim?.toLowerCase() === 'or' && Array.isArray(node.args)) {
+    return node.args.flatMap((child) => collectTaquitoEntrypointsFromType(child));
+  }
+
+  return (node.annots ?? [])
+    .map((annot) => annotationPattern.exec(annot)?.[1])
+    .filter((name): name is string => Boolean(name) && name !== 'default')
+    .map((name) => ({
+      name,
+      parameterType: normalizeMichelsonType(node),
+    }));
+}
+
+function parseEntrypointsWithTaquito(code: string): AbiEntrypoint[] {
+  const parsed = michelsonParser.parseScript(code);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  const parameter = contractSection(
+    parsed as unknown as Parameters<typeof contractSection>[0],
+    'parameter',
+  ) as unknown as MichelineLikeNode | null;
+  const root = parameter?.args?.[0];
+  if (!root) {
+    return [];
+  }
+
+  const entrypoints = new Map<string, string>();
+  for (const entrypoint of collectTaquitoEntrypointsFromType(root)) {
+    if (!entrypoints.has(entrypoint.name)) {
+      entrypoints.set(entrypoint.name, entrypoint.parameterType);
+    }
+  }
+
+  return [...entrypoints.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, parameterType]) => ({
+      name,
+      args: [],
+      parameterType,
+    }));
+}
+
+function parseEntrypointsWithFallback(code: string): AbiEntrypoint[] {
+  const entrypoints = new Map<string, string>();
   const parameterSection = extractParameterSection(code);
   const nodes = parseMichelsonNodes(tokenizeMichelsonExpression(parameterSection));
   const root: MichelsonNode =
     nodes.length === 1 && nodes[0] !== undefined ? nodes[0] : nodes;
 
   for (const entrypoint of collectEntrypointsFromParameterNode(root)) {
-    names.add(entrypoint);
+    if (!entrypoints.has(entrypoint.name)) {
+      entrypoints.set(entrypoint.name, entrypoint.parameterType);
+    }
   }
 
-  return [...names].sort().map((name) => ({ name, args: [] }));
+  return [...entrypoints.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, parameterType]) => ({
+      name,
+      args: [],
+      parameterType,
+    }));
+}
+
+export function parseEntrypointsFromMichelson(code: string): AbiEntrypoint[] {
+  try {
+    return parseEntrypointsWithTaquito(code);
+  } catch {
+    return parseEntrypointsWithFallback(code);
+  }
 }
