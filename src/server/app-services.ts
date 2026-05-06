@@ -176,16 +176,9 @@ export function createApiAppServices(
   const tokenConfigured = Boolean(env.API_AUTH_TOKEN);
   const authRequired = tokenConfigured || env.KILN_API_AUTH_REQUIRED === true;
 
-  const requireApiToken: RequestHandler = (req, res, next) => {
+  const requireApiToken: RequestHandler = async (req, res, next) => {
     if (!authRequired) {
       next();
-      return;
-    }
-
-    if (!env.API_AUTH_TOKEN) {
-      res.status(503).json({
-        error: 'API auth is required but API_AUTH_TOKEN is not configured.',
-      });
       return;
     }
 
@@ -193,12 +186,32 @@ export function createApiAppServices(
     // is still accepted as an alias so existing clients/curl scripts don't
     // break mid-rollout; remove the alias once all callers are migrated.
     const token = req.header('x-kiln-token') ?? req.header('x-api-token');
-    if (token !== env.API_AUTH_TOKEN) {
-      res.status(401).json({ error: 'Unauthorized' });
+    if (env.API_AUTH_TOKEN && token === env.API_AUTH_TOKEN) {
+      next();
       return;
     }
 
-    next();
+    if (token) {
+      try {
+        const verifiedApiKey = await userStore.verifyApiToken(token);
+        if (verifiedApiKey) {
+          next();
+          return;
+        }
+      } catch (error) {
+        next(error);
+        return;
+      }
+    }
+
+    if (!env.API_AUTH_TOKEN && !token) {
+      res.status(503).json({
+        error: 'API auth is required but API_AUTH_TOKEN is not configured.',
+      });
+      return;
+    }
+
+    res.status(401).json({ error: 'Unauthorized' });
   };
 
   const mutationLimiter = rateLimit({

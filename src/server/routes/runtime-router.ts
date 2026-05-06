@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  contractIntrospectionQuerySchema,
   e2eRunPayloadSchema,
   executePayloadSchema,
   uploadPayloadSchema,
@@ -52,6 +53,8 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
           env: services.env,
           clearanceStore: services.clearanceStore,
           createTezosService: (wallet) => services.createTezosService(wallet, network.id),
+          allowDirectDeploy:
+            network.id === 'tezos-shadownet' && payload.data.allowShadownetDirectDeploy,
         });
         res.json({ ...result, networkId: network.id });
       } catch (error) {
@@ -188,6 +191,49 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
       res.status(500).json({ error: asMessage(error) });
     }
   });
+
+  router.get(
+    '/api/kiln/contracts/introspect',
+    services.requireApiToken,
+    async (req, res) => {
+      const payload = contractIntrospectionQuerySchema.safeParse(req.query);
+      if (!payload.success) {
+        res.status(400).json({
+          error: validationErrorMessage(payload.error),
+        });
+        return;
+      }
+
+      try {
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM — use the EVM contract tooling for Solidity contracts.`,
+          });
+          return;
+        }
+        const tezosService = services.createTezosService('A', network.id);
+        if (!tezosService.getContractEntrypoints) {
+          res.status(501).json({
+            error: 'Contract entrypoint introspection is unavailable for this Tezos adapter.',
+          });
+          return;
+        }
+        const entrypoints = await tezosService.getContractEntrypoints(
+          payload.data.contractAddress,
+        );
+        res.json({
+          success: true,
+          networkId: network.id,
+          ecosystem: network.ecosystem,
+          contractAddress: payload.data.contractAddress,
+          entrypoints,
+        });
+      } catch (error) {
+        res.status(500).json({ error: asMessage(error) });
+      }
+    },
+  );
 
   return router;
 }

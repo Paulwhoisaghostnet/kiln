@@ -24,6 +24,7 @@ export interface ContractRuntimeDependencies {
   env: AppEnv;
   clearanceStore: DeploymentClearanceStore;
   createTezosService: (wallet: WalletType) => TezosServiceLike;
+  allowDirectDeploy?: boolean;
 }
 
 export async function deployContract(
@@ -44,7 +45,7 @@ export async function deployContract(
   const injectedInitialStorage = injectedArtifacts.initialStorage;
   const codeHash = hashContractCode(injectedCode);
 
-  if (dependencies.env.KILN_REQUIRE_SIM_CLEARANCE) {
+  if (dependencies.env.KILN_REQUIRE_SIM_CLEARANCE && !dependencies.allowDirectDeploy) {
     const clearanceId = payload.clearanceId?.trim();
     if (!clearanceId) {
       throw new DeploymentBlockedError(
@@ -162,21 +163,71 @@ function findBestKt1(value: unknown): string | undefined {
     ?.address;
 }
 
+function coerceNumeric(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'bigint') {
+    const numeric = Number(value);
+    return Number.isSafeInteger(numeric) ? numeric : undefined;
+  }
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return Number(value);
+  }
+  return undefined;
+}
+
 function findNumericField(value: unknown, fieldNames: string[]): number | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findNumericField(item, fieldNames);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+    return undefined;
+  }
   if (!isRecord(value)) {
     return undefined;
   }
+
   for (const fieldName of fieldNames) {
     const fieldValue = value[fieldName];
-    if (typeof fieldValue === 'number' && Number.isFinite(fieldValue)) {
-      return fieldValue;
-    }
-    if (typeof fieldValue === 'string' && /^\d+$/.test(fieldValue)) {
-      return Number(fieldValue);
+    const numeric = coerceNumeric(fieldValue);
+    if (numeric !== undefined) {
+      return numeric;
     }
   }
   for (const nested of Object.values(value)) {
     const found = findNumericField(nested, fieldNames);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
+function findFieldByName(value: unknown, fieldNames: string[]): unknown {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findFieldByName(item, fieldNames);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const normalized = new Set(fieldNames.map((fieldName) => fieldName.toLowerCase()));
+  for (const [field, fieldValue] of Object.entries(value)) {
+    if (normalized.has(field.toLowerCase())) {
+      return fieldValue;
+    }
+  }
+  for (const nested of Object.values(value)) {
+    const found = findFieldByName(nested, fieldNames);
     if (found !== undefined) {
       return found;
     }
@@ -225,7 +276,7 @@ async function resolveStepCall(
   };
 }
 
-function purchaseAmountUnits(args: unknown[]): number | undefined {
+function explicitPurchaseAmountUnits(args: unknown[]): number | undefined {
   const [firstArg] = args;
   return findNumericField(firstArg, [
     'amount_wtf_units',
@@ -239,8 +290,50 @@ function looksLikeTokenPurchase(entrypoint: string, args: unknown[]): boolean {
   const normalized = entrypoint.toLowerCase();
   return (
     (normalized === 'purchase' || normalized === 'buy') &&
-    purchaseAmountUnits(args) !== undefined
+    (explicitPurchaseAmountUnits(args) !== undefined ||
+      findNumericField(args, ['listing_id', 'quantity']) !== undefined)
   );
+}
+
+async function readMapValue(mapLike: unknown, key: number): Promise<unknown> {
+  if (!mapLike) {
+    return undefined;
+  }
+  if (mapLike instanceof Map) {
+    return mapLike.get(key) ?? mapLike.get(String(key));
+  }
+  if (isRecord(mapLike)) {
+    const getter = mapLike.get;
+    if (typeof getter === 'function') {
+      return await (getter as (input: number | string) => Promise<unknown> | unknown)(key);
+    }
+    return mapLike[String(key)] ?? mapLike[key];
+  }
+  return undefined;
+}
+
+async function resolvePurchaseAmountUnits(input: {
+  args: unknown[];
+  storage: unknown;
+}): Promise<number | undefined> {
+  const explicit = explicitPurchaseAmountUnits(input.args);
+  if (explicit !== undefined) {
+    return explicit;
+  }
+
+  const listingId = findNumericField(input.args, ['listing_id']);
+  if (listingId === undefined) {
+    return undefined;
+  }
+  const quantity = Math.max(findNumericField(input.args, ['quantity']) ?? 1, 1);
+  const listings = findFieldByName(input.storage, ['listings', 'listing']);
+  const listing = await readMapValue(listings, listingId);
+  const price = findNumericField(listing, [
+    'price_wtf_units',
+    'amount_wtf_units',
+    'price',
+  ]);
+  return price === undefined ? undefined : price * quantity;
 }
 
 async function prepareTokenPurchaseResources(input: {
@@ -264,7 +357,10 @@ async function prepareTokenPurchaseResources(input: {
     return;
   }
   const tokenId = findNumericField(storage, ['wtf_token_id', 'currency_token_id', 'token_id']) ?? 0;
-  const amount = Math.max(purchaseAmountUnits(input.args) ?? 1, 1);
+  const amount = Math.max(
+    (await resolvePurchaseAmountUnits({ args: input.args, storage })) ?? 1,
+    1,
+  );
   const buyerAddress = await input.tezosService.getAddress();
 
   try {

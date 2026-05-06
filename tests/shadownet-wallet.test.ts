@@ -260,6 +260,11 @@ describe('shadownet-wallet', () => {
     expect(mocks.state.open).not.toHaveBeenCalled();
     expect(mocks.state.requestPermissions).toHaveBeenCalledTimes(1);
     expect(mocks.state.requestPermissions).toHaveBeenCalledWith({
+      network: {
+        type: 'shadownet',
+        name: 'shadownet',
+        rpcUrl: 'https://rpc.shadownet.teztnets.com',
+      },
       scopes: ['operation_request'],
     });
     expect(localStorage.getItem('beacon:stale')).toBeNull();
@@ -415,6 +420,11 @@ describe('shadownet-wallet', () => {
     await walletModule.signKilnAuthChallenge('hello');
 
     expect(mocks.state.requestPermissions).toHaveBeenNthCalledWith(2, {
+      network: {
+        type: 'shadownet',
+        name: 'shadownet',
+        rpcUrl: 'https://rpc.shadownet.teztnets.com',
+      },
       scopes: ['operation_request', 'sign'],
     });
   });

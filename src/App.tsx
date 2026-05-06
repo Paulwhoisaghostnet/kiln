@@ -7,7 +7,9 @@ import {
   ChevronRight,
   ClipboardCopy,
   Download,
+  FileSearch,
   FlaskConical,
+  FolderPlus,
   Globe,
   Hammer,
   KeyRound,
@@ -16,11 +18,13 @@ import {
   PlugZap,
   RefreshCw,
   Rocket,
+  Save,
   Settings,
   ShieldCheck,
   Terminal,
   TerminalSquare,
   Upload,
+  UserCircle,
   Wallet,
 } from 'lucide-react';
 import DynamicRig from './components/DynamicRig';
@@ -39,6 +43,7 @@ import {
 import { KilnCopy, useKilnView } from './context/KilnViewProvider';
 import { useKilnNetwork } from './context/NetworkProvider';
 import type { EvmWalletTarget } from './lib/evm-wallet';
+import type { KilnNetworkId } from './lib/networks';
 import type { WalletConnectTarget } from './lib/shadownet-wallet';
 import type { AbiEntrypoint, WalletType } from './lib/types';
 import { buildWorkflowDrivenE2ESteps } from './lib/workflow-discovery';
@@ -55,7 +60,7 @@ type LogType = 'info' | 'error' | 'success';
 type DeployMode = 'connected' | 'puppet';
 type ContractSourceType = 'michelson' | 'smartpy' | 'solidity';
 
-type TabKey = 'settings' | 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
+type TabKey = 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
 
 interface LogEntry {
   time: string;
@@ -141,6 +146,12 @@ interface KilnAuthUser {
     expiresAt: string;
     revokedAt?: string;
   } | null;
+  currentApiToken?: {
+    id: string;
+    createdAt: string;
+    expiresAt: string;
+    revokedAt?: string;
+  } | null;
 }
 
 interface KilnAuthSession {
@@ -169,6 +180,37 @@ interface BundleExportResponse {
   zipFileName: string;
   zipPath: string;
   downloadUrl: string;
+}
+
+interface ContractIntrospectionResponse {
+  success: boolean;
+  contractAddress: string;
+  entrypoints: AbiEntrypoint[];
+}
+
+interface SavedKilnProject {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  networkId: KilnNetworkId;
+  contractSourceType: ContractSourceType;
+  michelsonCode: string;
+  solidityCode: string;
+  initialStorage: string;
+  contractAddress: string;
+  clearanceId: string | null;
+  abi: AbiEntrypoint[];
+  e2eEntrypoint: string;
+  e2eArgs: string;
+  deployMode: DeployMode;
+  lastWorkflow: WorkflowRunResponse | null;
+  lastSolidityCompile: SolidityCompileResult | null;
+}
+
+interface KilnProjectStore {
+  projects: SavedKilnProject[];
+  activeProjectId: string;
 }
 
 const puppetWalletLabels: Record<WalletType, string> = { A: 'Bert', B: 'Ernie' };
@@ -272,10 +314,80 @@ function hasMichelsonSectionLocal(
   return new RegExp(`\\b${section}\\b`, 'i').test(code);
 }
 
+const PROJECT_STORE_KEY = 'kiln.projects.v1';
+
+function newProjectId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `project-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function createSavedProject(input: {
+  name: string;
+  networkId: KilnNetworkId;
+}): SavedKilnProject {
+  const now = new Date().toISOString();
+  return {
+    id: newProjectId(),
+    name: input.name,
+    createdAt: now,
+    updatedAt: now,
+    networkId: input.networkId,
+    contractSourceType: 'michelson',
+    michelsonCode: '',
+    solidityCode: '',
+    initialStorage: 'Unit',
+    contractAddress: '',
+    clearanceId: null,
+    abi: [],
+    e2eEntrypoint: '',
+    e2eArgs: '[]',
+    deployMode: 'connected',
+    lastWorkflow: null,
+    lastSolidityCompile: null,
+  };
+}
+
+function loadProjectStore(): KilnProjectStore {
+  const fallback = createSavedProject({
+    name: 'My Kiln Project',
+    networkId: 'tezos-shadownet',
+  });
+  if (typeof window === 'undefined') {
+    return { projects: [fallback], activeProjectId: fallback.id };
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PROJECT_STORE_KEY) ?? '{}') as Partial<KilnProjectStore>;
+    const projects = Array.isArray(parsed.projects) ? parsed.projects : [];
+    if (projects.length === 0) {
+      return { projects: [fallback], activeProjectId: fallback.id };
+    }
+    const activeProjectId =
+      typeof parsed.activeProjectId === 'string' &&
+      projects.some((project) => project.id === parsed.activeProjectId)
+        ? parsed.activeProjectId
+        : projects[0]?.id ?? fallback.id;
+    return { projects: projects as SavedKilnProject[], activeProjectId };
+  } catch {
+    return { projects: [fallback], activeProjectId: fallback.id };
+  }
+}
+
+function persistProjectStore(store: KilnProjectStore): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(PROJECT_STORE_KEY, JSON.stringify(store));
+}
+
 export default function App() {
   const { mode, setMode, t, tip } = useKilnView();
   const { networkId, network, isTezos, isEvm, can, requestNetworkChange } = useKilnNetwork();
 
+  const [projectStore, setProjectStore] = useState<KilnProjectStore>(() =>
+    loadProjectStore(),
+  );
   const [michelsonCode, setMichelsonCode] = useState('');
   const [solidityCode, setSolidityCode] = useState('');
   const [contractSourceType, setContractSourceType] =
@@ -310,15 +422,24 @@ export default function App() {
     useState<SolidityCompileResult | null>(null);
   const [authSession, setAuthSession] = useState<KilnAuthSession | null>(null);
   const [mcpToken, setMcpToken] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [isMcpLoggingIn, setIsMcpLoggingIn] = useState(false);
   const [isRequestingMcpAccess, setIsRequestingMcpAccess] = useState(false);
   const [isGeneratingMcpToken, setIsGeneratingMcpToken] = useState(false);
+  const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
+  const [isLoadingContract, setIsLoadingContract] = useState(false);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.location.hash.replace('#', '') === 'settings';
+  });
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window === 'undefined') {
-      return 'settings';
+      return 'setup';
     }
     const hash = window.location.hash.replace('#', '');
-    return isTabKey(hash) ? hash : 'settings';
+    return isTabKey(hash) ? hash : 'setup';
   });
   const [terminalOpen, setTerminalOpen] = useState(() => {
     if (typeof window === 'undefined') {
@@ -332,15 +453,21 @@ export default function App() {
   const keepWorkflowAfterStorageSyncRef = useRef(false);
   const connectedWalletRef = useRef<ConnectedWalletState | null>(null);
   const suppressWalletSessionEndedLogRef = useRef(false);
+  const pendingProjectHydrationRef = useRef<SavedKilnProject | null>(null);
+  const hydratingProjectRef = useRef(false);
   const apiToken = getApiToken();
+  const activeProject =
+    projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
+    projectStore.projects[0];
 
   const buildHeaders = (includeJson = false): HeadersInit => {
     const headers: Record<string, string> = {};
     if (includeJson) {
       headers['Content-Type'] = 'application/json';
     }
-    if (apiToken) {
-      headers['x-kiln-token'] = apiToken;
+    const requestToken = apiKey ?? apiToken;
+    if (requestToken) {
+      headers['x-kiln-token'] = requestToken;
     }
     return headers;
   };
@@ -353,11 +480,95 @@ export default function App() {
     const hadWallet = Boolean(connectedWalletRef.current);
     connectedWalletRef.current = null;
     setConnectedWallet(null);
-    setAuthSession(null);
-    setMcpToken(null);
     if (message && hadWallet) {
       addLog(message, 'info');
     }
+  };
+
+  const applyProjectState = (project: SavedKilnProject) => {
+    hydratingProjectRef.current = true;
+    setContractSourceType(project.contractSourceType);
+    setMichelsonCode(project.michelsonCode);
+    setSolidityCode(project.solidityCode);
+    setInitialStorage(project.initialStorage || 'Unit');
+    setContractAddress(project.contractAddress);
+    setClearanceId(project.clearanceId);
+    setAbi(project.abi ?? []);
+    setE2EEntrypoint(project.e2eEntrypoint);
+    setE2EArgs(project.e2eArgs || '[]');
+    setDeployMode(project.deployMode);
+    setLastWorkflow(project.lastWorkflow);
+    setLastSolidityCompile(project.lastSolidityCompile);
+    window.setTimeout(() => {
+      hydratingProjectRef.current = false;
+    }, 0);
+  };
+
+  const snapshotActiveProject = (): SavedKilnProject => ({
+    ...(activeProject ??
+      createSavedProject({ name: 'My Kiln Project', networkId: network.id })),
+    updatedAt: new Date().toISOString(),
+    networkId: network.id,
+    contractSourceType,
+    michelsonCode,
+    solidityCode,
+    initialStorage,
+    contractAddress,
+    clearanceId,
+    abi,
+    e2eEntrypoint,
+    e2eArgs,
+    deployMode,
+    lastWorkflow,
+    lastSolidityCompile,
+  });
+
+  const updateProjectStore = (updater: (store: KilnProjectStore) => KilnProjectStore) => {
+    setProjectStore((prev) => {
+      const next = updater(prev);
+      persistProjectStore(next);
+      return next;
+    });
+  };
+
+  const createNewProject = () => {
+    const project = createSavedProject({
+      name: `Kiln Project ${projectStore.projects.length + 1}`,
+      networkId: network.id,
+    });
+    updateProjectStore((prev) => ({
+      projects: [...prev.projects, project],
+      activeProjectId: project.id,
+    }));
+    applyProjectState(project);
+    addLog(`Created project: ${project.name}`, 'success');
+  };
+
+  const renameActiveProject = (name: string) => {
+    updateProjectStore((prev) => ({
+      ...prev,
+      projects: prev.projects.map((project) =>
+        project.id === prev.activeProjectId
+          ? { ...project, name, updatedAt: new Date().toISOString() }
+          : project,
+      ),
+    }));
+  };
+
+  const selectProject = (projectId: string) => {
+    const project = projectStore.projects.find((candidate) => candidate.id === projectId);
+    if (!project) {
+      return;
+    }
+    updateProjectStore((prev) => ({ ...prev, activeProjectId: project.id }));
+    pendingProjectHydrationRef.current = project;
+    if (project.networkId !== networkId) {
+      requestNetworkChange(project.networkId);
+      return;
+    }
+    pendingProjectHydrationRef.current = null;
+    applyProjectState(project);
+    addLog(`Loaded project: ${project.name}`, 'info');
   };
 
   useEffect(() => {
@@ -380,6 +591,10 @@ export default function App() {
   useEffect(() => {
     const handler = () => {
       const next = window.location.hash.replace('#', '');
+      if (next === 'settings') {
+        setAccountSettingsOpen(true);
+        return;
+      }
       if (isTabKey(next)) {
         setActiveTab(next);
       }
@@ -409,6 +624,60 @@ export default function App() {
     void hydrateConnectedWallet();
     addLog(`Switched to ${network.label} (${network.ecosystem}).`, 'info');
   }, [networkId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const pending = pendingProjectHydrationRef.current;
+    if (!pending || pending.networkId !== networkId) {
+      return;
+    }
+    pendingProjectHydrationRef.current = null;
+    applyProjectState(pending);
+    addLog(`Loaded project: ${pending.name}`, 'info');
+  }, [networkId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!activeProject) {
+      return;
+    }
+    pendingProjectHydrationRef.current = activeProject;
+    if (activeProject.networkId !== networkId) {
+      requestNetworkChange(activeProject.networkId);
+      return;
+    }
+    pendingProjectHydrationRef.current = null;
+    applyProjectState(activeProject);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (hydratingProjectRef.current || !activeProject) {
+      return;
+    }
+    setProjectStore((prev) => {
+      const snapshot = snapshotActiveProject();
+      const next = {
+        activeProjectId: prev.activeProjectId,
+        projects: prev.projects.map((project) =>
+          project.id === prev.activeProjectId ? snapshot : project,
+        ),
+      };
+      persistProjectStore(next);
+      return next;
+    });
+  }, [
+    network.id,
+    contractSourceType,
+    michelsonCode,
+    solidityCode,
+    initialStorage,
+    contractAddress,
+    clearanceId,
+    abi,
+    e2eEntrypoint,
+    e2eArgs,
+    deployMode,
+    lastWorkflow,
+    lastSolidityCompile,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isTezos) {
@@ -559,6 +828,45 @@ export default function App() {
       setBalancesStatus('error');
       setBalancesError(message);
       addLog(message, 'error');
+    }
+  };
+
+  const loadExistingContract = async (address: string) => {
+    const trimmed = address.trim();
+    if (!/^KT1[1-9A-HJ-NP-Za-km-z]{33}$/.test(trimmed)) {
+      addLog('Enter a valid KT1 contract address before loading tests.', 'error');
+      return;
+    }
+    setIsLoadingContract(true);
+    try {
+      const response = await fetch(
+        `/api/kiln/contracts/introspect?networkId=${networkId}&contractAddress=${encodeURIComponent(trimmed)}`,
+        { headers: buildHeaders() },
+      );
+      const payload = (await response.json()) as
+        | ContractIntrospectionResponse
+        | { error?: string };
+      if (!response.ok || !('entrypoints' in payload)) {
+        throw new Error(
+          'error' in payload && payload.error
+            ? payload.error
+            : 'Contract introspection failed.',
+        );
+      }
+      setContractAddress(payload.contractAddress);
+      setAbi(payload.entrypoints);
+      setE2EEntrypoint(payload.entrypoints[0]?.name ?? '');
+      addLog(
+        `Loaded ${payload.entrypoints.length} entrypoint(s) from ${payload.contractAddress}.`,
+        'success',
+      );
+    } catch (error) {
+      addLog(
+        `Contract load failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsLoadingContract(false);
     }
   };
 
@@ -823,6 +1131,49 @@ export default function App() {
     }
   };
 
+  const generateApiKey = async () => {
+    if (!authSession) {
+      addLog('Wallet login is required before generating an API key.', 'error');
+      return;
+    }
+    setIsGeneratingApiKey(true);
+    try {
+      const response = await fetch('/api/kiln/api-key', {
+        method: 'POST',
+        headers: sessionHeaders(true),
+        body: JSON.stringify({}),
+      });
+      const payload = (await response.json()) as
+        | {
+            token: string;
+            expiresAt: string;
+            user: KilnAuthUser;
+            error?: string;
+          }
+        | { error?: string };
+      if (!response.ok || !('token' in payload)) {
+        throw new Error(payload.error ?? 'Unable to generate API key.');
+      }
+      setApiKey(payload.token);
+      setAuthSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: payload.user,
+            }
+          : prev,
+      );
+      addLog(`API key generated; expires ${new Date(payload.expiresAt).toLocaleString()}.`, 'success');
+    } catch (error) {
+      addLog(
+        `API key generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsGeneratingApiKey(false);
+    }
+  };
+
   const copyMcpToken = async () => {
     if (!mcpToken) {
       return;
@@ -832,6 +1183,18 @@ export default function App() {
       addLog('MCP token copied to clipboard.', 'success');
     } catch {
       addLog('Clipboard copy failed. Select the token text manually.', 'error');
+    }
+  };
+
+  const copyApiKey = async () => {
+    if (!apiKey) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(apiKey);
+      addLog('API key copied to clipboard.', 'success');
+    } catch {
+      addLog('Clipboard copy failed. Select the API key text manually.', 'error');
     }
   };
 
@@ -1041,7 +1404,9 @@ export default function App() {
     }
   };
 
-  const deployTezosWithPuppet = async (workflow: WorkflowRunResponse) => {
+  const deployTezosWithPuppet = async (
+    workflow: Pick<WorkflowRunResponse, 'artifacts' | 'clearance'>,
+  ) => {
     if (!can('puppetWallets')) {
       throw new Error(
         `Puppet wallets are disabled on ${network.label}. Use the connected wallet instead.`,
@@ -1056,6 +1421,8 @@ export default function App() {
         wallet: 'A',
         initialStorage: workflow.artifacts.initialStorage,
         clearanceId: workflow.clearance.record?.id ?? clearanceId ?? undefined,
+        allowShadownetDirectDeploy:
+          network.id === 'tezos-shadownet' && !workflow.clearance.record?.id,
       }),
     });
     const payload = (await res.json()) as UploadResponse | { error?: string };
@@ -1069,7 +1436,9 @@ export default function App() {
     addLog(`Deployed via Bert: ${payload.contractAddress}`, 'success');
   };
 
-  const deployTezosWithConnectedWallet = async (workflow: WorkflowRunResponse) => {
+  const deployTezosWithConnectedWallet = async (
+    workflow: Pick<WorkflowRunResponse, 'artifacts'>,
+  ) => {
     if (!connectedWallet) {
       throw new Error('Connect a Tezos wallet before deploying.');
     }
@@ -1114,19 +1483,44 @@ export default function App() {
 
   const handleTezosDeploy = async () => {
     let workflow = lastWorkflow;
-    if (!workflow || !clearanceId) {
+    const canDirectShadownetDeploy =
+      network.id === 'tezos-shadownet' &&
+      contractSourceType === 'michelson' &&
+      michelsonCode.trim().length > 0;
+    if ((!workflow || !clearanceId) && !canDirectShadownetDeploy) {
       workflow = await runTezosWorkflow();
     }
-    if (!workflow || !workflow.clearance.approved || !workflow.clearance.record?.id) {
+    const deployable =
+      workflow ??
+      (canDirectShadownetDeploy
+        ? {
+            artifacts: {
+              michelson: michelsonCode,
+              initialStorage: initialStorage.trim() || 'Unit',
+              entrypoints: abi.map((entrypoint) => entrypoint.name),
+              entrypointMetadata: abi,
+              codeHash: '',
+            },
+            clearance: { approved: false, record: undefined },
+          }
+        : null);
+    if (
+      !deployable ||
+      (!canDirectShadownetDeploy &&
+        (!workflow?.clearance.approved || !workflow.clearance.record?.id))
+    ) {
       addLog('Deployment blocked: workflow clearance missing.', 'error');
       return;
+    }
+    if (canDirectShadownetDeploy && !workflow?.clearance.record?.id) {
+      addLog('Direct Shadownet deploy enabled for loaded Michelson source.', 'info');
     }
     setIsDeploying(true);
     try {
       if (deployMode === 'connected') {
-        await deployTezosWithConnectedWallet(workflow);
+        await deployTezosWithConnectedWallet(deployable);
       } else {
-        await deployTezosWithPuppet(workflow);
+        await deployTezosWithPuppet(deployable);
       }
       void fetchBalances();
       setActiveTab('test');
@@ -1311,17 +1705,13 @@ export default function App() {
   >(() => {
     const hasSource = isEvm ? solidityCode.trim().length > 0 : michelsonCode.trim().length > 0;
     const hasClearance = isEvm ? Boolean(lastSolidityCompile?.entry) : Boolean(clearanceId);
+    const canDirectDeploy =
+      isTezos &&
+      network.id === 'tezos-shadownet' &&
+      contractSourceType === 'michelson' &&
+      michelsonCode.trim().length > 0;
     const hasContract = Boolean(contractAddress);
-    const hasMcpAccess = authSession?.user.access.status === 'approved';
     return [
-      {
-        key: 'settings',
-        label: 'Settings',
-        icon: <Settings className="w-4 h-4" />,
-        tipKey: 'tabSetupLabel',
-        ready: true,
-        done: Boolean(verifiedTezosWalletAddress || verifiedEvmWalletAddress || hasMcpAccess),
-      },
       {
         key: 'setup',
         label: t('tabSetupLabel'),
@@ -1351,7 +1741,7 @@ export default function App() {
         label: t('tabDeployLabel'),
         icon: <Rocket className="w-4 h-4" />,
         tipKey: 'tabDeployLabel',
-        ready: hasClearance,
+        ready: hasClearance || canDirectDeploy,
         done: hasContract,
       },
       {
@@ -1359,7 +1749,7 @@ export default function App() {
         label: t('tabTestLabel'),
         icon: <FlaskConical className="w-4 h-4" />,
         tipKey: 'tabTestLabel',
-        ready: hasContract,
+        ready: true,
         done: false,
       },
       {
@@ -1378,6 +1768,8 @@ export default function App() {
     lastSolidityCompile,
     clearanceId,
     contractAddress,
+    contractSourceType,
+    network.id,
     lastWorkflow,
     authSession,
     verifiedTezosWalletAddress,
@@ -1427,6 +1819,43 @@ export default function App() {
       ) : null}
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-6 space-y-6">
+        <ProjectAccountBar
+          projects={projectStore.projects}
+          activeProject={activeProject}
+          authSession={authSession}
+          accountSettingsOpen={accountSettingsOpen}
+          setAccountSettingsOpen={setAccountSettingsOpen}
+          onSelectProject={selectProject}
+          onCreateProject={createNewProject}
+          onRenameProject={renameActiveProject}
+        />
+
+        {accountSettingsOpen ? (
+          <div className="bg-base-100 rounded-2xl border border-base-200 p-6">
+            <SettingsTab
+              isTezos={isTezos}
+              isEvm={isEvm}
+              connectedWallet={connectedWallet}
+              onConnect={connectWallet}
+              onDisconnect={disconnectWallet}
+              authSession={authSession}
+              mcpToken={mcpToken}
+              apiKey={apiKey}
+              isMcpLoggingIn={isMcpLoggingIn}
+              isConnectingWallet={isConnectingWallet}
+              isRequestingMcpAccess={isRequestingMcpAccess}
+              isGeneratingMcpToken={isGeneratingMcpToken}
+              isGeneratingApiKey={isGeneratingApiKey}
+              onLogin={startMcpWalletLogin}
+              onRequestAccess={requestMcpAccess}
+              onGenerateToken={generateMcpToken}
+              onCopyToken={copyMcpToken}
+              onGenerateApiKey={generateApiKey}
+              onCopyApiKey={copyApiKey}
+            />
+          </div>
+        ) : null}
+
         <SessionSummary summary={sessionSummary} />
 
         <div className="bg-base-100 rounded-2xl shadow-lg border border-base-200 overflow-hidden">
@@ -1496,25 +1925,6 @@ export default function App() {
                 isConnectingWallet={isConnectingWallet}
               />
             ) : null}
-            {activeTab === 'settings' ? (
-              <SettingsTab
-                isTezos={isTezos}
-                isEvm={isEvm}
-                connectedWallet={connectedWallet}
-                onConnect={connectWallet}
-                onDisconnect={disconnectWallet}
-                authSession={authSession}
-                mcpToken={mcpToken}
-                isMcpLoggingIn={isMcpLoggingIn}
-                isConnectingWallet={isConnectingWallet}
-                isRequestingMcpAccess={isRequestingMcpAccess}
-                isGeneratingMcpToken={isGeneratingMcpToken}
-                onLogin={startMcpWalletLogin}
-                onRequestAccess={requestMcpAccess}
-                onGenerateToken={generateMcpToken}
-                onCopyToken={copyMcpToken}
-              />
-            ) : null}
             {activeTab === 'build' ? (
               <BuildTab
                 isTezos={isTezos}
@@ -1536,6 +1946,7 @@ export default function App() {
                 entrypoints={abi.map((entrypoint) => entrypoint.name)}
                 contractAddress={contractAddress}
                 clearanceId={clearanceId}
+                projectName={activeProject?.name ?? 'Kiln Browser Workspace'}
                 verifiedEvmWalletAddress={verifiedEvmWalletAddress}
                 isAssociatingEvmWallet={isMcpLoggingIn}
                 onAssociateEvmWallet={startMcpWalletLogin}
@@ -1573,7 +1984,12 @@ export default function App() {
                 isValidating={isValidating}
                 onTezosDeploy={handleTezosDeploy}
                 canPuppet={can('puppetWallets')}
-                onReconnect={() => setActiveTab('settings')}
+                directDeployAvailable={
+                  network.id === 'tezos-shadownet' &&
+                  contractSourceType === 'michelson' &&
+                  michelsonCode.trim().length > 0
+                }
+                onReconnect={() => setAccountSettingsOpen(true)}
               />
             ) : null}
             {activeTab === 'test' ? (
@@ -1589,6 +2005,8 @@ export default function App() {
                 runE2E={runPostDeployE2E}
                 isRunningE2E={isRunningE2E}
                 canPuppet={can('puppetWallets') && can('postdeployE2E')}
+                onLoadContract={loadExistingContract}
+                isLoadingContract={isLoadingContract}
               />
             ) : null}
             {activeTab === 'handoff' ? (
@@ -1664,7 +2082,7 @@ export default function App() {
 }
 
 function isTabKey(value: string): value is TabKey {
-  return ['setup', 'settings', 'build', 'validate', 'deploy', 'test', 'handoff'].includes(value);
+  return ['setup', 'build', 'validate', 'deploy', 'test', 'handoff'].includes(value);
 }
 
 /** Bottom spacer so the terminal dock never covers the tab nav. */
@@ -1746,6 +2164,75 @@ function Header({
         </div>
       </div>
     </header>
+  );
+}
+
+function ProjectAccountBar({
+  projects,
+  activeProject,
+  authSession,
+  accountSettingsOpen,
+  setAccountSettingsOpen,
+  onSelectProject,
+  onCreateProject,
+  onRenameProject,
+}: {
+  projects: SavedKilnProject[];
+  activeProject?: SavedKilnProject;
+  authSession: KilnAuthSession | null;
+  accountSettingsOpen: boolean;
+  setAccountSettingsOpen: (next: boolean) => void;
+  onSelectProject: (projectId: string) => void;
+  onCreateProject: () => void;
+  onRenameProject: (name: string) => void;
+}) {
+  return (
+    <div className="bg-base-100 rounded-2xl border border-base-200 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2 min-w-0">
+        <Save className="w-4 h-4 text-primary" />
+        <select
+          className="select select-sm select-bordered max-w-[18rem] font-semibold"
+          value={activeProject?.id ?? ''}
+          onChange={(event) => onSelectProject(event.target.value)}
+          aria-label="Active Kiln project"
+        >
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+        <input
+          className="input input-sm input-bordered w-52"
+          value={activeProject?.name ?? ''}
+          onChange={(event) => onRenameProject(event.target.value)}
+          aria-label="Project name"
+        />
+        <button
+          type="button"
+          className="btn btn-sm btn-outline gap-2"
+          onClick={onCreateProject}
+        >
+          <FolderPlus className="w-4 h-4" />
+          New project
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="text-xs text-base-content/60 hidden sm:block">
+          {activeProject
+            ? `Saved ${new Date(activeProject.updatedAt).toLocaleTimeString()}`
+            : 'Autosave ready'}
+        </div>
+        <button
+          type="button"
+          className={`btn btn-sm gap-2 ${accountSettingsOpen ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setAccountSettingsOpen(!accountSettingsOpen)}
+        >
+          <UserCircle className="w-4 h-4" />
+          {authSession ? 'Account verified' : 'Account settings'}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1996,14 +2483,18 @@ function SettingsTab({
   onDisconnect,
   authSession,
   mcpToken,
+  apiKey,
   isMcpLoggingIn,
   isConnectingWallet,
   isRequestingMcpAccess,
   isGeneratingMcpToken,
+  isGeneratingApiKey,
   onLogin,
   onRequestAccess,
   onGenerateToken,
   onCopyToken,
+  onGenerateApiKey,
+  onCopyApiKey,
 }: {
   isTezos: boolean;
   isEvm: boolean;
@@ -2012,18 +2503,23 @@ function SettingsTab({
   onDisconnect: () => Promise<void>;
   authSession: KilnAuthSession | null;
   mcpToken: string | null;
+  apiKey: string | null;
   isMcpLoggingIn: boolean;
   isConnectingWallet: boolean;
   isRequestingMcpAccess: boolean;
   isGeneratingMcpToken: boolean;
+  isGeneratingApiKey: boolean;
   onLogin: (target?: EvmWalletTarget) => Promise<void>;
   onRequestAccess: () => Promise<void>;
   onGenerateToken: () => Promise<void>;
   onCopyToken: () => Promise<void>;
+  onGenerateApiKey: () => Promise<void>;
+  onCopyApiKey: () => Promise<void>;
 }) {
   const access = authSession?.user.access;
   const accessStatus = access?.status ?? 'none';
   const tokenMeta = authSession?.user.currentMcpToken;
+  const apiTokenMeta = authSession?.user.currentApiToken;
   const walletLabel = authSession?.user.walletAddress ?? connectedWallet?.address ?? 'No wallet login';
   const walletKindLabel = authSession?.user.walletKind ?? (isEvm ? 'evm' : 'tezos');
   const { network } = useKilnNetwork();
@@ -2033,6 +2529,8 @@ function SettingsTab({
   const canRequestAccess = Boolean(authSession) && !isRequestingMcpAccess;
   const canGenerateToken =
     Boolean(authSession) && accessStatus === 'approved' && !isGeneratingMcpToken;
+  const canGenerateApiKey =
+    Boolean(authSession) && accessStatus === 'approved' && !isGeneratingApiKey;
 
   return (
     <div className="space-y-6">
@@ -2214,6 +2712,63 @@ function SettingsTab({
           </div>
         )}
       </section>
+
+      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+              <KeyRound className="w-4 h-4" />
+              API key
+            </h3>
+            <p className="text-xs text-base-content/60 mt-1">
+              Use this as <code className="bg-base-200 px-1 rounded">x-kiln-token</code> for protected HTTP routes and scripts.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary gap-2"
+            disabled={!canGenerateApiKey}
+            onClick={() => {
+              void onGenerateApiKey();
+            }}
+          >
+            <KeyRound className="w-4 h-4" />
+            {isGeneratingApiKey ? 'Generating…' : 'Generate API key'}
+          </button>
+        </div>
+
+        {apiTokenMeta ? (
+          <div className="rounded-lg border border-base-300 bg-base-200/40 p-3 text-xs space-y-1">
+            <div className="font-mono">Key id: {apiTokenMeta.id}</div>
+            <div>Expires: {new Date(apiTokenMeta.expiresAt).toLocaleString()}</div>
+          </div>
+        ) : null}
+
+        {apiKey ? (
+          <div className="space-y-2">
+            <textarea
+              className="textarea textarea-bordered w-full font-mono text-xs min-h-24"
+              readOnly
+              value={apiKey}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-outline gap-2"
+              onClick={() => {
+                void onCopyApiKey();
+              }}
+            >
+              <ClipboardCopy className="w-4 h-4" />
+              Copy API key
+            </button>
+          </div>
+        ) : (
+          <div className="text-xs text-base-content/60 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-base-content/40" />
+            Generate an API key after access is approved.
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -2238,6 +2793,7 @@ function BuildTab({
   entrypoints,
   contractAddress,
   clearanceId,
+  projectName,
   verifiedEvmWalletAddress,
   isAssociatingEvmWallet,
   onAssociateEvmWallet,
@@ -2262,6 +2818,7 @@ function BuildTab({
   entrypoints: string[];
   contractAddress: string;
   clearanceId: string | null;
+  projectName: string;
   verifiedEvmWalletAddress: string | null;
   isAssociatingEvmWallet: boolean;
   onAssociateEvmWallet: (target?: EvmWalletTarget) => Promise<void>;
@@ -2397,6 +2954,7 @@ function BuildTab({
       )}
 
       <ProjectWorkspacePanel
+        projectName={projectName}
         networkId={network.id}
         sourceType={isTezos ? contractSourceType : 'solidity'}
         source={isTezos ? michelsonCode : solidityCode}
@@ -2527,6 +3085,7 @@ function DeployTab({
   isValidating,
   onTezosDeploy,
   canPuppet,
+  directDeployAvailable,
   onReconnect,
 }: {
   isTezos: boolean;
@@ -2544,6 +3103,7 @@ function DeployTab({
   isValidating: boolean;
   onTezosDeploy: () => Promise<void>;
   canPuppet: boolean;
+  directDeployAvailable: boolean;
   onReconnect: () => void;
 }) {
   const { network } = useKilnNetwork();
@@ -2599,8 +3159,7 @@ function DeployTab({
     !verifiedTezosWalletAddress ||
     connectedWallet.address === verifiedTezosWalletAddress;
   const deployReady =
-    Boolean(lastWorkflow) &&
-    Boolean(clearanceId) &&
+    (Boolean(lastWorkflow && clearanceId) || directDeployAvailable) &&
     (deployMode === 'puppet'
       ? canPuppet
       : Boolean(connectedWallet && connectedWalletMatchesVerifiedSigner));
@@ -2706,7 +3265,7 @@ function DeployTab({
         <div>
           <span className="opacity-60">Clearance: </span>
           <span className={clearanceId ? 'text-success font-mono' : 'text-warning'}>
-            {clearanceId ?? 'not granted'}
+            {clearanceId ?? (directDeployAvailable ? 'direct shadownet deploy' : 'not granted')}
           </span>
         </div>
         <div>
@@ -2741,6 +3300,12 @@ function DeployTab({
         {network.tier === 'mainnet' ? (
           <div className="text-error">
             Mainnet deploy — double-check admin address and storage before signing.
+          </div>
+        ) : null}
+        {directDeployAvailable && !clearanceId ? (
+          <div className="text-info">
+            Loaded Michelson can deploy directly to Shadownet; run Validate when you need a
+            clearance-backed release bundle.
           </div>
         ) : null}
       </div>
@@ -2783,6 +3348,8 @@ function TestTab({
   runE2E,
   isRunningE2E,
   canPuppet,
+  onLoadContract,
+  isLoadingContract,
 }: {
   isTezos: boolean;
   contractAddress: string;
@@ -2795,8 +3362,16 @@ function TestTab({
   runE2E: () => Promise<void>;
   isRunningE2E: boolean;
   canPuppet: boolean;
+  onLoadContract: (address: string) => Promise<void>;
+  isLoadingContract: boolean;
 }) {
   const { t, tip } = useKilnView();
+  const [contractAddressDraft, setContractAddressDraft] = useState(contractAddress);
+
+  useEffect(() => {
+    setContractAddressDraft(contractAddress);
+  }, [contractAddress]);
+
   return (
     <div className="space-y-4">
       <div>
@@ -2806,9 +3381,38 @@ function TestTab({
         </h2>
         <KilnCopy k="tabTestIntro" as="p" className="text-sm text-base-content/60 mt-1" />
       </div>
+      {isTezos ? (
+        <div className="rounded-xl border border-base-300 bg-base-200/30 p-4 space-y-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <FileSearch className="w-4 h-4 text-primary" />
+            Load existing contract
+          </h3>
+          <div className="flex flex-col md:flex-row gap-2">
+            <input
+              className="input input-sm input-bordered flex-1 font-mono"
+              value={contractAddressDraft}
+              onChange={(event) => {
+                setContractAddressDraft(event.target.value);
+              }}
+              placeholder="KT1..."
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-outline gap-2"
+              disabled={isLoadingContract}
+              onClick={() => {
+                void onLoadContract(contractAddressDraft);
+              }}
+            >
+              {isLoadingContract ? <span className="loading loading-spinner" /> : <FileSearch className="w-4 h-4" />}
+              Load tests
+            </button>
+          </div>
+        </div>
+      ) : null}
       {!contractAddress ? (
         <div className="rounded-2xl border border-dashed border-base-300 p-8 text-center text-sm text-base-content/60">
-          Deploy a contract first — the dynamic rig wakes up once there's an address to talk to.
+          Deploy a contract or load an existing address to wake up the dynamic rig.
         </div>
       ) : (
         <>

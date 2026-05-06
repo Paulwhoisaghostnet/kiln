@@ -294,4 +294,103 @@ describe('runContractE2E', () => {
       },
     ]);
   });
+
+  it('derives WTF in-app market purchase funding from listing price and quantity', async () => {
+    const calls: Array<{
+      wallet: WalletType;
+      contractAddress: string;
+      entrypoint: string;
+      args: unknown[];
+      options?: TezosCallOptions;
+    }> = [];
+    const marketAddress = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
+    const tokenAddress = 'KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW';
+    const entrypoints: AbiEntrypoint[] = [
+      {
+        name: 'purchase',
+        args: [],
+        sampleJsArgs: [
+          {
+            listing_id: 0,
+            purchase_ref: 'kiln-e2e',
+            quantity: 2,
+          },
+        ],
+      },
+    ];
+
+    const result = await runContractE2E(
+      {
+        contractAddress: marketAddress,
+        contracts: [
+          {
+            id: 'market',
+            address: marketAddress,
+            entrypoints: ['purchase'],
+          },
+        ],
+        steps: [
+          {
+            label: 'Ernie buys pet medicine',
+            wallet: 'B',
+            targetContractId: 'market',
+            targetContractAddress: marketAddress,
+            entrypoint: 'purchase',
+            args: [1],
+            generatedArgs: true,
+            assertions: [],
+            expectFailure: false,
+          },
+        ],
+      },
+      (wallet) =>
+        new FakeTezosService(wallet, calls, entrypoints, {
+          wtf_token_address: tokenAddress,
+          wtf_token_id: 0,
+          listings: new Map([
+            [
+              0,
+              {
+                price_wtf_units: 2_500_000_000,
+                listing_id: 0,
+                active: true,
+              },
+            ],
+          ]),
+        }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(calls[0]).toEqual(
+      expect.objectContaining({
+        wallet: 'A',
+        contractAddress: tokenAddress,
+        entrypoint: 'mint_tokens',
+        args: [
+          [
+            {
+              token_id: 0,
+              to_: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6',
+              amount: 5_000_000_000,
+            },
+          ],
+        ],
+      }),
+    );
+    expect(calls.at(-1)).toEqual(
+      expect.objectContaining({
+        wallet: 'B',
+        contractAddress: marketAddress,
+        entrypoint: 'purchase',
+        args: [
+          {
+            listing_id: 0,
+            purchase_ref: 'kiln-e2e',
+            quantity: 2,
+          },
+        ],
+        options: { amountMutez: undefined, useMethodsObject: true },
+      }),
+    );
+  });
 });

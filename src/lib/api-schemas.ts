@@ -60,6 +60,7 @@ export const uploadPayloadSchema = z.object({
   wallet: walletSchema.default('A'),
   initialStorage: z.string().trim().min(1, 'initialStorage is required'),
   clearanceId: z.string().trim().min(6).max(128).optional(),
+  allowShadownetDirectDeploy: z.boolean().default(false),
 });
 
 export const executePayloadSchema = z.object({
@@ -128,6 +129,11 @@ export const e2eRunPayloadSchema = z.object({
       });
     }
   }
+});
+
+export const contractIntrospectionQuerySchema = z.object({
+  networkId: networkIdSchema,
+  contractAddress: kt1AddressSchema,
 });
 
 const guidedContractTypeSchema = z.enum([

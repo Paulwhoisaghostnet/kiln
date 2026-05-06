@@ -136,6 +136,27 @@ function clearStaleBeaconStorage(): void {
   }
 }
 
+function isExpiredBeaconPairingError(error: unknown): boolean {
+  return /expired/i.test(error instanceof Error ? error.message : String(error));
+}
+
+async function retryAfterClearingExpiredBeaconPairing<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isExpiredBeaconPairingError(error)) {
+      throw error;
+    }
+    clearStaleBeaconStorage();
+    activeHandle = null;
+    initializing = null;
+    initializingFor = null;
+    return await operation();
+  }
+}
+
 function normalizedBeaconNetworkName(networkId: KilnNetworkId): string {
   const profile = getNetworkProfile(networkId);
   return profile.beaconNetworkName ?? profile.id.replace('tezos-', '');
@@ -639,8 +660,9 @@ async function ensureSignPermission(handle: TezosWalletHandle): Promise<BeaconAc
 
   if (!activeAccount?.address || !accountHasScope(activeAccount, PermissionScope.SIGN)) {
     await handle.wallet.requestPermissions({
+      network: buildBeaconPermissionNetwork(handle.networkId),
       scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
-    });
+    } as never);
     activeAccount = (await handle.wallet.client.getActiveAccount()) as
       | BeaconAccountLike
       | null;
@@ -656,16 +678,19 @@ export async function connectShadownetWallet(
   _target: WalletConnectTarget = 'beacon',
   networkId: KilnNetworkId = getDefaultNetworkId(),
 ): Promise<ConnectedWalletState> {
-  const handle = await ensureToolkit(networkId);
+  return retryAfterClearingExpiredBeaconPairing(async () => {
+    const handle = await ensureToolkit(networkId);
 
-  await handle.wallet.clearActiveAccount();
-  await handle.wallet.requestPermissions({
-    scopes: [PermissionScope.OPERATION_REQUEST],
+    await handle.wallet.clearActiveAccount();
+    await handle.wallet.requestPermissions({
+      network: buildBeaconPermissionNetwork(networkId),
+      scopes: [PermissionScope.OPERATION_REQUEST],
+    } as never);
+
+    const activeAccount = await getVerifiedActiveAccount(handle, networkId);
+
+    return connectedWalletStateFromAccount(activeAccount, networkId) as ConnectedWalletState;
   });
-
-  const activeAccount = await getVerifiedActiveAccount(handle, networkId);
-
-  return connectedWalletStateFromAccount(activeAccount, networkId) as ConnectedWalletState;
 }
 
 export async function getConnectedShadownetWallet(
@@ -700,56 +725,58 @@ export async function signKilnAuthChallenge(
   message: string,
   networkId: KilnNetworkId = getDefaultNetworkId(),
 ): Promise<SignedKilnAuthChallenge> {
-  const handle = await ensureToolkit(networkId);
-  await assertExpectedNetwork(handle, networkId);
+  return retryAfterClearingExpiredBeaconPairing(async () => {
+    const handle = await ensureToolkit(networkId);
+    await assertExpectedNetwork(handle, networkId);
 
-  const activeAccount = await ensureSignPermission(handle);
-  await assertExpectedNetwork(handle, networkId);
+    const activeAccount = await ensureSignPermission(handle);
+    await assertExpectedNetwork(handle, networkId);
 
-  const activeAddress = activeAccount.address;
-  if (!activeAddress) {
-    throw new Error('Wallet connected but no active account address was returned.');
-  }
-  const publicKey = activeAccount.publicKey || (await handle.wallet.getPK());
-  if (!publicKey) {
-    throw new Error(
-      'The connected wallet did not expose a Tezos public key for signature verification. Reconnect the wallet and approve sign permissions.',
-    );
-  }
-  const messageBytes = stringToBytes(message);
-  const client = handle.wallet.client as unknown as {
-    requestSignPayload(input: {
-      signingType: SigningType;
-      payload: string;
-      sourceAddress?: string;
-    }): Promise<{ signature: string }>;
-  };
-  const signRequests = [
-    {
-      signingType: SigningType.MICHELINE,
-      payload: buildTezosMichelineSigningPayload(message),
-    },
-    {
-      signingType: SigningType.RAW,
-      payload: messageBytes,
-    },
-  ];
-  let lastError: unknown;
-  for (const request of signRequests) {
-    try {
-      const { signature } = await client.requestSignPayload({
-        ...request,
-        sourceAddress: activeAddress,
-      });
-      return { signature, publicKey, messageBytes, address: activeAddress };
-    } catch (error) {
-      lastError = error;
+    const activeAddress = activeAccount.address;
+    if (!activeAddress) {
+      throw new Error('Wallet connected but no active account address was returned.');
     }
-  }
+    const publicKey = activeAccount.publicKey || (await handle.wallet.getPK());
+    if (!publicKey) {
+      throw new Error(
+        'The connected wallet did not expose a Tezos public key for signature verification. Reconnect the wallet and approve sign permissions.',
+      );
+    }
+    const messageBytes = stringToBytes(message);
+    const client = handle.wallet.client as unknown as {
+      requestSignPayload(input: {
+        signingType: SigningType;
+        payload: string;
+        sourceAddress?: string;
+      }): Promise<{ signature: string }>;
+    };
+    const signRequests = [
+      {
+        signingType: SigningType.MICHELINE,
+        payload: buildTezosMichelineSigningPayload(message),
+      },
+      {
+        signingType: SigningType.RAW,
+        payload: messageBytes,
+      },
+    ];
+    let lastError: unknown;
+    for (const request of signRequests) {
+      try {
+        const { signature } = await client.requestSignPayload({
+          ...request,
+          sourceAddress: activeAddress,
+        });
+        return { signature, publicKey, messageBytes, address: activeAddress };
+      } catch (error) {
+        lastError = error;
+      }
+    }
 
-  throw new Error(
-    `Wallet did not sign the Kiln verification challenge: ${formatOriginationFailure(lastError)}`,
-  );
+    throw new Error(
+      `Wallet did not sign the Kiln verification challenge: ${formatOriginationFailure(lastError)}`,
+    );
+  });
 }
 
 export async function disconnectShadownetWallet(): Promise<void> {

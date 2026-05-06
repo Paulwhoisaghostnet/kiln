@@ -25,7 +25,10 @@ describe('readMichelsonEntrypoints', () => {
       },
       {
         name: 'transfer',
-        args: [],
+        args: [
+          { name: 'arg0', type: 'address' },
+          { name: 'arg1', type: 'nat' },
+        ],
         parameterType: 'pair address nat',
         parameterSchema: {
           __michelsonType: 'pair',
@@ -93,7 +96,11 @@ describe('readMichelsonEntrypoints', () => {
     expect(readMichelsonEntrypoints(michelson)).toEqual([
       {
         name: 'purchase',
-        args: [],
+        args: [
+          { name: 'arg0', type: 'nat' },
+          { name: 'arg1', type: 'nat' },
+          { name: 'arg2', type: 'string' },
+        ],
         parameterType: 'pair nat nat string',
         parameterSchema: {
           __michelsonType: 'pair',
@@ -108,7 +115,11 @@ describe('readMichelsonEntrypoints', () => {
       },
       {
         name: 'settle',
-        args: [],
+        args: [
+          { name: 'arg0', type: 'nat' },
+          { name: 'arg1', type: 'nat' },
+          { name: 'arg2', type: 'string' },
+        ],
         parameterType: 'pair nat (pair nat string)',
         parameterSchema: {
           __michelsonType: 'pair',
@@ -140,7 +151,11 @@ describe('readMichelsonEntrypoints', () => {
     expect(readMichelsonEntrypoints(michelson)).toEqual([
       {
         name: 'purchase',
-        args: [],
+        args: [
+          { name: 'listing_id', type: 'nat' },
+          { name: 'amount_wtf_units', type: 'nat' },
+          { name: 'purchase_ref', type: 'string' },
+        ],
         parameterType: 'pair nat nat string',
         parameterSchema: {
           __michelsonType: 'pair',

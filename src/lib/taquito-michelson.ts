@@ -6,7 +6,7 @@ import {
 import type { Expr } from '@taquito/michel-codec';
 import { ParameterSchema } from '@taquito/michelson-encoder';
 import type { MichelsonV1Expression, ScriptResponse } from '@taquito/rpc';
-import type { AbiEntrypoint } from './types.js';
+import type { AbiArg, AbiEntrypoint } from './types.js';
 
 type MichelineLikeNode = {
   prim?: string;
@@ -307,6 +307,41 @@ function sampleJsArgsForType(node: unknown): unknown[] {
   return sample === undefined ? [] : [sample];
 }
 
+function abiTypeForSchema(schema: unknown): string {
+  if (typeof schema === 'string') {
+    return schema;
+  }
+  if (!isSchemaObject(schema)) {
+    return 'unknown';
+  }
+  return schema.__michelsonType ?? 'unknown';
+}
+
+function abiArgsForSchema(schema: unknown): AbiArg[] {
+  if (!schema) {
+    return [];
+  }
+  if (
+    isSchemaObject(schema) &&
+    schema.__michelsonType?.toLowerCase() === 'unit'
+  ) {
+    return [];
+  }
+  if (
+    isSchemaObject(schema) &&
+    schema.__michelsonType?.toLowerCase() === 'pair' &&
+    schema.schema &&
+    typeof schema.schema === 'object' &&
+    !Array.isArray(schema.schema)
+  ) {
+    return Object.entries(schema.schema).map(([key, value], index) => ({
+      name: /^\d+$/.test(key) ? `arg${index}` : key,
+      type: abiTypeForSchema(value),
+    }));
+  }
+  return [{ name: 'arg0', type: abiTypeForSchema(schema) }];
+}
+
 function collectEntrypointsFromType(node: unknown): ParsedEntrypointShape[] {
   if (!isMichelineObject(node)) {
     return [];
@@ -340,7 +375,7 @@ function readEntrypointsFromParameterRoot(root: unknown): AbiEntrypoint[] {
     .sort((left, right) => left.name.localeCompare(right.name))
     .map(({ name, parameterType, sampleArgs, parameterSchema, sampleJsArgs }) => ({
       name,
-      args: [],
+      args: abiArgsForSchema(parameterSchema),
       parameterType,
       sampleArgs,
       parameterSchema,

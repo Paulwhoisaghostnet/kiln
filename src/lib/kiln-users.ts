@@ -45,6 +45,12 @@ export interface KilnUser {
     expiresAt: string;
     revokedAt?: string;
   };
+  currentApiToken?: {
+    id: string;
+    createdAt: string;
+    expiresAt: string;
+    revokedAt?: string;
+  };
 }
 
 export interface UserSession {
@@ -80,12 +86,23 @@ export interface McpTokenRecord {
   lastUsedAt?: string;
 }
 
+export interface ApiTokenRecord {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt?: string;
+  lastUsedAt?: string;
+}
+
 interface KilnUserDatabase {
   version: 1;
   users: KilnUser[];
   challenges: AuthChallenge[];
   sessions: UserSession[];
   mcpTokens: McpTokenRecord[];
+  apiTokens: ApiTokenRecord[];
 }
 
 export interface KilnUserStoreOptions {
@@ -106,6 +123,11 @@ export interface VerifiedMcpToken {
   user: KilnUser;
 }
 
+export interface VerifiedApiToken {
+  token: ApiTokenRecord;
+  user: KilnUser;
+}
+
 const ACCESS_WORKER_NAME = 'kiln-mcp-access-worker';
 const CHALLENGE_TTL_MINUTES = 10;
 
@@ -116,6 +138,7 @@ function emptyDb(): KilnUserDatabase {
     challenges: [],
     sessions: [],
     mcpTokens: [],
+    apiTokens: [],
   };
 }
 
@@ -430,6 +453,7 @@ export class KilnUserStore {
           reason: 'Wallet is present on the MCP blocklist.',
         };
         this.revokeUserTokens(db, user.id, now.toISOString());
+        this.revokeUserApiTokens(db, user.id, now.toISOString());
         return { ...user.access };
       }
 
@@ -478,6 +502,67 @@ export class KilnUserStore {
       return {
         token,
         tokenRecord: { ...tokenRecord },
+        user: cloneUser(user),
+      };
+    });
+  }
+
+  async generateApiToken(userId: string): Promise<{
+    token: string;
+    tokenRecord: ApiTokenRecord;
+    user: KilnUser;
+  }> {
+    return this.mutate((db) => {
+      const now = this.now();
+      const user = this.requireUser(db, userId);
+      if (user.access.status !== 'approved') {
+        throw new Error('API key access is not approved for this wallet.');
+      }
+
+      this.revokeUserApiTokens(db, user.id, now.toISOString());
+      const token = createSecret('kiln_api');
+      const tokenRecord: ApiTokenRecord = {
+        id: randomUUID(),
+        userId: user.id,
+        tokenHash: tokenHash(token),
+        createdAt: now.toISOString(),
+        expiresAt: addHours(now, this.tokenTtlHours).toISOString(),
+      };
+      db.apiTokens.push(tokenRecord);
+      user.currentApiToken = {
+        id: tokenRecord.id,
+        createdAt: tokenRecord.createdAt,
+        expiresAt: tokenRecord.expiresAt,
+      };
+      return {
+        token,
+        tokenRecord: { ...tokenRecord },
+        user: cloneUser(user),
+      };
+    });
+  }
+
+  async verifyApiToken(token: string): Promise<VerifiedApiToken | null> {
+    return this.mutate((db) => {
+      const now = this.now();
+      this.pruneExpired(db, now);
+      const hash = tokenHash(token);
+      const record = db.apiTokens.find(
+        (row) =>
+          row.tokenHash === hash &&
+          !row.revokedAt &&
+          Date.parse(row.expiresAt) > now.getTime(),
+      );
+      if (!record) {
+        return null;
+      }
+      const user = db.users.find((row) => row.id === record.userId);
+      if (!user || user.access.status !== 'approved') {
+        return null;
+      }
+      record.lastUsedAt = now.toISOString();
+      return {
+        token: { ...record },
         user: cloneUser(user),
       };
     });
@@ -533,6 +618,22 @@ export class KilnUserStore {
     }
   }
 
+  private revokeUserApiTokens(
+    db: KilnUserDatabase,
+    userId: string,
+    revokedAt: string,
+  ): void {
+    for (const token of db.apiTokens) {
+      if (token.userId === userId && !token.revokedAt) {
+        token.revokedAt = revokedAt;
+      }
+    }
+    const user = db.users.find((row) => row.id === userId);
+    if (user?.currentApiToken && !user.currentApiToken.revokedAt) {
+      user.currentApiToken.revokedAt = revokedAt;
+    }
+  }
+
   private pruneExpired(db: KilnUserDatabase, now: Date): void {
     const cutoff = now.getTime();
     db.challenges = db.challenges.filter(
@@ -540,6 +641,12 @@ export class KilnUserStore {
     );
     db.sessions = db.sessions.filter(
       (session) => !session.revokedAt && Date.parse(session.expiresAt) > cutoff,
+    );
+    db.apiTokens = db.apiTokens.filter(
+      (token) => !token.revokedAt && Date.parse(token.expiresAt) > cutoff,
+    );
+    db.mcpTokens = db.mcpTokens.filter(
+      (token) => !token.revokedAt && Date.parse(token.expiresAt) > cutoff,
     );
   }
 
@@ -569,6 +676,7 @@ export class KilnUserStore {
         challenges: Array.isArray(parsed.challenges) ? parsed.challenges : [],
         sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
         mcpTokens: Array.isArray(parsed.mcpTokens) ? parsed.mcpTokens : [],
+        apiTokens: Array.isArray(parsed.apiTokens) ? parsed.apiTokens : [],
       };
     } catch (error) {
       const maybeError = error as NodeJS.ErrnoException;

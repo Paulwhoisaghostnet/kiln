@@ -31,6 +31,7 @@ function fileIcon(kind: KilnProjectFile['kind']) {
 
 export function ProjectWorkspacePanel({
   networkId,
+  projectName,
   sourceType,
   source,
   initialStorage,
@@ -39,6 +40,7 @@ export function ProjectWorkspacePanel({
   clearanceId,
 }: {
   networkId: KilnNetworkId;
+  projectName?: string;
   sourceType: 'michelson' | 'smartpy' | 'solidity';
   source: string;
   initialStorage?: string;
@@ -49,6 +51,7 @@ export function ProjectWorkspacePanel({
   const project: BrowserWorkspaceProject = useMemo(
     () =>
       createBrowserWorkspaceProject({
+        projectName,
         networkId,
         sourceType,
         source,
@@ -57,7 +60,7 @@ export function ProjectWorkspacePanel({
         contractAddress,
         clearanceId,
       }),
-    [clearanceId, contractAddress, entrypoints, initialStorage, networkId, source, sourceType],
+    [clearanceId, contractAddress, entrypoints, initialStorage, networkId, projectName, source, sourceType],
   );
   const [selectedPath, setSelectedPath] = useState(project.files[0]?.path ?? '');
   const selectedFile =

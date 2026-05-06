@@ -131,6 +131,28 @@ function mockTezosServiceFactory() {
         status: 'applied',
       };
     },
+    async getContractEntrypoints() {
+      return [
+        {
+          name: 'mint',
+          args: [],
+          parameterType: 'unit',
+          sampleArgs: ['Unit'],
+          sampleJsArgs: [],
+        },
+        {
+          name: 'purchase',
+          args: [
+            { name: 'listing_id', type: 'nat' },
+            { name: 'purchase_ref', type: 'string' },
+            { name: 'quantity', type: 'nat' },
+          ],
+          parameterType: 'pair nat string nat',
+          sampleArgs: ['(Pair 0 "kiln-e2e" 1)'],
+          sampleJsArgs: [{ listing_id: 0, purchase_ref: 'kiln-e2e', quantity: 1 }],
+        },
+      ];
+    },
   });
 
   return { factory, calls };
@@ -790,6 +812,26 @@ describe('createApiApp', () => {
     expect(response.body.error).toContain('Deployment blocked');
   });
 
+  it('allows explicit direct deploys to Tezos Shadownet from loaded Michelson', async () => {
+    const { factory, calls } = mockTezosServiceFactory();
+    const app = createApiApp({
+      env: baseEnv({ KILN_REQUIRE_SIM_CLEARANCE: true }),
+      createTezosService: factory,
+    });
+
+    const response = await request(app).post('/api/kiln/upload').send({
+      networkId: 'tezos-shadownet',
+      code: sampleMichelson,
+      initialStorage: 'Unit',
+      wallet: 'A',
+      allowShadownetDirectDeploy: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(calls.originate).toHaveLength(1);
+  });
+
   it('deploys when workflow clearance id matches code hash', async () => {
     const { factory, calls } = mockTezosServiceFactory();
     const app = createApiApp({
@@ -925,7 +967,10 @@ describe('createApiApp', () => {
       }),
       expect.objectContaining({
         name: 'transfer',
-        args: [],
+        args: [
+          { name: 'arg0', type: 'address' },
+          { name: 'arg1', type: 'nat' },
+        ],
         parameterType: 'pair address nat',
         sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
         sampleJsArgs: [{ 0: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb', 1: 1 }],
@@ -1083,7 +1128,10 @@ describe('createApiApp', () => {
       }),
       expect.objectContaining({
         name: 'transfer',
-        args: [],
+        args: [
+          { name: 'arg0', type: 'address' },
+          { name: 'arg1', type: 'nat' },
+        ],
         parameterType: 'pair address nat',
         sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
         sampleJsArgs: [{ 0: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb', 1: 1 }],
@@ -1164,6 +1212,32 @@ describe('createApiApp', () => {
       args: ['100', '1'],
       options: { amountMutez: 2_000_000 },
     });
+  });
+
+  it('introspects existing Tezos contracts for standalone testing', async () => {
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app)
+      .get('/api/kiln/contracts/introspect')
+      .query({ networkId: 'tezos-shadownet', contractAddress });
+
+    expect(response.status).toBe(200);
+    expect(response.body.contractAddress).toBe(contractAddress);
+    expect(response.body.entrypoints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'purchase',
+          args: [
+            { name: 'listing_id', type: 'nat' },
+            { name: 'purchase_ref', type: 'string' },
+            { name: 'quantity', type: 'nat' },
+          ],
+        }),
+      ]),
+    );
   });
 
   it('runs post-deploy E2E sequence for Bert and Ernie', async () => {
@@ -1519,6 +1593,7 @@ describe('createApiApp', () => {
         env: {
           ...baseEnv(),
           KILN_USER_DB_PATH: userDbPath,
+          KILN_API_AUTH_REQUIRED: true,
         } as AppEnv,
         createTezosService: mockTezosServiceFactory().factory,
         createEtherlinkService: () =>
@@ -1599,6 +1674,20 @@ describe('createApiApp', () => {
       expect(tokenResponse.status).toBe(200);
       expect(tokenResponse.body.token).toMatch(/^kiln_mcp_/);
       expect(tokenResponse.body.expiresAt).toBe('2026-05-05T12:00:00.000Z');
+
+      const apiKeyResponse = await request(app)
+        .post('/api/kiln/api-key')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`)
+        .send();
+
+      expect(apiKeyResponse.status).toBe(200);
+      expect(apiKeyResponse.body.token).toMatch(/^kiln_api_/);
+      expect(apiKeyResponse.body.expiresAt).toBe('2026-05-05T12:00:00.000Z');
+
+      const apiKeyBalances = await request(app)
+        .get('/api/kiln/balances')
+        .set('x-kiln-token', apiKeyResponse.body.token);
+      expect(apiKeyBalances.status).toBe(200);
 
       const initialize = await request(app)
         .post('/mcp')

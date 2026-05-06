@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Play, Loader2 } from 'lucide-react';
 import { useKilnView } from '../context/KilnViewProvider';
 import type { AbiEntrypoint, WalletType } from '../lib/types';
@@ -20,23 +20,49 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [selectedWallet, setSelectedWallet] = useState<WalletType>('A');
 
-  const handleInputChange = (entrypoint: string, argIndex: number, value: string) => {
-    setFormValues(prev => ({
+  const defaultArgsByEntrypoint = useMemo(
+    () =>
+      Object.fromEntries(
+        abi.map((entrypoint) => [
+          entrypoint.name,
+          JSON.stringify(entrypoint.sampleJsArgs ?? [], null, 2),
+        ]),
+      ),
+    [abi],
+  );
+
+  useEffect(() => {
+    setFormValues((prev) => {
+      const next = { ...prev };
+      for (const [entrypoint, defaultArgs] of Object.entries(defaultArgsByEntrypoint)) {
+        if (next[entrypoint] === undefined) {
+          next[entrypoint] = defaultArgs;
+        }
+      }
+      return next;
+    });
+  }, [defaultArgsByEntrypoint]);
+
+  const handleInputChange = (entrypoint: string, value: string) => {
+    setFormValues((prev) => ({
       ...prev,
-      [`${entrypoint}_${argIndex}`]: value
+      [entrypoint]: value,
     }));
   };
 
-  const handleExecute = async (entrypoint: string, numArgs: number) => {
-    setLoadingMap(prev => ({ ...prev, [entrypoint]: true }));
+  const handleExecute = async (entrypoint: AbiEntrypoint) => {
+    setLoadingMap(prev => ({ ...prev, [entrypoint.name]: true }));
     try {
-      const args = [];
-      for (let i = 0; i < numArgs; i++) {
-        args.push(formValues[`${entrypoint}_${i}`] || '');
+      const raw = formValues[entrypoint.name] ?? defaultArgsByEntrypoint[entrypoint.name] ?? '[]';
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) {
+        throw new Error('Entrypoint args must be a JSON array.');
       }
-      await onExecute(entrypoint, args, selectedWallet);
+      await onExecute(entrypoint.name, parsed, selectedWallet);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Invalid JSON args.');
     } finally {
-      setLoadingMap(prev => ({ ...prev, [entrypoint]: false }));
+      setLoadingMap(prev => ({ ...prev, [entrypoint.name]: false }));
     }
   };
 
@@ -88,34 +114,37 @@ export default function DynamicRig({ contractAddress, abi, onExecute }: DynamicR
               <h4 className="card-title text-lg font-mono text-secondary">{entrypoint.name}</h4>
               
               <div className="space-y-3 mt-4">
-                {entrypoint.args?.map((arg, argIdx: number) => (
-                  <div key={argIdx} className="form-control w-full">
-                    <label className="label py-1">
-                      <span className="label-text text-xs font-mono">{arg.name || `arg${argIdx}`} ({arg.type})</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder={`Enter ${arg.type}...`}
-                      className="input input-sm input-bordered w-full font-mono"
-                      value={formValues[`${entrypoint.name}_${argIdx}`] || ''}
-                      onChange={(e) => handleInputChange(entrypoint.name, argIdx, e.target.value)}
-                    />
+                {(entrypoint.args?.length ?? 0) > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {entrypoint.args.map((arg, argIdx: number) => (
+                      <span key={`${arg.name}-${argIdx}`} className="badge badge-outline font-mono">
+                        {arg.name || `arg${argIdx}`}:{arg.type}
+                      </span>
+                    ))}
                   </div>
-                ))}
+                ) : null}
 
-                {(entrypoint.args?.length ?? 0) === 0 && (
+                {(entrypoint.args?.length ?? 0) === 0 && (entrypoint.sampleJsArgs?.length ?? 0) === 0 ? (
                   <p
                     className={`text-xs text-base-content/60 font-mono ${mode === 'eli5' && tip('dynamicRigNoArgs') ? 'cursor-help underline decoration-dotted decoration-base-content/40 underline-offset-2' : ''}`}
                     title={mode === 'eli5' ? tip('dynamicRigNoArgs') : undefined}
                   >
                     {t('dynamicRigNoArgs')}
                   </p>
-                )}
+                ) : null}
+
+                <textarea
+                  className="textarea textarea-bordered w-full min-h-24 font-mono text-xs bg-base-300/50"
+                  value={formValues[entrypoint.name] ?? defaultArgsByEntrypoint[entrypoint.name] ?? '[]'}
+                  onChange={(event) => handleInputChange(entrypoint.name, event.target.value)}
+                  spellCheck={false}
+                  aria-label={`${entrypoint.name} JSON arguments`}
+                />
 
                 <button
                   title={tip('dynamicRigExecute') ?? undefined}
                   className="btn btn-sm btn-primary w-full mt-2"
-                  onClick={() => handleExecute(entrypoint.name, entrypoint.args?.length || 0)}
+                  onClick={() => handleExecute(entrypoint)}
                   disabled={loadingMap[entrypoint.name]}
                 >
                   {loadingMap[entrypoint.name] ? (

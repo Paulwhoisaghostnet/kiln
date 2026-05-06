@@ -57,6 +57,14 @@ function publicUser(user: KilnUser) {
           revokedAt: user.currentMcpToken.revokedAt,
         }
       : null,
+    currentApiToken: user.currentApiToken
+      ? {
+          id: user.currentApiToken.id,
+          createdAt: user.currentApiToken.createdAt,
+          expiresAt: user.currentApiToken.expiresAt,
+          revokedAt: user.currentApiToken.revokedAt,
+        }
+      : null,
   };
 }
 
@@ -184,6 +192,37 @@ export function createAuthRouter(services: ApiAppServices): Router {
         timestamp: new Date().toISOString(),
         requestId: res.locals.requestId as string | undefined,
         event: 'mcp_token_generated',
+        userId: result.user.id,
+        walletKind: result.user.walletKind,
+        walletAddress: result.user.walletAddress,
+        tokenId: result.tokenRecord.id,
+        expiresAt: result.tokenRecord.expiresAt,
+      });
+      res.json({
+        success: true,
+        token: result.token,
+        tokenId: result.tokenRecord.id,
+        expiresAt: result.tokenRecord.expiresAt,
+        user: publicUser(result.user),
+      });
+    } catch (error) {
+      res.status(403).json({ error: asMessage(error) });
+    }
+  });
+
+  router.post('/api/kiln/api-key', async (req, res) => {
+    const user = await requireUserSession(req, services);
+    if (!user) {
+      res.status(401).json({ error: 'Wallet login required.' });
+      return;
+    }
+
+    try {
+      const result = await services.userStore.generateApiToken(user.id);
+      services.activityLogger.log({
+        timestamp: new Date().toISOString(),
+        requestId: res.locals.requestId as string | undefined,
+        event: 'api_key_generated',
         userId: result.user.id,
         walletKind: result.user.walletKind,
         walletAddress: result.user.walletAddress,
