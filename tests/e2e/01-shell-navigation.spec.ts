@@ -43,6 +43,14 @@ test.describe('UI shell smoke', () => {
     await expect(page).toHaveURL(/#tool-build$/);
     await expect(page.getByRole('heading', { name: /Contract tools, no required login/i })).toBeVisible();
 
+    await page.getByRole('button', { name: /Validate/i }).first().click();
+    await expect(page).toHaveURL(/#tool-validate$/);
+    await expect(page.getByRole('button', { name: /Load from file/i })).toBeVisible();
+
+    await page.getByRole('button', { name: /Deploy/i }).first().click();
+    await expect(page).toHaveURL(/#tool-deploy$/);
+    await expect(page.getByRole('button', { name: /Load from file/i })).toBeVisible();
+
     await page.getByRole('button', { name: /Account/i }).first().click();
     await expect(page).toHaveURL(/#account$/);
     await expect(page.getByRole('heading', { name: /Account and access/i })).toBeVisible();

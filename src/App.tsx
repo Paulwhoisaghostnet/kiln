@@ -214,6 +214,14 @@ interface DiscoveredTezosContractWithProject extends DiscoveredTezosContract {
   projectId: string | null;
 }
 
+interface AssociatedContractOption {
+  id: string;
+  projectId: string;
+  projectName: string;
+  projectNetworkId: KilnNetworkId;
+  contract: KilnProjectContractItem;
+}
+
 interface WorkflowRunResponse extends WorkflowSummary {
   success: boolean;
   sourceType: ContractSourceType;
@@ -973,6 +981,19 @@ export default function App() {
   const activeContract =
     activeProject?.contracts.find((contract) => contract.id === activeProject.activeContractId) ??
     activeProject?.contracts[0];
+  const associatedContractOptions = useMemo<AssociatedContractOption[]>(
+    () =>
+      projectStore.projects.flatMap((project) =>
+        project.contracts.map((contract) => ({
+          id: `${project.id}:${contract.id}`,
+          projectId: project.id,
+          projectName: project.name,
+          projectNetworkId: project.networkId,
+          contract,
+        })),
+      ),
+    [projectStore.projects],
+  );
   const discoveredContractsWithProjects = useMemo<DiscoveredTezosContractWithProject[]>(
     () =>
       discoveredContracts.map((contract) => {
@@ -1253,6 +1274,38 @@ export default function App() {
     }));
     applyContractState(contract, project.networkId);
     addLog(`Loaded contract item: ${contract.title}`, 'info');
+  };
+
+  const loadAssociatedProjectContract = (optionId: string) => {
+    const option = associatedContractOptions.find((candidate) => candidate.id === optionId);
+    const project = projectStore.projects.find((candidate) => candidate.id === option?.projectId);
+    if (!option || !project) {
+      return;
+    }
+    const normalized = normalizeSavedProject({
+      ...project,
+      activeContractId: option.contract.id,
+    });
+    updateProjectStore((prev) => ({
+      ...prev,
+      activeProjectId: normalized.id,
+      projects: prev.projects.map((candidate) =>
+        candidate.id === normalized.id
+          ? {
+              ...normalized,
+              updatedAt: new Date().toISOString(),
+            }
+          : candidate,
+      ),
+    }));
+    pendingProjectHydrationRef.current = normalized;
+    if (normalized.networkId !== networkId) {
+      requestNetworkChange(normalized.networkId);
+    } else {
+      pendingProjectHydrationRef.current = null;
+      applyProjectState(normalized);
+    }
+    addLog(`Loaded ${option.contract.title} from ${option.projectName}.`, 'info');
   };
 
   const updateActiveContractMetadata = (
@@ -2066,6 +2119,7 @@ export default function App() {
     if (!file) {
       return;
     }
+    const input = event.target;
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
       const loadedSource = String(loadEvent.target?.result ?? '');
@@ -2076,7 +2130,15 @@ export default function App() {
       } else {
         setMichelsonCode(loadedSource);
       }
+      setClearanceId(null);
+      setContractAddress('');
+      setAbi([]);
+      setE2EEntrypoint('');
+      setE2EArgs('[]');
+      setLastWorkflow(null);
+      setLastSolidityCompile(null);
       addLog(`Loaded file: ${file.name} (${detectedType}).`, 'info');
+      input.value = '';
     };
     reader.readAsText(file);
   };
@@ -3425,6 +3487,13 @@ export default function App() {
           isTezos={isTezos}
           isRunningWorkflow={isRunningWorkflow}
           hasSource={isTezos ? michelsonCode.trim().length > 0 : solidityCode.trim().length > 0}
+          isAccountLoggedIn={Boolean(authSession)}
+          associatedContracts={associatedContractOptions}
+          activeAssociatedContractId={
+            activeProject && activeContract ? `${activeProject.id}:${activeContract.id}` : null
+          }
+          onOpenContractFile={openContractFilePicker}
+          onLoadAssociatedContract={loadAssociatedProjectContract}
           runWorkflow={runTezosWorkflow}
           workflow={lastWorkflow}
           solidityResult={lastSolidityCompile}
@@ -3445,6 +3514,14 @@ export default function App() {
           clearanceId={clearanceId}
           lastWorkflow={lastWorkflow}
           solidityResult={lastSolidityCompile}
+          hasSource={isTezos ? michelsonCode.trim().length > 0 : solidityCode.trim().length > 0}
+          isAccountLoggedIn={Boolean(authSession)}
+          associatedContracts={associatedContractOptions}
+          activeAssociatedContractId={
+            activeProject && activeContract ? `${activeProject.id}:${activeContract.id}` : null
+          }
+          onOpenContractFile={openContractFilePicker}
+          onLoadAssociatedContract={loadAssociatedProjectContract}
           contractAddress={contractAddress}
           isDeploying={isDeploying}
           isValidating={isValidating}
@@ -5463,10 +5540,97 @@ function CompileSync({
   return null;
 }
 
+function StepContractSourceLoader({
+  isAccountLoggedIn,
+  associatedContracts,
+  activeAssociatedContractId,
+  hasSource,
+  onOpenContractFile,
+  onLoadAssociatedContract,
+}: {
+  isAccountLoggedIn: boolean;
+  associatedContracts: AssociatedContractOption[];
+  activeAssociatedContractId: string | null;
+  hasSource: boolean;
+  onOpenContractFile: () => void;
+  onLoadAssociatedContract: (optionId: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-base-300 bg-base-200/30 p-3">
+      <div className="flex flex-col md:flex-row md:items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs uppercase tracking-wider text-base-content/55">
+            Contract source
+          </div>
+          <div className="text-sm text-base-content/70">
+            {hasSource
+              ? 'Source loaded for this screen.'
+              : isAccountLoggedIn
+                ? 'Load a file or select one of your saved project contracts.'
+                : 'Load a contract file to use this screen without logging in.'}
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline gap-2"
+            onClick={onOpenContractFile}
+          >
+            <Upload className="w-4 h-4" />
+            Load from file
+          </button>
+          {isAccountLoggedIn ? (
+            <select
+              aria-label="Load associated contract"
+              className="select select-bordered select-sm w-full sm:min-w-80"
+              value=""
+              disabled={associatedContracts.length === 0}
+              onChange={(event) => {
+                const optionId = event.target.value;
+                if (optionId) {
+                  onLoadAssociatedContract(optionId);
+                }
+              }}
+            >
+              <option value="">
+                {associatedContracts.length > 0
+                  ? 'Load associated contract'
+                  : 'No associated contracts'}
+              </option>
+              {associatedContracts.map((option) => {
+                const { contract } = option;
+                const domain = contract.domain.trim() || 'General';
+                const role = contract.role.trim() || 'contract';
+                const sourceLoaded =
+                  contract.sourceType === 'solidity'
+                    ? contract.solidityCode.trim().length > 0
+                    : contract.michelsonCode.trim().length > 0;
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.id === activeAssociatedContractId ? 'Current: ' : ''}
+                    {option.projectName} / {contract.title} - {domain} - {role} -{' '}
+                    {option.projectNetworkId}
+                    {sourceLoaded ? '' : ' - empty source'}
+                  </option>
+                );
+              })}
+            </select>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ValidateTab({
   isTezos,
   isRunningWorkflow,
   hasSource,
+  isAccountLoggedIn,
+  associatedContracts,
+  activeAssociatedContractId,
+  onOpenContractFile,
+  onLoadAssociatedContract,
   runWorkflow,
   workflow,
   solidityResult,
@@ -5474,6 +5638,11 @@ function ValidateTab({
   isTezos: boolean;
   isRunningWorkflow: boolean;
   hasSource: boolean;
+  isAccountLoggedIn: boolean;
+  associatedContracts: AssociatedContractOption[];
+  activeAssociatedContractId: string | null;
+  onOpenContractFile: () => void;
+  onLoadAssociatedContract: (optionId: string) => void;
   runWorkflow: () => Promise<WorkflowRunResponse | null>;
   workflow: WorkflowRunResponse | null;
   solidityResult: SolidityCompileResult | null;
@@ -5488,6 +5657,14 @@ function ValidateTab({
           </h2>
           <KilnCopy k="tabValidateIntro" as="p" className="text-sm text-base-content/60 mt-1" />
         </div>
+        <StepContractSourceLoader
+          isAccountLoggedIn={isAccountLoggedIn}
+          associatedContracts={associatedContracts}
+          activeAssociatedContractId={activeAssociatedContractId}
+          hasSource={hasSource}
+          onOpenContractFile={onOpenContractFile}
+          onLoadAssociatedContract={onLoadAssociatedContract}
+        />
         {solidityResult ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="rounded-xl border border-base-300 bg-base-200/40 p-4 space-y-1 text-sm">
@@ -5508,7 +5685,7 @@ function ValidateTab({
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/60">
-            Compile Solidity in the Build tab to populate validation results.
+            Load Solidity here or compile from Build to populate validation results.
           </div>
         )}
       </div>
@@ -5536,6 +5713,14 @@ function ValidateTab({
           {isRunningWorkflow ? 'Running…' : 'Run full workflow'}
         </button>
       </div>
+      <StepContractSourceLoader
+        isAccountLoggedIn={isAccountLoggedIn}
+        associatedContracts={associatedContracts}
+        activeAssociatedContractId={activeAssociatedContractId}
+        hasSource={hasSource}
+        onOpenContractFile={onOpenContractFile}
+        onLoadAssociatedContract={onLoadAssociatedContract}
+      />
       <WorkflowResultsPanel summary={workflow} />
     </div>
   );
@@ -5553,6 +5738,12 @@ function DeployTab({
   clearanceId,
   lastWorkflow,
   solidityResult,
+  hasSource,
+  isAccountLoggedIn,
+  associatedContracts,
+  activeAssociatedContractId,
+  onOpenContractFile,
+  onLoadAssociatedContract,
   contractAddress,
   isDeploying,
   isValidating,
@@ -5572,6 +5763,12 @@ function DeployTab({
   clearanceId: string | null;
   lastWorkflow: WorkflowRunResponse | null;
   solidityResult: SolidityCompileResult | null;
+  hasSource: boolean;
+  isAccountLoggedIn: boolean;
+  associatedContracts: AssociatedContractOption[];
+  activeAssociatedContractId: string | null;
+  onOpenContractFile: () => void;
+  onLoadAssociatedContract: (optionId: string) => void;
   contractAddress: string;
   isDeploying: boolean;
   isValidating: boolean;
@@ -5606,6 +5803,14 @@ function DeployTab({
           </h2>
           <KilnCopy k="tabDeployIntro" as="p" className="text-sm text-base-content/60 mt-1" />
         </div>
+        <StepContractSourceLoader
+          isAccountLoggedIn={isAccountLoggedIn}
+          associatedContracts={associatedContracts}
+          activeAssociatedContractId={activeAssociatedContractId}
+          hasSource={hasSource}
+          onOpenContractFile={onOpenContractFile}
+          onLoadAssociatedContract={onLoadAssociatedContract}
+        />
         {solidityResult?.entry ? (
           <div className="rounded-xl border border-success/40 bg-success/5 p-4 space-y-2 text-sm">
             <div className="font-semibold">{solidityResult.entry.name}</div>
@@ -5616,7 +5821,7 @@ function DeployTab({
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-base-300 p-8 text-center text-sm text-base-content/60">
-            Compile Solidity in the Build tab to enable EVM deploy.
+            Load or compile Solidity before EVM deploy.
           </div>
         )}
         {contractAddress ? (
@@ -5644,6 +5849,15 @@ function DeployTab({
         </h2>
         <KilnCopy k="tabDeployIntro" as="p" className="text-sm text-base-content/60 mt-1" />
       </div>
+
+      <StepContractSourceLoader
+        isAccountLoggedIn={isAccountLoggedIn}
+        associatedContracts={associatedContracts}
+        activeAssociatedContractId={activeAssociatedContractId}
+        hasSource={hasSource}
+        onOpenContractFile={onOpenContractFile}
+        onLoadAssociatedContract={onLoadAssociatedContract}
+      />
 
       <div
         className={`alert text-xs ${
