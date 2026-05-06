@@ -193,6 +193,24 @@ describe('evm-wallet', () => {
     });
   });
 
+  it('snapshots provider account and chain without switching networks', async () => {
+    const request = vi.fn().mockResolvedValueOnce([walletAddress]).mockResolvedValueOnce('0x1f34f');
+    installWindow({ ethereum: { request, info: { name: 'MetaMask' } } });
+    const { getEvmProviderSnapshot } = await import('../src/lib/evm-wallet.js');
+
+    await expect(getEvmProviderSnapshot()).resolves.toMatchObject({
+      providerDetected: true,
+      address: walletAddress,
+      chainId: 127823,
+      providerName: 'MetaMask',
+    });
+    expect(request).toHaveBeenCalledWith({ method: 'eth_accounts' });
+    expect(request).toHaveBeenCalledWith({ method: 'eth_chainId' });
+    expect(request).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'wallet_switchEthereumChain' }),
+    );
+  });
+
   it('deploys bytecode through the injected wallet and validates receipt contract address', async () => {
     const request = vi.fn();
     installProvider(request);

@@ -19,6 +19,15 @@ export interface ConnectedEvmWallet {
   rpcUrl: string;
 }
 
+export interface EvmProviderSnapshot {
+  providerDetected: boolean;
+  address: Hex | null;
+  chainId: number | null;
+  providerName?: string;
+  error?: string;
+  checkedAt: string;
+}
+
 export interface EvmDeployResult {
   transactionHash: Hex;
   contractAddress: Hex;
@@ -221,6 +230,46 @@ function buildChain(profile: KilnNetworkProfile): Chain {
 
 export function hasInjectedEvmProvider(target: EvmWalletTarget = 'auto'): boolean {
   return readProvider(target) !== null;
+}
+
+export async function getEvmProviderSnapshot(
+  target: EvmWalletTarget = 'auto',
+): Promise<EvmProviderSnapshot> {
+  const provider = readProvider(target);
+  const checkedAt = new Date().toISOString();
+  if (!provider) {
+    return {
+      providerDetected: false,
+      address: null,
+      chainId: null,
+      checkedAt,
+    };
+  }
+
+  const info = getProviderInfo(provider);
+  try {
+    const [accounts, chainIdHex] = await Promise.all([
+      provider.request({ method: 'eth_accounts' }) as Promise<Hex[]>,
+      provider.request({ method: 'eth_chainId' }) as Promise<string>,
+    ]);
+    selectedProvider = provider;
+    return {
+      providerDetected: true,
+      address: accounts?.[0] ?? null,
+      chainId: typeof chainIdHex === 'string' ? parseInt(chainIdHex, 16) : null,
+      providerName: info?.name,
+      checkedAt,
+    };
+  } catch (error) {
+    return {
+      providerDetected: true,
+      address: null,
+      chainId: null,
+      providerName: info?.name,
+      error: error instanceof Error ? error.message : 'Unable to read EVM provider state.',
+      checkedAt,
+    };
+  }
 }
 
 /**

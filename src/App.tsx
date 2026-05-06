@@ -42,10 +42,11 @@ import {
 } from './components/WorkflowResultsPanel';
 import { KilnCopy, useKilnView } from './context/KilnViewProvider';
 import { useKilnNetwork } from './context/NetworkProvider';
-import type { EvmWalletTarget } from './lib/evm-wallet';
+import type { EvmProviderSnapshot, EvmWalletTarget } from './lib/evm-wallet';
 import type { KilnNetworkId } from './lib/networks';
 import type { WalletConnectTarget } from './lib/shadownet-wallet';
 import type { AbiEntrypoint, WalletType } from './lib/types';
+import { buildWalletAdvisor, type WalletAdvisorView } from './lib/wallet-advisor';
 import { buildWorkflowDrivenE2ESteps } from './lib/workflow-discovery';
 
 const SolidityPanel = React.lazy(() =>
@@ -67,6 +68,7 @@ type FlowMode = 'guided' | 'workbench';
 
 const guidedStepOrder: TabKey[] = ['setup', 'build', 'validate', 'deploy', 'test', 'handoff'];
 const workbenchToolOrder: WorkbenchToolKey[] = ['build', 'validate', 'deploy', 'test', 'handoff'];
+const WALLET_ADVISOR_INTERVAL_MS = 4_000;
 
 interface LogEntry {
   time: string;
@@ -794,6 +796,15 @@ function persistLinkedWallets(wallets: LinkedKilnWallet[]): void {
   window.localStorage.setItem(LINKED_WALLETS_KEY, JSON.stringify(wallets));
 }
 
+function emptyEvmProviderSnapshot(): EvmProviderSnapshot {
+  return {
+    providerDetected: false,
+    address: null,
+    chainId: null,
+    checkedAt: '',
+  };
+}
+
 function linkedWalletId(kind: KilnWalletKind, address: string, networkId: string): string {
   return `${kind}:${networkId}:${address.toLowerCase()}`;
 }
@@ -839,7 +850,7 @@ function routeHash(surface: SurfaceKey, guidedStep: TabKey, workbenchTool: Workb
 
 export default function App() {
   const { mode, setMode, t, tip } = useKilnView();
-  const { networkId, network, isTezos, isEvm, can, requestNetworkChange } = useKilnNetwork();
+  const { networkId, network, pickable, isTezos, isEvm, can, requestNetworkChange } = useKilnNetwork();
 
   const [projectStore, setProjectStore] = useState<KilnProjectStore>(() =>
     loadProjectStore(),
@@ -868,6 +879,9 @@ export default function App() {
   >('checking');
   const [abi, setAbi] = useState<AbiEntrypoint[]>([]);
   const [connectedWallet, setConnectedWallet] = useState<ConnectedWalletState | null>(null);
+  const [evmProviderSnapshot, setEvmProviderSnapshot] = useState<EvmProviderSnapshot>(() =>
+    emptyEvmProviderSnapshot(),
+  );
   const [useConnectedWalletAsContractAdmin, setUseConnectedWalletAsContractAdmin] =
     useState(true);
   const [e2eEntrypoint, setE2EEntrypoint] = useState('');
@@ -1663,6 +1677,39 @@ export default function App() {
   useEffect(() => {
     void checkHealth();
     void hydrateConnectedWallet();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    let disposed = false;
+    const refreshEvmWalletState = async () => {
+      try {
+        const { getEvmProviderSnapshot } = await import('./lib/evm-wallet');
+        const snapshot = await getEvmProviderSnapshot();
+        if (!disposed) {
+          setEvmProviderSnapshot(snapshot);
+        }
+      } catch (error) {
+        if (!disposed) {
+          setEvmProviderSnapshot({
+            providerDetected: false,
+            address: null,
+            chainId: null,
+            checkedAt: new Date().toISOString(),
+            error: error instanceof Error ? error.message : 'Unable to read EVM wallet state.',
+          });
+        }
+      }
+    };
+
+    void refreshEvmWalletState();
+    const timer = window.setInterval(refreshEvmWalletState, WALLET_ADVISOR_INTERVAL_MS);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   // Every time the network changes, re-fetch balances and clear deploy state that
@@ -3272,6 +3319,47 @@ export default function App() {
     ],
   );
 
+  const signerRequiredForCurrentStep =
+    network.tier === 'mainnet' ||
+    (((activeSurface === 'guided' && activeTab === 'deploy') ||
+      (activeSurface === 'workbench' && activeTool === 'deploy')) &&
+      (deployMode === 'connected' || isEvm));
+
+  const walletAdvisor = useMemo<WalletAdvisorView>(
+    () =>
+      buildWalletAdvisor({
+        networks: pickable,
+        activeNetworkId: networkId,
+        tezosWallet: connectedWallet
+          ? {
+              address: connectedWallet.address,
+              networkId: connectedWallet.networkId,
+              networkName: connectedWallet.networkName,
+              rpcUrl: connectedWallet.rpcUrl,
+            }
+          : null,
+        evmSnapshot: evmProviderSnapshot,
+        accountSession: authSession
+          ? {
+              walletKind: authSession.user.walletKind,
+              walletAddress: authSession.user.walletAddress,
+              lastLoginWalletKind: authSession.user.lastLoginWalletKind,
+              lastLoginWalletAddress: authSession.user.lastLoginWalletAddress,
+              lastLoginNetworkId: authSession.user.lastLoginNetworkId,
+            }
+          : null,
+        signerRequired: signerRequiredForCurrentStep,
+      }),
+    [
+      pickable,
+      networkId,
+      connectedWallet,
+      evmProviderSnapshot,
+      authSession,
+      signerRequiredForCurrentStep,
+    ],
+  );
+
   const renderStep = (step: TabKey, flowMode: FlowMode): React.ReactNode => {
     if (step === 'setup') {
       return (
@@ -3440,6 +3528,8 @@ export default function App() {
       ) : null}
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-6">
+        <WalletStateAdvisorPanel advisor={walletAdvisor} />
+
         {activeSurface === 'dashboard' ? (
           <DashboardScreen
             projects={projectStore.projects}
@@ -4339,6 +4429,105 @@ function SessionSummary({
         </span>
       </div>
     </div>
+  );
+}
+
+function walletAdvisorAccent(status: WalletAdvisorView['status']): string {
+  if (status === 'ready') {
+    return 'border-success/40 bg-success/5';
+  }
+  if (status === 'blocked') {
+    return 'border-error/40 bg-error/5';
+  }
+  if (status === 'action') {
+    return 'border-warning/40 bg-warning/5';
+  }
+  return 'border-base-300 bg-base-100';
+}
+
+function walletAdvisorBadge(status: WalletAdvisorView['status']): string {
+  if (status === 'ready') {
+    return 'badge-success';
+  }
+  if (status === 'blocked') {
+    return 'badge-error';
+  }
+  if (status === 'action') {
+    return 'badge-warning';
+  }
+  return 'badge-ghost';
+}
+
+function WalletStateAdvisorPanel({ advisor }: { advisor: WalletAdvisorView }) {
+  return (
+    <section className={`mb-4 rounded-2xl border p-4 ${walletAdvisorAccent(advisor.status)}`}>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Activity className="w-4 h-4 text-base-content/70" />
+            <h2 className="text-sm font-bold uppercase tracking-wider">
+              Wallet state advisor
+            </h2>
+            <span className={`badge badge-sm ${walletAdvisorBadge(advisor.status)}`}>
+              {advisor.status}
+            </span>
+          </div>
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div>
+              <div className="text-base-content/50 uppercase tracking-wider text-[0.65rem]">
+                Expected
+              </div>
+              <div className="font-semibold">{advisor.expected}</div>
+            </div>
+            <div>
+              <div className="text-base-content/50 uppercase tracking-wider text-[0.65rem]">
+                Current
+              </div>
+              <div>{advisor.current}</div>
+            </div>
+            <div>
+              <div className="text-base-content/50 uppercase tracking-wider text-[0.65rem]">
+                Action
+              </div>
+              <div>{advisor.action}</div>
+            </div>
+          </div>
+          {advisor.accountNote ? (
+            <div className="mt-3 text-xs text-info">{advisor.accountNote}</div>
+          ) : null}
+        </div>
+        {advisor.checkedAt ? (
+          <div className="text-[0.65rem] text-base-content/50 font-mono">
+            checked {new Date(advisor.checkedAt).toLocaleTimeString()}
+          </div>
+        ) : null}
+      </div>
+
+      <details className="mt-3">
+        <summary className="cursor-pointer text-xs font-semibold text-base-content/70">
+          Network wallet matrix
+        </summary>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 mt-3">
+          {advisor.rows.map((row) => (
+            <div
+              key={row.networkId}
+              className={`rounded-xl border p-3 text-xs ${
+                row.active ? 'border-primary/50 bg-primary/5' : 'border-base-300 bg-base-100/70'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-semibold">{row.label}</div>
+                <span className={`badge badge-xs ${walletAdvisorBadge(row.status)}`}>
+                  {row.status}
+                </span>
+              </div>
+              <div className="mt-2 text-base-content/60">{row.current}</div>
+              <div className="mt-2 text-base-content/70">{row.action}</div>
+            </div>
+          ))}
+        </div>
+      </details>
+    </section>
   );
 }
 
