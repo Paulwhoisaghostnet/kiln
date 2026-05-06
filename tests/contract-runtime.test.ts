@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runContractE2E } from '../src/server/pipelines/contract-runtime.js';
-import type { ContractCallResult, WalletType } from '../src/lib/types.js';
-import type { TezosServiceLike } from '../src/lib/tezos-service.js';
+import type { AbiEntrypoint, ContractCallResult, WalletType } from '../src/lib/types.js';
+import type { TezosCallOptions, TezosServiceLike } from '../src/lib/tezos-service.js';
 
 class FakeTezosService implements TezosServiceLike {
   constructor(
@@ -11,7 +11,10 @@ class FakeTezosService implements TezosServiceLike {
       contractAddress: string;
       entrypoint: string;
       args: unknown[];
+      options?: TezosCallOptions;
     }>,
+    private readonly entrypoints: AbiEntrypoint[] = [],
+    private readonly storage: unknown = {},
   ) {}
 
   async getAddress(): Promise<string> {
@@ -46,18 +49,28 @@ class FakeTezosService implements TezosServiceLike {
     contractAddress: string,
     entrypoint: string,
     args: unknown[] = [],
+    options?: TezosCallOptions,
   ): Promise<ContractCallResult> {
     this.calls.push({
       wallet: this.wallet,
       contractAddress,
       entrypoint,
       args,
+      options,
     });
     return {
       hash: `op-${this.wallet}-${entrypoint}`,
       level: 42,
       status: 'applied',
     };
+  }
+
+  async getContractEntrypoints(): Promise<AbiEntrypoint[]> {
+    return this.entrypoints;
+  }
+
+  async getContractStorage(): Promise<unknown> {
+    return this.storage;
   }
 }
 
@@ -172,6 +185,113 @@ describe('runContractE2E', () => {
       'B:transfer',
       'A:start_auction',
       'B:bid_with_token',
+    ]);
+  });
+
+  it('normalizes generated purchase args and prepares FA2 balance/operator resources', async () => {
+    const calls: Array<{
+      wallet: WalletType;
+      contractAddress: string;
+      entrypoint: string;
+      args: unknown[];
+      options?: TezosCallOptions;
+    }> = [];
+    const marketAddress = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
+    const tokenAddress = 'KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW';
+    const entrypoints: AbiEntrypoint[] = [
+      {
+        name: 'purchase',
+        args: [],
+        sampleJsArgs: [
+          {
+            listing_id: 0,
+            amount_wtf_units: 7,
+            purchase_ref: 'kiln-e2e',
+          },
+        ],
+      },
+    ];
+
+    const result = await runContractE2E(
+      {
+        contractAddress: marketAddress,
+        contracts: [
+          {
+            id: 'market',
+            address: marketAddress,
+            entrypoints: ['purchase'],
+          },
+        ],
+        steps: [
+          {
+            label: 'Ernie buys pet food',
+            wallet: 'B',
+            targetContractId: 'market',
+            targetContractAddress: marketAddress,
+            entrypoint: 'purchase',
+            args: [1],
+            generatedArgs: true,
+            assertions: [],
+            expectFailure: false,
+          },
+        ],
+      },
+      (wallet) =>
+        new FakeTezosService(wallet, calls, entrypoints, {
+          asset_token_address: marketAddress,
+          wtf_token_address: tokenAddress,
+          wtf_token_id: 0,
+          treasury: 'tz1cVRngZw42KZ42VQF2ZCy2CJSPNG3H7Cgt',
+        }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(calls).toEqual([
+      {
+        wallet: 'A',
+        contractAddress: tokenAddress,
+        entrypoint: 'mint_tokens',
+        args: [
+          [
+            {
+              token_id: 0,
+              to_: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6',
+              amount: 7,
+            },
+          ],
+        ],
+        options: { useMethodsObject: true },
+      },
+      {
+        wallet: 'B',
+        contractAddress: tokenAddress,
+        entrypoint: 'update_operators',
+        args: [
+          [
+            {
+              add_operator: {
+                owner: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6',
+                operator: marketAddress,
+                token_id: 0,
+              },
+            },
+          ],
+        ],
+        options: { useMethodsObject: true },
+      },
+      {
+        wallet: 'B',
+        contractAddress: marketAddress,
+        entrypoint: 'purchase',
+        args: [
+          {
+            listing_id: 0,
+            amount_wtf_units: 7,
+            purchase_ref: 'kiln-e2e',
+          },
+        ],
+        options: { amountMutez: undefined, useMethodsObject: true },
+      },
     ]);
   });
 });

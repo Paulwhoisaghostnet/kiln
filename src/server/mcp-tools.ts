@@ -23,7 +23,9 @@ import {
   NetworkCapabilityError,
   selectNetworkForRequest,
 } from '../lib/ecosystem-resolver.js';
-import { injectKilnTokens } from '../lib/kiln-injector.js';
+import {
+  injectKilnTokenArtifacts,
+} from '../lib/kiln-injector.js';
 import type { KilnUser } from '../lib/kiln-users.js';
 import { readMichelsonEntrypoints } from '../lib/taquito-michelson.js';
 import { listNetworkCatalog, listNetworkProfiles } from '../lib/networks.js';
@@ -362,7 +364,8 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
           },
           {
             compileSmartPy: services.compileSmartPy,
-            injectKilnTokens: (code: string) => injectKilnTokens(code, services.env),
+            injectKilnTokens: (code: string, initialStorage = 'Unit') =>
+              injectKilnTokenArtifacts({ code, initialStorage }, services.env),
             estimateOrigination: async (code, initialStorage) => {
               const tezos = services.createTezosService('A', network.id);
               return tezos.validateOrigination(code, initialStorage);
@@ -466,7 +469,12 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
           requestedInitialStorage: payload.initialStorage,
           compiledInitialStorage: source.compiled?.initialStorage,
         }).initialStorage;
-        const injectedCode = injectKilnTokens(source.michelson, services.env);
+        const injectedArtifacts = injectKilnTokenArtifacts(
+          { code: source.michelson, initialStorage },
+          services.env,
+        );
+        const injectedCode = injectedArtifacts.code;
+        const injectedInitialStorage = injectedArtifacts.initialStorage;
         const parsedEntrypoints = readMichelsonEntrypoints(injectedCode);
         const entrypoints = parsedEntrypoints.map((entry) => entry.name);
         const entrypointTypes = Object.fromEntries(
@@ -483,7 +491,7 @@ export function createMcpTools(services: ApiAppServices): McpToolDefinition[] {
         const shadowbox = await services.runShadowbox({
           sourceType: source.sourceType,
           michelson: injectedCode,
-          initialStorage,
+          initialStorage: injectedInitialStorage,
           entrypoints,
           entrypointTypes,
           entrypointArgCandidates,

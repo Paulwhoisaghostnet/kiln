@@ -35,6 +35,7 @@ export interface WorkflowRunResult {
     michelson: string;
     initialStorage: string;
     entrypoints: string[];
+    entrypointMetadata: ReturnType<typeof readMichelsonEntrypoints>;
     codeHash: string;
   };
   validate: {
@@ -107,7 +108,10 @@ export async function runContractWorkflow(
       source: string,
       scenario?: string,
     ) => Promise<SmartPyCompilationResult>;
-    injectKilnTokens: (code: string) => string;
+    injectKilnTokens: (code: string, initialStorage?: string) => string | {
+      code: string;
+      initialStorage: string;
+    };
     estimateOrigination: (
       code: string,
       initialStorage: string,
@@ -183,8 +187,15 @@ export async function runContractWorkflow(
   }
 
   let injectedCode = michelson;
+  let injectedInitialStorage = initialStorage;
   try {
-    injectedCode = deps.injectKilnTokens(michelson);
+    const injected = deps.injectKilnTokens(michelson, initialStorage);
+    if (typeof injected === 'string') {
+      injectedCode = injected;
+    } else {
+      injectedCode = injected.code;
+      injectedInitialStorage = injected.initialStorage;
+    }
   } catch (error) {
     warnings.push(
       `Token injection skipped: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -193,7 +204,7 @@ export async function runContractWorkflow(
 
   let estimate: WorkflowRunResult['validate']['estimate'] = null;
   try {
-    estimate = await deps.estimateOrigination(injectedCode, initialStorage);
+    estimate = await deps.estimateOrigination(injectedCode, injectedInitialStorage);
   } catch (error) {
     warnings.push(
       `Origination estimate skipped: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -237,7 +248,7 @@ export async function runContractWorkflow(
       : await deps.runShadowbox({
           sourceType: effectiveSourceType,
           michelson: injectedCode,
-          initialStorage,
+          initialStorage: injectedInitialStorage,
           entrypoints,
           entrypointTypes,
           entrypointArgCandidates,
@@ -282,8 +293,9 @@ export async function runContractWorkflow(
     },
     artifacts: {
       michelson: injectedCode,
-      initialStorage,
+      initialStorage: injectedInitialStorage,
       entrypoints,
+      entrypointMetadata: parsedEntrypoints,
       codeHash,
     },
     validate: {

@@ -151,6 +151,58 @@ describe('workflow discovery', () => {
     );
   });
 
+  it('does not invent listing lifecycle tests for a lone purchase router', () => {
+    const discovery = discoverContractWorkflows({
+      contractId: 'in_app_market',
+      entrypoints: ['purchase'],
+    });
+
+    expect(discovery.workflows.map((workflow) => workflow.kind)).toEqual([
+      'endpoint_reachability',
+    ]);
+    expect(discovery.workflows[0]?.steps).toEqual([
+      expect.objectContaining({
+        label: 'in_app_market: reach purchase',
+        wallet: 'ernie',
+        entrypoint: 'purchase',
+      }),
+    ]);
+  });
+
+  it('uses Taquito object samples in generated E2E steps when metadata is available', () => {
+    const steps = buildWorkflowDrivenE2ESteps({
+      contractId: 'in_app_market',
+      contractAddress: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      entrypoints: [
+        {
+          name: 'purchase',
+          args: [],
+          sampleJsArgs: [
+            {
+              listing_id: 0,
+              amount_wtf_units: 1,
+              purchase_ref: 'kiln-e2e',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(steps).toEqual([
+      expect.objectContaining({
+        entrypoint: 'purchase',
+        args: [
+          {
+            listing_id: 0,
+            amount_wtf_units: 1,
+            purchase_ref: 'kiln-e2e',
+          },
+        ],
+        generatedArgs: true,
+      }),
+    ]);
+  });
+
   it('omits callback and signature-bound entrypoints from shadowbox steps with warnings', () => {
     const steps = buildWorkflowDrivenShadowboxSteps({
       contractId: 'token',

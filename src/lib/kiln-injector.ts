@@ -32,6 +32,11 @@ export interface ResolvedDummyTokens {
   source: 'named' | 'list';
 }
 
+export interface InjectedKilnArtifacts {
+  code: string;
+  initialStorage: string;
+}
+
 function parseKt1Address(address: string, fieldName: string): string {
   if (!kt1Regex.test(address)) {
     throw new Error(
@@ -126,6 +131,12 @@ export function injectKilnTokens(
   michelsonCode: string,
   dummyTokenConfig: string | DummyTokenConfig | undefined = process.env.KILN_DUMMY_TOKENS,
 ): string {
+  return createKilnTokenInjector(dummyTokenConfig).inject(michelsonCode);
+}
+
+export function createKilnTokenInjector(
+  dummyTokenConfig: string | DummyTokenConfig | undefined = process.env.KILN_DUMMY_TOKENS,
+): { inject: (text: string) => string } {
   const dummyTokens =
     typeof dummyTokenConfig === 'string' || typeof dummyTokenConfig === 'undefined'
       ? parseDummyTokens(dummyTokenConfig)
@@ -137,14 +148,35 @@ export function injectKilnTokens(
   }
 
   let tokenIndex = 0;
+  const replacements = new Map<string, string>();
 
-  return michelsonCode.replace(kt1InCodeRegex, (match) => {
-    const replacement = dummyTokens[tokenIndex % dummyTokens.length];
-    if (!replacement) {
-      throw new Error('No replacement token available for injection.');
-    }
-    console.log(`[Kiln Injector] Replacing ${match} with ${replacement}`);
-    tokenIndex += 1;
-    return replacement;
-  });
+  return {
+    inject(text: string): string {
+      return text.replace(kt1InCodeRegex, (match) => {
+        const existing = replacements.get(match);
+        if (existing) {
+          return existing;
+        }
+        const replacement = dummyTokens[tokenIndex % dummyTokens.length];
+        if (!replacement) {
+          throw new Error('No replacement token available for injection.');
+        }
+        replacements.set(match, replacement);
+        console.log(`[Kiln Injector] Replacing ${match} with ${replacement}`);
+        tokenIndex += 1;
+        return replacement;
+      });
+    },
+  };
+}
+
+export function injectKilnTokenArtifacts(
+  artifacts: InjectedKilnArtifacts,
+  dummyTokenConfig: string | DummyTokenConfig | undefined = process.env.KILN_DUMMY_TOKENS,
+): InjectedKilnArtifacts {
+  const injector = createKilnTokenInjector(dummyTokenConfig);
+  return {
+    code: injector.inject(artifacts.code),
+    initialStorage: injector.inject(artifacts.initialStorage),
+  };
 }

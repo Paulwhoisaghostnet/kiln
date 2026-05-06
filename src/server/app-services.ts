@@ -14,7 +14,7 @@ import {
 } from '../lib/bundle-export.js';
 import { getEnv, type AppEnv } from '../lib/env.js';
 import { EtherlinkService } from '../lib/etherlink-service.js';
-import { injectKilnTokens } from '../lib/kiln-injector.js';
+import { injectKilnTokenArtifacts } from '../lib/kiln-injector.js';
 import {
   createKilnUserStore,
   type KilnUserStore,
@@ -152,7 +152,8 @@ export function createApiAppServices(
     ((payload) =>
       runContractWorkflow(payload, {
         compileSmartPy,
-        injectKilnTokens: (code: string) => injectKilnTokens(code, env),
+        injectKilnTokens: (code: string, initialStorage = 'Unit') =>
+          injectKilnTokenArtifacts({ code, initialStorage }, env),
         estimateOrigination: async (code, initialStorage) => {
           // Tezos-only path — network is picked per-workflow by the router.
           const tezosService = createTezosService('A', env.KILN_NETWORK);

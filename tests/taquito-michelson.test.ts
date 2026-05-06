@@ -15,12 +15,32 @@ describe('readMichelsonEntrypoints', () => {
     const result = readMichelsonEntrypoints(michelson);
 
     expect(result).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
+      {
+        name: 'mint',
+        args: [],
+        parameterType: 'unit',
+        parameterSchema: { __michelsonType: 'unit', schema: 'unit' },
+        sampleArgs: ['Unit'],
+        sampleJsArgs: [],
+      },
       {
         name: 'transfer',
         args: [],
         parameterType: 'pair address nat',
+        parameterSchema: {
+          __michelsonType: 'pair',
+          schema: {
+            0: { __michelsonType: 'address', schema: 'address' },
+            1: { __michelsonType: 'nat', schema: 'nat' },
+          },
+        },
         sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
+        sampleJsArgs: [
+          {
+            0: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+            1: 1,
+          },
+        ],
       },
     ]);
   });
@@ -41,8 +61,22 @@ describe('readMichelsonEntrypoints', () => {
     `;
 
     expect(readMichelsonEntrypoints(michelson)).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
-      { name: 'transfer', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
+      {
+        name: 'mint',
+        args: [],
+        parameterType: 'unit',
+        parameterSchema: { __michelsonType: 'unit', schema: 'unit' },
+        sampleArgs: ['Unit'],
+        sampleJsArgs: [],
+      },
+      {
+        name: 'transfer',
+        args: [],
+        parameterType: 'unit',
+        parameterSchema: { __michelsonType: 'unit', schema: 'unit' },
+        sampleArgs: ['Unit'],
+        sampleJsArgs: [],
+      },
     ]);
   });
 
@@ -61,13 +95,69 @@ describe('readMichelsonEntrypoints', () => {
         name: 'purchase',
         args: [],
         parameterType: 'pair nat nat string',
+        parameterSchema: {
+          __michelsonType: 'pair',
+          schema: {
+            0: { __michelsonType: 'nat', schema: 'nat' },
+            1: { __michelsonType: 'nat', schema: 'nat' },
+            2: { __michelsonType: 'string', schema: 'string' },
+          },
+        },
         sampleArgs: ['(Pair 1 1 "shadowbox")', '(Pair 1 (Pair 1 "shadowbox"))'],
+        sampleJsArgs: [{ 0: 1, 1: 1, 2: 'shadowbox' }],
       },
       {
         name: 'settle',
         args: [],
         parameterType: 'pair nat (pair nat string)',
+        parameterSchema: {
+          __michelsonType: 'pair',
+          schema: {
+            0: { __michelsonType: 'nat', schema: 'nat' },
+            1: { __michelsonType: 'nat', schema: 'nat' },
+            2: { __michelsonType: 'string', schema: 'string' },
+          },
+        },
         sampleArgs: ['(Pair 1 (Pair 1 "shadowbox"))'],
+        sampleJsArgs: [{ 0: 1, 1: 1, 2: 'shadowbox' }],
+      },
+    ]);
+  });
+
+  it('keeps SmartPy field names for Taquito methodsObject sample args', () => {
+    const michelson = `
+      parameter
+        (or
+          (unit %default)
+          (pair %purchase
+            (nat %listing_id)
+            (nat %amount_wtf_units)
+            (string %purchase_ref)));
+      storage unit;
+      code { CAR ; NIL operation ; PAIR };
+    `;
+
+    expect(readMichelsonEntrypoints(michelson)).toEqual([
+      {
+        name: 'purchase',
+        args: [],
+        parameterType: 'pair nat nat string',
+        parameterSchema: {
+          __michelsonType: 'pair',
+          schema: {
+            listing_id: { __michelsonType: 'nat', schema: 'nat' },
+            amount_wtf_units: { __michelsonType: 'nat', schema: 'nat' },
+            purchase_ref: { __michelsonType: 'string', schema: 'string' },
+          },
+        },
+        sampleArgs: ['(Pair 1 1 "shadowbox")', '(Pair 1 (Pair 1 "shadowbox"))'],
+        sampleJsArgs: [
+          {
+            listing_id: 0,
+            amount_wtf_units: 1,
+            purchase_ref: 'kiln-e2e',
+          },
+        ],
       },
     ]);
   });

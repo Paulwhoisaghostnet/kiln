@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => {
   const getBalanceMock = vi.fn();
   const getChainIdMock = vi.fn();
   const getConstantsMock = vi.fn();
+  const getScriptMock = vi.fn();
   const estimateOriginateMock = vi.fn();
   const originateMock = vi.fn();
   const atMock = vi.fn();
@@ -14,7 +15,11 @@ const mocks = vi.hoisted(() => {
 
   class MockTezosToolkit {
     tz = { getBalance: getBalanceMock };
-    rpc = { getChainId: getChainIdMock, getConstants: getConstantsMock };
+    rpc = {
+      getChainId: getChainIdMock,
+      getConstants: getConstantsMock,
+      getScript: getScriptMock,
+    };
     estimate = { originate: estimateOriginateMock };
     contract = { originate: originateMock, at: atMock };
     setProvider = setProviderMock;
@@ -33,6 +38,7 @@ const mocks = vi.hoisted(() => {
     getBalanceMock,
     getChainIdMock,
     getConstantsMock,
+    getScriptMock,
     estimateOriginateMock,
     originateMock,
     atMock,
@@ -105,6 +111,30 @@ describe('TezosService', () => {
       hard_gas_limit_per_operation: '1040000',
       hard_storage_limit_per_operation: '60000',
     });
+    mocks.getScriptMock.mockResolvedValue({
+      code: [
+        {
+          prim: 'parameter',
+          args: [
+            {
+              prim: 'or',
+              args: [
+                { prim: 'unit', annots: ['%default'] },
+                {
+                  prim: 'pair',
+                  annots: ['%purchase'],
+                  args: [
+                    { prim: 'nat', annots: ['%listing_id'] },
+                    { prim: 'nat', annots: ['%amount_wtf_units'] },
+                    { prim: 'string', annots: ['%purchase_ref'] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
     mocks.estimateOriginateMock.mockResolvedValue({
       gasLimit: 380_000,
       storageLimit: 35_000,
@@ -133,6 +163,10 @@ describe('TezosService', () => {
           send: mocks.sendMock,
         }),
       },
+      storage: vi.fn().mockResolvedValue({
+        wtf_token_address: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+        wtf_token_id: 0,
+      }),
     });
   });
 
@@ -222,6 +256,101 @@ describe('TezosService', () => {
 
     expect(result.hash).toBe('opTestHash');
     expect(mocks.sendMock).toHaveBeenCalledWith(undefined);
+  });
+
+  it('prefers methodsObject for generated object arguments', async () => {
+    const methodsPurchase = vi.fn((..._args: unknown[]) => ({
+      send: mocks.sendMock,
+    }));
+    const methodsObjectPurchase = vi.fn((..._args: unknown[]) => ({
+      send: mocks.sendMock,
+    }));
+    mocks.atMock.mockResolvedValue({
+      methods: {
+        purchase: methodsPurchase,
+      },
+      methodsObject: {
+        purchase: methodsObjectPurchase,
+      },
+    });
+    const service = new TezosService('B', baseEnv());
+
+    await service.callContract(
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'purchase',
+      [{ listing_id: 0, amount_wtf_units: 1, purchase_ref: 'kiln-e2e' }],
+    );
+
+    expect(methodsPurchase).not.toHaveBeenCalled();
+    expect(methodsObjectPurchase).toHaveBeenCalledWith({
+      listing_id: 0,
+      amount_wtf_units: 1,
+      purchase_ref: 'kiln-e2e',
+    });
+  });
+
+  it('honors explicit methodsObject calls for list parameters', async () => {
+    const updateOperators = vi.fn((..._args: unknown[]) => ({
+      send: mocks.sendMock,
+    }));
+    mocks.atMock.mockResolvedValue({
+      methodsObject: {
+        update_operators: updateOperators,
+      },
+    });
+    const service = new TezosService('B', baseEnv());
+
+    const args = [
+      [
+        {
+          add_operator: {
+            owner: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+            operator: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+            token_id: 0,
+          },
+        },
+      ],
+    ];
+    await service.callContract(
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      'update_operators',
+      args,
+      { useMethodsObject: true },
+    );
+
+    expect(updateOperators).toHaveBeenCalledWith(args[0]);
+  });
+
+  it('reads live contract entrypoint metadata through the RPC script', async () => {
+    const service = new TezosService('B', baseEnv());
+
+    const entrypoints = await service.getContractEntrypoints(
+      'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+    );
+
+    expect(entrypoints).toEqual([
+      expect.objectContaining({
+        name: 'purchase',
+        sampleJsArgs: [
+          {
+            listing_id: 0,
+            amount_wtf_units: 1,
+            purchase_ref: 'kiln-e2e',
+          },
+        ],
+      }),
+    ]);
+  });
+
+  it('reads contract storage through the contract abstraction', async () => {
+    const service = new TezosService('B', baseEnv());
+
+    await expect(
+      service.getContractStorage('KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton'),
+    ).resolves.toEqual({
+      wtf_token_address: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+      wtf_token_id: 0,
+    });
   });
 
   it('keeps call results usable when Taquito omits confirmation block metadata', async () => {

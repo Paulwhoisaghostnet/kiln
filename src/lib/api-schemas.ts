@@ -92,6 +92,7 @@ export const e2eStepSchema = z.object({
     .min(1, 'entrypoint is required')
     .max(128, 'entrypoint is too long'),
   args: z.array(michelsonArgumentSchema).default([]),
+  generatedArgs: z.boolean().optional(),
   amountMutez: mutezAmountSchema.optional(),
   expectFailure: z.boolean().default(false),
   assertions: z.array(scenarioAssertionSchema).max(20).default([]),

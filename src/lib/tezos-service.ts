@@ -6,7 +6,10 @@ import {
   type KilnNetworkId,
   type RuntimeNetworkConfig,
 } from './networks.js';
-import type { ContractCallResult, WalletType } from './types.js';
+import {
+  readMichelsonEntrypointsFromScript,
+} from './taquito-michelson.js';
+import type { AbiEntrypoint, ContractCallResult, WalletType } from './types.js';
 
 const SAFE_ORIGINATION_GAS_LIMIT = 600_000;
 const SAFE_ORIGINATION_STORAGE_LIMIT = 60_000;
@@ -32,6 +35,7 @@ interface SendableMethod {
 interface ContractWithMethods {
   methods?: Record<string, (...args: unknown[]) => SendableMethod>;
   methodsObject?: Record<string, (...args: unknown[]) => SendableMethod>;
+  storage?: () => Promise<unknown>;
 }
 
 type OriginationParams = {
@@ -57,6 +61,8 @@ export interface TezosServiceLike {
     initialStorage: string,
   ): Promise<OriginationValidationResult>;
   originateContract(code: string, initialStorage: string): Promise<string>;
+  getContractEntrypoints?(contractAddress: string): Promise<AbiEntrypoint[]>;
+  getContractStorage?(contractAddress: string): Promise<unknown>;
   callContract(
     contractAddress: string,
     entrypoint: string,
@@ -67,6 +73,7 @@ export interface TezosServiceLike {
 
 export interface TezosCallOptions {
   amountMutez?: number;
+  useMethodsObject?: boolean;
 }
 
 /**
@@ -423,8 +430,18 @@ export class TezosService implements TezosServiceLike {
         contractAddress,
       )) as unknown as ContractWithMethods;
       
-      const method =
-        contract.methods?.[entrypoint] ?? contract.methodsObject?.[entrypoint];
+      const objectMethod = contract.methodsObject?.[entrypoint];
+      const flatMethod = contract.methods?.[entrypoint];
+      const preferObjectMethod =
+        Boolean(options.useMethodsObject && objectMethod) ||
+        (Boolean(objectMethod) &&
+          args.length === 1 &&
+          args[0] !== null &&
+          typeof args[0] === 'object' &&
+          !Array.isArray(args[0]));
+      const method = preferObjectMethod
+        ? objectMethod
+        : flatMethod ?? objectMethod;
       if (!method) {
         throw new Error(`Entrypoint ${entrypoint} not found on contract ${contractAddress}`);
       }
@@ -453,5 +470,22 @@ export class TezosService implements TezosServiceLike {
       console.error('Error calling contract:', error);
       throw error;
     }
+  }
+
+  async getContractEntrypoints(contractAddress: string): Promise<AbiEntrypoint[]> {
+    await this.ensureExpectedChainId();
+    const script = await this.tezos.rpc.getScript(contractAddress);
+    return readMichelsonEntrypointsFromScript(script);
+  }
+
+  async getContractStorage(contractAddress: string): Promise<unknown> {
+    await this.ensureExpectedChainId();
+    const contract = (await this.tezos.contract.at(
+      contractAddress,
+    )) as unknown as ContractWithMethods;
+    if (!contract.storage) {
+      throw new Error(`Contract ${contractAddress} storage reader is unavailable.`);
+    }
+    return contract.storage();
   }
 }

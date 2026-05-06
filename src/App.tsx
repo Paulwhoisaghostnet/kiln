@@ -157,6 +157,7 @@ interface WorkflowRunResponse extends WorkflowSummary {
     michelson: string;
     initialStorage: string;
     entrypoints: string[];
+    entrypointMetadata?: AbiEntrypoint[];
     codeHash: string;
   };
 }
@@ -1002,10 +1003,12 @@ export default function App() {
         );
       }
       setLastWorkflow(payload);
-      const parsedEntrypoints: AbiEntrypoint[] = payload.artifacts.entrypoints.map((name) => ({
-        name,
-        args: [],
-      }));
+      const parsedEntrypoints: AbiEntrypoint[] =
+        payload.artifacts.entrypointMetadata ??
+        payload.artifacts.entrypoints.map((name) => ({
+          name,
+          args: [],
+        }));
       setAbi(parsedEntrypoints);
       addLog(
         `Audit score ${payload.audit.score}/100 · Validation ${
@@ -1100,7 +1103,8 @@ export default function App() {
     );
     setContractAddress(result.contractAddress);
     setAbi(
-      workflow.artifacts.entrypoints.map((name) => ({ name, args: [] })),
+      workflow.artifacts.entrypointMetadata ??
+        workflow.artifacts.entrypoints.map((name) => ({ name, args: [] })),
     );
     addLog(
       `Deployed from ${connectedWallet.address}: ${result.contractAddress} (hash ${result.hash})`,
@@ -1211,7 +1215,7 @@ export default function App() {
         ? buildWorkflowDrivenE2ESteps({
             contractId: 'deployed_contract',
             contractAddress,
-            entrypoints: discoveredEntrypoints,
+            entrypoints: abi.length > 0 ? abi : discoveredEntrypoints,
           })
         : [
             { label: 'Bert step', wallet: 'A' as const, entrypoint: selectedEntrypoint, args: parsedArgs },

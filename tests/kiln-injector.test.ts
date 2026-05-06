@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  injectKilnTokenArtifacts,
   injectKilnTokens,
   parseDummyTokens,
   resolveDummyTokens,
@@ -49,6 +50,21 @@ describe('injectKilnTokens', () => {
     expect(() => injectKilnTokens('parameter unit;')).toThrow(
       /KILN_DUMMY_TOKENS is required/,
     );
+  });
+
+  it('uses one stable KT1 replacement map across code and initial storage', () => {
+    const originalToken = 'KT1AFA2mwNUMNd4SsujE1YYp29vd8BZejyKW';
+    const injected = injectKilnTokenArtifacts(
+      {
+        code: `code { PUSH address "${originalToken}" ; DROP }`,
+        initialStorage: `(Pair "${originalToken}" 0)`,
+      },
+      'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg,KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn',
+    );
+
+    expect(injected.code).toContain('KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg');
+    expect(injected.initialStorage).toContain('KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg');
+    expect(injected.initialStorage).not.toContain('KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn');
   });
 });
 

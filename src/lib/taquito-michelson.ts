@@ -4,6 +4,8 @@ import {
   emitMicheline,
 } from '@taquito/michel-codec';
 import type { Expr } from '@taquito/michel-codec';
+import { ParameterSchema } from '@taquito/michelson-encoder';
+import type { MichelsonV1Expression, ScriptResponse } from '@taquito/rpc';
 import type { AbiEntrypoint } from './types.js';
 
 type MichelineLikeNode = {
@@ -17,6 +19,8 @@ interface ParsedEntrypointShape {
   name: string;
   parameterType: string;
   sampleArgs: string[];
+  parameterSchema?: unknown;
+  sampleJsArgs?: unknown[];
 }
 
 const annotationPattern = /^%([a-zA-Z][a-zA-Z0-9_]*)$/;
@@ -163,6 +167,146 @@ function sampleMichelsonArgsForType(node: unknown): string[] {
   }
 }
 
+function isSchemaObject(
+  schema: unknown,
+): schema is { __michelsonType?: string; schema?: unknown } {
+  return Boolean(schema) && typeof schema === 'object' && !Array.isArray(schema);
+}
+
+function fieldAwareSample(fieldName: string | undefined, michelsonType: string): unknown {
+  const field = fieldName?.toLowerCase() ?? '';
+  if (michelsonType === 'address' || michelsonType === 'key_hash') {
+    return sampleAddress;
+  }
+  if (michelsonType === 'contract') {
+    return sampleContractAddress;
+  }
+  if (michelsonType === 'string') {
+    if (field.includes('ref')) {
+      return 'kiln-e2e';
+    }
+    return 'shadowbox';
+  }
+  if (michelsonType === 'bytes') {
+    return '0x00';
+  }
+  if (michelsonType === 'bool') {
+    return true;
+  }
+  if (michelsonType === 'timestamp') {
+    return '1970-01-01T00:00:00Z';
+  }
+  if (michelsonType === 'chain_id') {
+    return 'NetXsqzbfFenSTS';
+  }
+  if (michelsonType === 'mutez') {
+    return 1;
+  }
+  if (michelsonType === 'nat' || michelsonType === 'int') {
+    if (field.endsWith('listing_id') || field.endsWith('offer_id')) {
+      return 0;
+    }
+    return 1;
+  }
+  return undefined;
+}
+
+function sampleJsValueForSchema(schema: unknown, fieldName?: string): unknown {
+  if (typeof schema === 'string') {
+    return fieldAwareSample(fieldName, schema.toLowerCase());
+  }
+  if (!isSchemaObject(schema)) {
+    return undefined;
+  }
+
+  const michelsonType = schema.__michelsonType?.toLowerCase();
+  if (!michelsonType) {
+    return undefined;
+  }
+
+  switch (michelsonType) {
+    case 'unit':
+      return null;
+    case 'nat':
+    case 'int':
+    case 'mutez':
+    case 'bool':
+    case 'string':
+    case 'bytes':
+    case 'address':
+    case 'key_hash':
+    case 'timestamp':
+    case 'chain_id':
+    case 'contract':
+      return fieldAwareSample(fieldName, michelsonType);
+    case 'pair': {
+      if (
+        !schema.schema ||
+        typeof schema.schema !== 'object' ||
+        Array.isArray(schema.schema)
+      ) {
+        return undefined;
+      }
+      return Object.fromEntries(
+        Object.entries(schema.schema).map(([key, value]) => [
+          key,
+          sampleJsValueForSchema(value, key),
+        ]),
+      );
+    }
+    case 'or': {
+      if (
+        !schema.schema ||
+        typeof schema.schema !== 'object' ||
+        Array.isArray(schema.schema)
+      ) {
+        return undefined;
+      }
+      const [firstKey, firstValue] = Object.entries(schema.schema)[0] ?? [];
+      return firstKey
+        ? { [firstKey]: sampleJsValueForSchema(firstValue, firstKey) }
+        : undefined;
+    }
+    case 'option':
+      return null;
+    case 'list':
+    case 'set': {
+      const value = sampleJsValueForSchema(schema.schema, fieldName);
+      return value === undefined ? [] : [value];
+    }
+    case 'map':
+    case 'big_map':
+      return {};
+    case 'lambda':
+      return [];
+    default:
+      return undefined;
+  }
+}
+
+function parameterSchemaForType(node: unknown): unknown | undefined {
+  try {
+    return new ParameterSchema(node as MichelsonV1Expression).generateSchema();
+  } catch {
+    return undefined;
+  }
+}
+
+function sampleJsArgsForType(node: unknown): unknown[] {
+  const schema = parameterSchemaForType(node);
+  if (!schema) {
+    return [];
+  }
+  if (
+    isSchemaObject(schema) &&
+    schema.__michelsonType?.toLowerCase() === 'unit'
+  ) {
+    return [];
+  }
+  const sample = sampleJsValueForSchema(schema);
+  return sample === undefined ? [] : [sample];
+}
+
 function collectEntrypointsFromType(node: unknown): ParsedEntrypointShape[] {
   if (!isMichelineObject(node)) {
     return [];
@@ -179,6 +323,28 @@ function collectEntrypointsFromType(node: unknown): ParsedEntrypointShape[] {
       name,
       parameterType: normalizeMichelsonType(node),
       sampleArgs: sampleMichelsonArgsForType(node),
+      parameterSchema: parameterSchemaForType(node),
+      sampleJsArgs: sampleJsArgsForType(node),
+    }));
+}
+
+function readEntrypointsFromParameterRoot(root: unknown): AbiEntrypoint[] {
+  const entrypoints = new Map<string, ParsedEntrypointShape>();
+  for (const entrypoint of collectEntrypointsFromType(root)) {
+    if (!entrypoints.has(entrypoint.name)) {
+      entrypoints.set(entrypoint.name, entrypoint);
+    }
+  }
+
+  return [...entrypoints.values()]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(({ name, parameterType, sampleArgs, parameterSchema, sampleJsArgs }) => ({
+      name,
+      args: [],
+      parameterType,
+      sampleArgs,
+      parameterSchema,
+      sampleJsArgs,
     }));
 }
 
@@ -198,21 +364,23 @@ export function readMichelsonEntrypoints(code: string): AbiEntrypoint[] {
       return [];
     }
 
-    const entrypoints = new Map<string, ParsedEntrypointShape>();
-    for (const entrypoint of collectEntrypointsFromType(root)) {
-      if (!entrypoints.has(entrypoint.name)) {
-        entrypoints.set(entrypoint.name, entrypoint);
-      }
-    }
+    return readEntrypointsFromParameterRoot(root);
+  } catch {
+    return [];
+  }
+}
 
-    return [...entrypoints.values()]
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map(({ name, parameterType, sampleArgs }) => ({
-        name,
-        args: [],
-        parameterType,
-        sampleArgs,
-      }));
+export function readMichelsonEntrypointsFromScript(
+  script: Pick<ScriptResponse, 'code'>,
+): AbiEntrypoint[] {
+  try {
+    const code = script.code as unknown[];
+    const parameterSection = code.find(
+      (section) =>
+        isMichelineObject(section) && section.prim?.toLowerCase() === 'parameter',
+    ) as MichelineLikeNode | undefined;
+    const root = parameterSection?.args?.[0];
+    return root ? readEntrypointsFromParameterRoot(root) : [];
   } catch {
     return [];
   }

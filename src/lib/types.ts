@@ -10,6 +10,8 @@ export interface AbiEntrypoint {
   args: AbiArg[];
   parameterType?: string;
   sampleArgs?: string[];
+  parameterSchema?: unknown;
+  sampleJsArgs?: unknown[];
 }
 
 export interface ContractCallResult {

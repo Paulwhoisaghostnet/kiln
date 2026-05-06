@@ -745,7 +745,12 @@ describe('createApiApp', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
-    expect(seen.initialStorage).toBe(compiledStorage);
+    expect(seen.initialStorage).toBe(
+      compiledStorage.replace(
+        'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+        tokenAddresses.bronze,
+      ),
+    );
   });
 
   it('reports shadowbox runtime endpoint as unsuccessful when runtime is disabled', async () => {
@@ -911,13 +916,20 @@ describe('createApiApp', () => {
       minimalFeeMutez: 45_000,
     });
     expect(response.body.entrypoints).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
-      {
+      expect.objectContaining({
+        name: 'mint',
+        args: [],
+        parameterType: 'unit',
+        sampleArgs: ['Unit'],
+        sampleJsArgs: [],
+      }),
+      expect.objectContaining({
         name: 'transfer',
         args: [],
         parameterType: 'pair address nat',
         sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
-      },
+        sampleJsArgs: [{ 0: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb', 1: 1 }],
+      }),
     ]);
     expect(response.body.injectedCode).toContain(tokenAddresses.bronze);
     expect(calls.validate).toEqual([
@@ -1062,13 +1074,20 @@ describe('createApiApp', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.contractAddress).toBe(contractAddress);
     expect(response.body.entrypoints).toEqual([
-      { name: 'mint', args: [], parameterType: 'unit', sampleArgs: ['Unit'] },
-      {
+      expect.objectContaining({
+        name: 'mint',
+        args: [],
+        parameterType: 'unit',
+        sampleArgs: ['Unit'],
+        sampleJsArgs: [],
+      }),
+      expect.objectContaining({
         name: 'transfer',
         args: [],
         parameterType: 'pair address nat',
         sampleArgs: ['(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1)'],
-      },
+        sampleJsArgs: [{ 0: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb', 1: 1 }],
+      }),
     ]);
     expect(calls.originate).toHaveLength(1);
     const [origination] = calls.originate;

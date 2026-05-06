@@ -1,5 +1,6 @@
 import type { E2ERunPayload } from './api-schemas.js';
 import type { SimulationStepInput } from './contract-simulation.js';
+import type { AbiEntrypoint } from './types.js';
 import { buildEntrypointCoverage } from './workflow-coverage.js';
 
 export type WorkflowKind =
@@ -113,6 +114,16 @@ function presentAll(
 
 function compactEntries(entries: Array<string | undefined>): string[] {
   return unique(entries.filter((entry): entry is string => Boolean(entry)));
+}
+
+function normalizeEntrypointMetadata(
+  entrypoints: Array<string | AbiEntrypoint>,
+): AbiEntrypoint[] {
+  return entrypoints.map((entrypoint) =>
+    typeof entrypoint === 'string'
+      ? { name: entrypoint, args: [] }
+      : entrypoint,
+  );
 }
 
 const SAMPLE_TEZOS_ADDRESS = 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6';
@@ -357,7 +368,7 @@ function detectStandardListing(
   available: Set<string>,
 ): DiscoveredWorkflow | undefined {
   const entries = presentEntries(available, LISTING_GROUPS);
-  if (!entries.list && !entries.buy && !entries.cancel) {
+  if (!entries.list || !entries.buy) {
     return undefined;
   }
 
@@ -567,11 +578,37 @@ function reachabilityWorkflow(
     missingEntrypoints: [],
     steps: entrypoints.map((entrypoint, index) => ({
       label: `${contractId}: reach ${entrypoint}`,
-      wallet: index % 2 === 0 ? 'bert' : 'ernie',
+      wallet: walletForReachabilityEntrypoint(entrypoint, index),
       entrypoint,
       args: sampleArgsForEntrypoint(entrypoint),
     })),
   };
+}
+
+function walletForReachabilityEntrypoint(
+  entrypoint: string,
+  index: number,
+): 'bert' | 'ernie' {
+  const normalized = entrypoint.toLowerCase();
+  if (
+    [
+      'buy',
+      'buy_item',
+      'purchase',
+      'accept_swap',
+      'bid',
+      'bid_with_token',
+      'place_bid',
+      'make_offer',
+      'offer',
+      'place_offer',
+      'counter_barter',
+      'counter_offer',
+    ].includes(normalized)
+  ) {
+    return 'ernie';
+  }
+  return index % 2 === 0 ? 'bert' : 'ernie';
 }
 
 export function discoverContractWorkflows(input: {
@@ -660,26 +697,37 @@ export function buildWorkflowDrivenShadowboxSteps(input: {
 export function buildWorkflowDrivenE2ESteps(input: {
   contractId?: string;
   contractAddress?: string;
-  entrypoints: string[];
+  entrypoints: Array<string | AbiEntrypoint>;
   includeExpectedFailures?: boolean;
 }): E2ERunPayload['steps'] {
   const contractId = input.contractId?.trim() || 'contract';
   const includeExpectedFailures = input.includeExpectedFailures ?? true;
+  const metadata = normalizeEntrypointMetadata(input.entrypoints);
+  const metadataByName = new Map(metadata.map((entrypoint) => [entrypoint.name, entrypoint]));
   const discovery = discoverContractWorkflows({
     contractId,
-    entrypoints: input.entrypoints,
+    entrypoints: metadata.map((entrypoint) => entrypoint.name),
   });
 
   return discovery.workflows
     .flatMap((workflow) => workflow.steps)
     .filter((plannedStep) => includeExpectedFailures || !plannedStep.expectFailure)
     .map((plannedStep) => ({
+      ...(() => {
+        const entrypointMetadata = metadataByName.get(plannedStep.entrypoint);
+        return {
+          args:
+            entrypointMetadata?.sampleJsArgs && entrypointMetadata.sampleJsArgs.length > 0
+              ? (entrypointMetadata.sampleJsArgs as E2ERunPayload['steps'][number]['args'])
+              : (plannedStep.args as E2ERunPayload['steps'][number]['args']),
+        };
+      })(),
       label: plannedStep.label,
       wallet: plannedStep.wallet === 'bert' ? 'A' : 'B',
       targetContractId: contractId,
       targetContractAddress: input.contractAddress,
       entrypoint: plannedStep.entrypoint,
-      args: plannedStep.args as E2ERunPayload['steps'][number]['args'],
+      generatedArgs: true,
       amountMutez: 0,
       expectFailure: plannedStep.expectFailure ?? false,
       assertions: [],

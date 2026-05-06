@@ -8,10 +8,10 @@ import {
   hashContractCode,
 } from '../../lib/contract-simulation.js';
 import type { AppEnv } from '../../lib/env.js';
-import { injectKilnTokens } from '../../lib/kiln-injector.js';
+import { injectKilnTokenArtifacts } from '../../lib/kiln-injector.js';
 import { readMichelsonEntrypoints } from '../../lib/taquito-michelson.js';
 import type { WalletType } from '../../lib/types.js';
-import type { TezosServiceLike } from '../../lib/tezos-service.js';
+import type { TezosCallOptions, TezosServiceLike } from '../../lib/tezos-service.js';
 import {
   buildEntrypointCoverage,
   type EntrypointCoverageReport,
@@ -36,7 +36,12 @@ export async function deployContract(
   codeHash: string;
   entrypoints: ReturnType<typeof readMichelsonEntrypoints>;
 }> {
-  const injectedCode = injectKilnTokens(payload.code, dependencies.env);
+  const injectedArtifacts = injectKilnTokenArtifacts(
+    { code: payload.code, initialStorage: payload.initialStorage },
+    dependencies.env,
+  );
+  const injectedCode = injectedArtifacts.code;
+  const injectedInitialStorage = injectedArtifacts.initialStorage;
   const codeHash = hashContractCode(injectedCode);
 
   if (dependencies.env.KILN_REQUIRE_SIM_CLEARANCE) {
@@ -61,7 +66,7 @@ export async function deployContract(
   const tezosService = dependencies.createTezosService(payload.wallet);
   const contractAddress = await tezosService.originateContract(
     injectedCode,
-    payload.initialStorage,
+    injectedInitialStorage,
   );
 
   return {
@@ -94,6 +99,202 @@ export async function executeContractCall(
     success: true,
     ...result,
   };
+}
+
+const kt1Pattern = /^KT1[1-9A-HJ-NP-Za-km-z]{33}$/;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+interface Kt1Candidate {
+  address: string;
+  path: string[];
+}
+
+function collectKt1Candidates(
+  value: unknown,
+  path: string[] = [],
+  candidates: Kt1Candidate[] = [],
+): Kt1Candidate[] {
+  if (typeof value === 'string') {
+    if (kt1Pattern.test(value)) {
+      candidates.push({ address: value, path });
+    }
+    return candidates;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      collectKt1Candidates(item, [...path, String(index)], candidates);
+    });
+    return candidates;
+  }
+  if (isRecord(value)) {
+    for (const [field, item] of Object.entries(value)) {
+      collectKt1Candidates(item, [...path, field], candidates);
+    }
+  }
+  return candidates;
+}
+
+function scoreKt1Candidate(candidate: Kt1Candidate): number {
+  const path = candidate.path.join('_').toLowerCase();
+  let score = 0;
+  if (/currency|payment|wtf|price/.test(path)) {
+    score += 8;
+  }
+  if (/token|fa2/.test(path)) {
+    score += 4;
+  }
+  if (/address|contract/.test(path)) {
+    score += 2;
+  }
+  if (/asset|nft|collection/.test(path)) {
+    score -= 4;
+  }
+  return score;
+}
+
+function findBestKt1(value: unknown): string | undefined {
+  const candidates = collectKt1Candidates(value);
+  return candidates
+    .sort((left, right) => scoreKt1Candidate(right) - scoreKt1Candidate(left))[0]
+    ?.address;
+}
+
+function findNumericField(value: unknown, fieldNames: string[]): number | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  for (const fieldName of fieldNames) {
+    const fieldValue = value[fieldName];
+    if (typeof fieldValue === 'number' && Number.isFinite(fieldValue)) {
+      return fieldValue;
+    }
+    if (typeof fieldValue === 'string' && /^\d+$/.test(fieldValue)) {
+      return Number(fieldValue);
+    }
+  }
+  for (const nested of Object.values(value)) {
+    const found = findNumericField(nested, fieldNames);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
+function stepLooksGenerated(step: E2ERunPayload['steps'][number]): boolean {
+  if (step.generatedArgs) {
+    return true;
+  }
+  if (step.args.length === 0) {
+    return true;
+  }
+  return (
+    step.args.length === 1 &&
+    typeof step.args[0] === 'number' &&
+    step.args[0] === 1
+  );
+}
+
+async function resolveStepCall(
+  step: E2ERunPayload['steps'][number],
+  targetAddress: string,
+  tezosService: TezosServiceLike,
+): Promise<{
+  args: unknown[];
+  options: TezosCallOptions;
+}> {
+  const options: TezosCallOptions = { amountMutez: step.amountMutez };
+  if (!stepLooksGenerated(step) || !tezosService.getContractEntrypoints) {
+    return { args: step.args, options };
+  }
+
+  const entrypoints = await tezosService.getContractEntrypoints(targetAddress);
+  const entrypoint = entrypoints.find((candidate) => candidate.name === step.entrypoint);
+  if (!entrypoint?.sampleJsArgs || entrypoint.sampleJsArgs.length === 0) {
+    return { args: step.args, options };
+  }
+  return {
+    args: entrypoint.sampleJsArgs,
+    options: {
+      ...options,
+      useMethodsObject: true,
+    },
+  };
+}
+
+function purchaseAmountUnits(args: unknown[]): number | undefined {
+  const [firstArg] = args;
+  return findNumericField(firstArg, [
+    'amount_wtf_units',
+    'amount_wtf',
+    'amount',
+    'price_wtf',
+  ]);
+}
+
+function looksLikeTokenPurchase(entrypoint: string, args: unknown[]): boolean {
+  const normalized = entrypoint.toLowerCase();
+  return (
+    (normalized === 'purchase' || normalized === 'buy') &&
+    purchaseAmountUnits(args) !== undefined
+  );
+}
+
+async function prepareTokenPurchaseResources(input: {
+  step: E2ERunPayload['steps'][number];
+  args: unknown[];
+  targetAddress: string;
+  tezosService: TezosServiceLike;
+  createTezosService: (wallet: WalletType) => TezosServiceLike;
+}): Promise<void> {
+  if (
+    input.step.expectFailure ||
+    !looksLikeTokenPurchase(input.step.entrypoint, input.args) ||
+    !input.tezosService.getContractStorage
+  ) {
+    return;
+  }
+
+  const storage = await input.tezosService.getContractStorage(input.targetAddress);
+  const tokenAddress = findBestKt1(storage);
+  if (!tokenAddress) {
+    return;
+  }
+  const tokenId = findNumericField(storage, ['wtf_token_id', 'currency_token_id', 'token_id']) ?? 0;
+  const amount = Math.max(purchaseAmountUnits(input.args) ?? 1, 1);
+  const buyerAddress = await input.tezosService.getAddress();
+
+  try {
+    await input.createTezosService('A').callContract(
+      tokenAddress,
+      'mint_tokens',
+      [[{ token_id: tokenId, to_: buyerAddress, amount }]],
+      { useMethodsObject: true },
+    );
+  } catch {
+    // Some real tokens are not mintable by Bert. The purchase call below will
+    // still prove whether the buyer already has enough balance.
+  }
+
+  await input.tezosService.callContract(
+    tokenAddress,
+    'update_operators',
+    [
+      [
+        {
+          add_operator: {
+            owner: buyerAddress,
+            operator: input.targetAddress,
+            token_id: tokenId,
+          },
+        },
+      ],
+    ],
+    { useMethodsObject: true },
+  );
 }
 
 export async function runContractE2E(
@@ -154,11 +355,19 @@ export async function runContractE2E(
     }
     try {
       const tezosService = createTezosService(step.wallet);
+      const call = await resolveStepCall(step, targetAddress, tezosService);
+      await prepareTokenPurchaseResources({
+        step,
+        args: call.args,
+        targetAddress,
+        tezosService,
+        createTezosService,
+      });
       const result = await tezosService.callContract(
         targetAddress,
         step.entrypoint,
-        step.args,
-        { amountMutez: step.amountMutez },
+        call.args,
+        call.options,
       );
       if (step.expectFailure) {
         results.push({

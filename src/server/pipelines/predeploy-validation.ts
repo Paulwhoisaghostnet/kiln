@@ -1,6 +1,6 @@
 import type { AbiEntrypoint, WalletType } from '../../lib/types.js';
 import type { AppEnv } from '../../lib/env.js';
-import { injectKilnTokens } from '../../lib/kiln-injector.js';
+import { injectKilnTokenArtifacts } from '../../lib/kiln-injector.js';
 import { readMichelsonEntrypoints } from '../../lib/taquito-michelson.js';
 import type {
   OriginationValidationResult,
@@ -71,8 +71,14 @@ export async function runPredeployValidation(
   }
 
   let injectedCode = input.code;
+  let injectedInitialStorage = input.initialStorage;
   try {
-    injectedCode = injectKilnTokens(input.code, dependencies.env);
+    const injected = injectKilnTokenArtifacts(
+      { code: input.code, initialStorage: input.initialStorage },
+      dependencies.env,
+    );
+    injectedCode = injected.code;
+    injectedInitialStorage = injected.initialStorage;
   } catch (error) {
     warnings.push(`Kiln token injection check skipped: ${asMessage(error)}`);
   }
@@ -82,7 +88,7 @@ export async function runPredeployValidation(
     const tezosService = dependencies.createTezosService('A');
     estimate = await tezosService.validateOrigination(
       injectedCode,
-      input.initialStorage,
+      injectedInitialStorage,
     );
   } catch (error) {
     const message = asMessage(error);
