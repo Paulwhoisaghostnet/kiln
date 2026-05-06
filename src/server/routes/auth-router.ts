@@ -19,6 +19,10 @@ const verifyPayloadSchema = z.object({
   publicKey: z.string().trim().min(1).max(128).optional(),
 });
 
+const projectStorePayloadSchema = z.object({
+  projectStore: z.unknown(),
+});
+
 function bearerToken(req: Request): string | null {
   const authorization = req.header('authorization');
   const match = authorization?.match(/^Bearer\s+(.+)$/i);
@@ -65,6 +69,7 @@ function publicUser(user: KilnUser) {
           revokedAt: user.currentApiToken.revokedAt,
         }
       : null,
+    projectStoreUpdatedAt: user.projectStore?.updatedAt ?? null,
   };
 }
 
@@ -138,6 +143,54 @@ export function createAuthRouter(services: ApiAppServices): Router {
       return;
     }
     res.json({ success: true, user: publicUser(user) });
+  });
+
+  router.get('/api/kiln/projects', async (req, res) => {
+    const user = await requireUserSession(req, services);
+    if (!user) {
+      res.status(401).json({ error: 'Wallet login required.' });
+      return;
+    }
+    const projectStore = await services.userStore.getProjectStore(user.id);
+    res.json({
+      success: true,
+      projectStore: projectStore?.data ?? null,
+      updatedAt: projectStore?.updatedAt ?? null,
+    });
+  });
+
+  router.put('/api/kiln/projects', async (req, res) => {
+    const user = await requireUserSession(req, services);
+    if (!user) {
+      res.status(401).json({ error: 'Wallet login required.' });
+      return;
+    }
+    const payload = projectStorePayloadSchema.safeParse(req.body);
+    if (!payload.success) {
+      res.status(400).json({ error: validationErrorMessage(payload.error) });
+      return;
+    }
+
+    try {
+      const projectStore = await services.userStore.saveProjectStore(
+        user.id,
+        payload.data.projectStore,
+      );
+      services.activityLogger.log({
+        timestamp: new Date().toISOString(),
+        requestId: res.locals.requestId as string | undefined,
+        event: 'project_store_saved',
+        userId: user.id,
+        walletKind: user.walletKind,
+        walletAddress: user.walletAddress,
+      });
+      res.json({
+        success: true,
+        updatedAt: projectStore?.updatedAt ?? null,
+      });
+    } catch (error) {
+      res.status(500).json({ error: asMessage(error) });
+    }
   });
 
   router.get('/api/kiln/mcp/status', async (req, res) => {

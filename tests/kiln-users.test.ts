@@ -101,6 +101,41 @@ describe('KilnUserStore', () => {
     expect(access.reason).toBe('Wallet is present on the MCP blocklist.');
   });
 
+  it('persists account project state for verified wallets', async () => {
+    const fixedNow = new Date('2026-05-06T17:00:00.000Z');
+    const store = createKilnUserStore({
+      env: baseEnv({
+        KILN_USER_DB_PATH: await tempDbPath(),
+      }),
+      walletSignatureVerifier: () => true,
+      now: () => fixedNow,
+    });
+
+    const challenge = await store.createChallenge({
+      walletKind: 'tezos',
+      walletAddress: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+      networkId: 'tezos-shadownet',
+    });
+    const { user } = await store.verifyChallenge({
+      challengeId: challenge.id,
+      signature: 'sig',
+      publicKey: 'pk',
+    });
+    const projectStore = {
+      projects: [{ id: 'project-1', name: 'WTF in app market' }],
+      activeProjectId: 'project-1',
+    };
+
+    const saved = await store.saveProjectStore(user.id, projectStore);
+    const loaded = await store.getProjectStore(user.id);
+
+    expect(saved).toEqual({
+      updatedAt: fixedNow.toISOString(),
+      data: projectStore,
+    });
+    expect(loaded).toEqual(saved);
+  });
+
   it('defaults production user state to /var/lib/kiln', () => {
     const store = createKilnUserStore({
       env: baseEnv({ NODE_ENV: 'production' }),

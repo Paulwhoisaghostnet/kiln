@@ -159,6 +159,7 @@ interface KilnAuthUser {
     expiresAt: string;
     revokedAt?: string;
   } | null;
+  projectStoreUpdatedAt?: string | null;
 }
 
 interface KilnAuthSession {
@@ -388,6 +389,7 @@ function hasMichelsonSectionLocal(
 }
 
 const PROJECT_STORE_KEY = 'kiln.projects.v1';
+const AUTH_SESSION_KEY = 'kiln.authSession.v1';
 const USER_HANDLE_KEY = 'kiln.userHandle.v1';
 const LINKED_WALLETS_KEY = 'kiln.linkedWallets.v1';
 
@@ -638,6 +640,101 @@ function persistProjectStore(store: KilnProjectStore): void {
   window.localStorage.setItem(PROJECT_STORE_KEY, JSON.stringify(store));
 }
 
+function normalizeProjectStoreCandidate(value: unknown): KilnProjectStore | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const candidate = value as Partial<KilnProjectStore>;
+  if (!Array.isArray(candidate.projects)) {
+    return null;
+  }
+  const projects = candidate.projects.flatMap((project) => {
+    if (
+      !project ||
+      typeof project !== 'object' ||
+      typeof (project as Partial<SavedKilnProject>).id !== 'string' ||
+      typeof (project as Partial<SavedKilnProject>).name !== 'string'
+    ) {
+      return [];
+    }
+    try {
+      return [normalizeSavedProject(project as SavedKilnProject)];
+    } catch {
+      return [];
+    }
+  });
+  if (projects.length === 0) {
+    return null;
+  }
+  const activeProjectId =
+    typeof candidate.activeProjectId === 'string' &&
+    projects.some((project) => project.id === candidate.activeProjectId)
+      ? candidate.activeProjectId
+      : projects[0]?.id ?? '';
+  return { projects, activeProjectId };
+}
+
+function normalizeProjectStore(store: KilnProjectStore): KilnProjectStore {
+  const normalized = normalizeProjectStoreCandidate(store);
+  if (normalized) {
+    return normalized;
+  }
+  const fallback = createSavedProject({
+    name: 'My Kiln Project',
+    networkId: 'tezos-shadownet',
+  });
+  return { projects: [fallback], activeProjectId: fallback.id };
+}
+
+function isKilnAuthSession(value: unknown): value is KilnAuthSession {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as Partial<KilnAuthSession>;
+  return (
+    typeof candidate.token === 'string' &&
+    typeof candidate.expiresAt === 'string' &&
+    Boolean(candidate.user) &&
+    typeof candidate.user?.walletAddress === 'string' &&
+    (candidate.user?.walletKind === 'tezos' || candidate.user?.walletKind === 'evm')
+  );
+}
+
+function loadAuthSession(): KilnAuthSession | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(AUTH_SESSION_KEY) ?? 'null') as unknown;
+    if (!isKilnAuthSession(parsed)) {
+      return null;
+    }
+    const expiresAt = Date.parse(parsed.expiresAt);
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      window.localStorage.removeItem(AUTH_SESSION_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    window.localStorage.removeItem(AUTH_SESSION_KEY);
+    return null;
+  }
+}
+
+function persistAuthSession(session: KilnAuthSession): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+}
+
+function clearAuthSession(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.removeItem(AUTH_SESSION_KEY);
+}
+
 function loadUserHandle(): string {
   if (typeof window === 'undefined') {
     return '';
@@ -753,7 +850,9 @@ export default function App() {
   const [lastWorkflow, setLastWorkflow] = useState<WorkflowRunResponse | null>(null);
   const [lastSolidityCompile, setLastSolidityCompile] =
     useState<SolidityCompileResult | null>(null);
-  const [authSession, setAuthSession] = useState<KilnAuthSession | null>(null);
+  const [authSession, setAuthSession] = useState<KilnAuthSession | null>(() =>
+    loadAuthSession(),
+  );
   const [mcpToken, setMcpToken] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isMcpLoggingIn, setIsMcpLoggingIn] = useState(false);
@@ -821,6 +920,10 @@ export default function App() {
   const suppressWalletSessionEndedLogRef = useRef(false);
   const pendingProjectHydrationRef = useRef<SavedKilnProject | null>(null);
   const hydratingProjectRef = useRef(false);
+  const projectSyncTimerRef = useRef<number | null>(null);
+  const projectSyncReadyRef = useRef(false);
+  const loadingRemoteProjectStoreRef = useRef(false);
+  const lastRemoteProjectSyncRef = useRef('');
   const apiToken = getApiToken();
   const activeProject =
     projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
@@ -1240,9 +1343,236 @@ export default function App() {
     addLog(`Loaded project: ${normalized.name}`, 'info');
   };
 
+  const buildSessionHeaders = (
+    includeJson: boolean,
+    session: KilnAuthSession,
+  ): HeadersInit => {
+    const headers = buildHeaders(includeJson) as Record<string, string>;
+    headers.authorization = `Bearer ${session.token}`;
+    return headers;
+  };
+
+  const handleAccountSessionExpired = (message: string) => {
+    setAuthSession(null);
+    projectSyncReadyRef.current = false;
+    lastRemoteProjectSyncRef.current = '';
+    if (projectSyncTimerRef.current) {
+      window.clearTimeout(projectSyncTimerRef.current);
+      projectSyncTimerRef.current = null;
+    }
+    addLog(message, 'info');
+  };
+
+  const applySyncedProjectStore = (store: KilnProjectStore, message?: string) => {
+    const normalized = normalizeProjectStore(store);
+    setProjectStore(normalized);
+    persistProjectStore(normalized);
+
+    const project =
+      normalized.projects.find((candidate) => candidate.id === normalized.activeProjectId) ??
+      normalized.projects[0];
+    if (project) {
+      setActiveSurface(project.lastSurface);
+      setActiveTab(project.lastGuidedStep);
+      setActiveTool(project.lastWorkbenchTool);
+      pendingProjectHydrationRef.current = project;
+      if (project.networkId !== networkId) {
+        requestNetworkChange(project.networkId);
+      } else {
+        pendingProjectHydrationRef.current = null;
+        applyProjectState(project);
+      }
+    }
+    if (message) {
+      addLog(message, 'success');
+    }
+  };
+
+  const saveAccountProjectStore = async (
+    session: KilnAuthSession,
+    store: KilnProjectStore,
+    force = false,
+  ): Promise<boolean> => {
+    const normalized = normalizeProjectStore(store);
+    const serialized = JSON.stringify(normalized);
+    if (!force && serialized === lastRemoteProjectSyncRef.current) {
+      return true;
+    }
+
+    const response = await fetch('/api/kiln/projects', {
+      method: 'PUT',
+      headers: buildSessionHeaders(true, session),
+      body: JSON.stringify({ projectStore: normalized }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as
+      | { success?: true; updatedAt?: string | null; error?: string }
+      | { error?: string };
+
+    if (response.status === 401) {
+      handleAccountSessionExpired('Kiln account session expired. Verify the wallet again to resume account sync.');
+      return false;
+    }
+    if (!response.ok) {
+      throw new Error(payload.error ?? `Project sync failed (HTTP ${response.status}).`);
+    }
+
+    lastRemoteProjectSyncRef.current = serialized;
+    if ('updatedAt' in payload && payload.updatedAt) {
+      setAuthSession((prev) =>
+        prev?.token === session.token
+          ? {
+              ...prev,
+              user: {
+                ...prev.user,
+                projectStoreUpdatedAt: payload.updatedAt,
+              },
+            }
+          : prev,
+      );
+    }
+    return true;
+  };
+
+  const loadAccountProjectStore = async (
+    session: KilnAuthSession,
+    localStore: KilnProjectStore,
+  ) => {
+    let readyAfterLoad = true;
+    loadingRemoteProjectStoreRef.current = true;
+    projectSyncReadyRef.current = false;
+    try {
+      const accountResponse = await fetch('/api/kiln/me', {
+        headers: buildSessionHeaders(false, session),
+      });
+      const accountPayload = (await accountResponse.json().catch(() => ({}))) as
+        | { user?: KilnAuthUser; error?: string }
+        | { error?: string };
+      if (accountResponse.status === 401) {
+        readyAfterLoad = false;
+        handleAccountSessionExpired('Kiln account session expired. Verify the wallet again to load saved projects.');
+        return;
+      }
+      if (!accountResponse.ok) {
+        throw new Error(accountPayload.error ?? `Account refresh failed (HTTP ${accountResponse.status}).`);
+      }
+      if ('user' in accountPayload && accountPayload.user) {
+        setAuthSession((prev) =>
+          prev?.token === session.token ? { ...prev, user: accountPayload.user as KilnAuthUser } : prev,
+        );
+      }
+
+      const response = await fetch('/api/kiln/projects', {
+        headers: buildSessionHeaders(false, session),
+      });
+      const payload = (await response.json().catch(() => ({}))) as
+        | {
+            success?: true;
+            projectStore?: unknown;
+            updatedAt?: string | null;
+            error?: string;
+          }
+        | { error?: string };
+      if (response.status === 401) {
+        readyAfterLoad = false;
+        handleAccountSessionExpired('Kiln account session expired. Verify the wallet again to load saved projects.');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(payload.error ?? `Project load failed (HTTP ${response.status}).`);
+      }
+
+      if ('projectStore' in payload && payload.projectStore) {
+        const remoteStore = normalizeProjectStoreCandidate(payload.projectStore);
+        if (remoteStore) {
+          lastRemoteProjectSyncRef.current = JSON.stringify(remoteStore);
+          applySyncedProjectStore(remoteStore, 'Loaded account project state.');
+          return;
+        }
+        addLog('Saved account project state was unreadable, so Kiln kept this browser workspace.', 'error');
+      }
+
+      const normalizedLocal = normalizeProjectStore(localStore);
+      const saved = await saveAccountProjectStore(session, normalizedLocal, true);
+      if (!saved) {
+        readyAfterLoad = false;
+        return;
+      }
+      lastRemoteProjectSyncRef.current = JSON.stringify(normalizedLocal);
+      addLog('Initialized account project state from this browser workspace.', 'success');
+    } catch (error) {
+      addLog(
+        `Account project sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      loadingRemoteProjectStoreRef.current = false;
+      projectSyncReadyRef.current = readyAfterLoad && Boolean(session.token);
+    }
+  };
+
   useEffect(() => {
     connectedWalletRef.current = connectedWallet;
   }, [connectedWallet]);
+
+  useEffect(() => {
+    if (authSession) {
+      persistAuthSession(authSession);
+    } else {
+      clearAuthSession();
+    }
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession) {
+      projectSyncReadyRef.current = false;
+      lastRemoteProjectSyncRef.current = '';
+      if (projectSyncTimerRef.current) {
+        window.clearTimeout(projectSyncTimerRef.current);
+        projectSyncTimerRef.current = null;
+      }
+      return;
+    }
+    const expiresAt = Date.parse(authSession.expiresAt);
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      handleAccountSessionExpired('Kiln account session expired. Verify the wallet again to resume account sync.');
+      return;
+    }
+    void loadAccountProjectStore(authSession, projectStore);
+  }, [authSession?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (
+      !authSession ||
+      !projectSyncReadyRef.current ||
+      loadingRemoteProjectStoreRef.current
+    ) {
+      return;
+    }
+    const normalized = normalizeProjectStore(projectStore);
+    const serialized = JSON.stringify(normalized);
+    if (serialized === lastRemoteProjectSyncRef.current) {
+      return;
+    }
+    if (projectSyncTimerRef.current) {
+      window.clearTimeout(projectSyncTimerRef.current);
+    }
+    projectSyncTimerRef.current = window.setTimeout(() => {
+      projectSyncTimerRef.current = null;
+      void saveAccountProjectStore(authSession, normalized).catch((error) => {
+        addLog(
+          `Account project sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          'error',
+        );
+      });
+    }, 800);
+
+    return () => {
+      if (projectSyncTimerRef.current) {
+        window.clearTimeout(projectSyncTimerRef.current);
+        projectSyncTimerRef.current = null;
+      }
+    };
+  }, [authSession?.token, projectStore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll terminal to bottom on new logs.
   useEffect(() => {

@@ -51,6 +51,10 @@ export interface KilnUser {
     expiresAt: string;
     revokedAt?: string;
   };
+  projectStore?: {
+    updatedAt: string;
+    data: unknown;
+  };
 }
 
 export interface UserSession {
@@ -434,6 +438,25 @@ export class KilnUserStore {
     const db = await this.readDb();
     const user = db.users.find((row) => row.id === userId);
     return user ? cloneUser(user) : null;
+  }
+
+  async getProjectStore(userId: string): Promise<KilnUser['projectStore'] | null> {
+    const db = await this.readDb();
+    const user = db.users.find((row) => row.id === userId);
+    return user?.projectStore
+      ? (JSON.parse(JSON.stringify(user.projectStore)) as KilnUser['projectStore'])
+      : null;
+  }
+
+  async saveProjectStore(userId: string, data: unknown): Promise<KilnUser['projectStore']> {
+    return this.mutate((db) => {
+      const user = this.requireUser(db, userId);
+      user.projectStore = {
+        updatedAt: this.now().toISOString(),
+        data,
+      };
+      return JSON.parse(JSON.stringify(user.projectStore)) as KilnUser['projectStore'];
+    });
   }
 
   async requestMcpAccess(userId: string): Promise<KilnUser['access']> {

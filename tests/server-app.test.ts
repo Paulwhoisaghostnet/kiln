@@ -1653,6 +1653,75 @@ describe('createApiApp', () => {
     );
   });
 
+  it('loads and saves project state for authenticated wallet sessions', async () => {
+    const fixedNow = new Date('2026-05-06T17:30:00.000Z');
+    const userDbPath = join(tmpdir(), `kiln-users-${randomUUID()}.json`);
+
+    try {
+      const app = createApiApp({
+        env: {
+          ...baseEnv(),
+          KILN_USER_DB_PATH: userDbPath,
+        } as AppEnv,
+        createTezosService: mockTezosServiceFactory().factory,
+        walletSignatureVerifier: async () => true,
+        now: () => fixedNow,
+      } as Parameters<typeof createApiApp>[0] & {
+        walletSignatureVerifier: () => Promise<boolean>;
+        now: () => Date;
+      });
+
+      const unauthorized = await request(app).get('/api/kiln/projects');
+      expect(unauthorized.status).toBe(401);
+
+      const challenge = await request(app).post('/api/kiln/auth/challenge').send({
+        walletKind: 'tezos',
+        walletAddress: walletAAddress,
+        networkId: 'tezos-shadownet',
+      });
+      const verified = await request(app).post('/api/kiln/auth/verify').send({
+        challengeId: challenge.body.challengeId,
+        signature: 'sig-valid-for-test',
+        publicKey: 'edpk-test',
+      });
+
+      const emptyStore = await request(app)
+        .get('/api/kiln/projects')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`);
+      expect(emptyStore.status).toBe(200);
+      expect(emptyStore.body.projectStore).toBeNull();
+
+      const projectStore = {
+        projects: [
+          {
+            id: 'project-1',
+            name: 'WTF in app market',
+            contracts: [{ id: 'contract-1', title: 'Marketplace core' }],
+          },
+        ],
+        activeProjectId: 'project-1',
+      };
+      const saved = await request(app)
+        .put('/api/kiln/projects')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`)
+        .send({ projectStore });
+      expect(saved.status).toBe(200);
+      expect(saved.body.updatedAt).toBe(fixedNow.toISOString());
+
+      const loaded = await request(app)
+        .get('/api/kiln/projects')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`);
+      expect(loaded.status).toBe(200);
+      expect(loaded.body).toMatchObject({
+        success: true,
+        updatedAt: fixedNow.toISOString(),
+        projectStore,
+      });
+    } finally {
+      await fs.rm(userDbPath, { force: true });
+    }
+  });
+
   it('logs in with a connected wallet, approves MCP access, and serves MCP tools with a 24h token', async () => {
     const fixedNow = new Date('2026-05-04T12:00:00.000Z');
     let now = fixedNow;
