@@ -21,6 +21,10 @@ set -euo pipefail
 REPO_ROOT="/opt/platform/repos/shadownet-kiln"
 VENV_ROOT="/opt/platform/venvs/kiln"
 SERVICE_USER="kiln"
+SERVICE_FILE_SRC="${REPO_ROOT}/infrastructure/systemd/kiln.service"
+SERVICE_FILE_DST="/etc/systemd/system/kiln.service"
+LOG_ROOT="/var/log/kiln"
+DATA_ROOT="/var/lib/kiln"
 DEPLOY_BRANCH="${KILN_DEPLOY_BRANCH:-main}"
 REFERENCE_ROOT="${KILN_REFERENCE_ROOT:-/var/lib/kiln/reference}"
 HEALTHCHECK_URL="${KILN_HEALTHCHECK_URL:-http://127.0.0.1:3001/api/health}"
@@ -75,6 +79,10 @@ run_as_kiln "cd '${REPO_ROOT}' && npm run build"
 log "Pruning dev dependencies for production runtime..."
 run_as_kiln "cd '${REPO_ROOT}' && npm prune --omit=dev"
 
+log "Ensuring runtime data directories..."
+mkdir -p "${LOG_ROOT}" "${DATA_ROOT}/exports" "${DATA_ROOT}/reference"
+chown -R "${SERVICE_USER}:${SERVICE_USER}" "${LOG_ROOT}" "${DATA_ROOT}"
+
 shadowbox_enabled="$(read_env_value KILN_SHADOWBOX_ENABLED)"
 shadowbox_provider="$(read_env_value KILN_SHADOWBOX_PROVIDER)"
 shadowbox_command="$(read_env_value KILN_SHADOWBOX_COMMAND)"
@@ -99,6 +107,9 @@ else
 fi
 
 log "Restarting kiln.service..."
+if [[ -f "${SERVICE_FILE_SRC}" ]]; then
+  install -m 0644 "${SERVICE_FILE_SRC}" "${SERVICE_FILE_DST}"
+fi
 systemctl daemon-reload
 systemctl restart kiln.service
 

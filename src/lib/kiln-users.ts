@@ -113,7 +113,8 @@ export interface KilnUserStoreOptions {
     | 'KILN_MCP_BLOCKLIST'
     | 'KILN_MCP_TOKEN_TTL_HOURS'
     | 'KILN_SESSION_TTL_MINUTES'
-  >;
+  > &
+    Partial<Pick<AppEnv, 'NODE_ENV'>>;
   now?: () => Date;
   walletSignatureVerifier?: WalletSignatureVerifier;
 }
@@ -130,6 +131,7 @@ export interface VerifiedApiToken {
 
 const ACCESS_WORKER_NAME = 'kiln-mcp-access-worker';
 const CHALLENGE_TTL_MINUTES = 10;
+const PRODUCTION_USER_DB_PATH = '/var/lib/kiln/kiln-users.json';
 
 function emptyDb(): KilnUserDatabase {
   return {
@@ -288,7 +290,9 @@ export class KilnUserStore {
   constructor(options: KilnUserStoreOptions) {
     this.filePath =
       options.env.KILN_USER_DB_PATH?.trim() ||
-      resolve(process.cwd(), 'data', 'kiln-users.json');
+      (options.env.NODE_ENV === 'production'
+        ? PRODUCTION_USER_DB_PATH
+        : resolve(process.cwd(), 'data', 'kiln-users.json'));
     this.accessList = parseAccessList(options.env.KILN_MCP_ACCESSLIST);
     this.blockList = parseAccessList(options.env.KILN_MCP_BLOCKLIST);
     this.tokenTtlHours = options.env.KILN_MCP_TOKEN_TTL_HOURS;

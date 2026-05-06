@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -159,6 +159,10 @@ function mockTezosServiceFactory() {
 }
 
 describe('createApiApp', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('returns health details', async () => {
     const app = createApiApp({
       env: baseEnv({ TEZOS_CHAIN_ID: 'NetXxyz' }),
@@ -1528,6 +1532,72 @@ describe('createApiApp', () => {
       .get('/api/kiln/balances')
       .set('x-kiln-token', 'super-secret');
     expect(authorizedBalances.status).toBe(200);
+  });
+
+  it('discovers recent Tezos contracts originated by a connected wallet', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith('/contracts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              address: contractAddress,
+              kind: 'smart_contract',
+              creator: { address: walletAAddress },
+              firstActivity: 100,
+              firstActivityTime: '2026-05-01T10:00:00Z',
+              typeHash: 1,
+              codeHash: 2,
+            },
+          ]),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      if (url.searchParams.has('sender')) {
+        return new Response(
+          JSON.stringify([
+            {
+              level: 200,
+              timestamp: '2026-05-02T10:00:00Z',
+              hash: 'opSender',
+              sender: { address: walletAAddress },
+              originatedContract: {
+                kind: 'smart_contract',
+                address: 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg',
+                typeHash: 3,
+                codeHash: 4,
+              },
+            },
+          ]),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+    const app = createApiApp({
+      env: baseEnv({ API_AUTH_TOKEN: 'super-secret' }),
+      createTezosService: mockTezosServiceFactory().factory,
+    });
+
+    const response = await request(app)
+      .get(
+        `/api/kiln/contracts/discover?networkId=tezos-shadownet&walletAddress=${walletAAddress}`,
+      )
+      .set('x-kiln-token', 'super-secret');
+
+    expect(response.status).toBe(200);
+    expect(response.body.contracts.map((contract: { address: string }) => contract.address)).toEqual([
+      'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg',
+      contractAddress,
+    ]);
+    expect(response.body.contracts[0]).toMatchObject({
+      source: 'sender',
+      operationHash: 'opSender',
+    });
   });
 
   it('keeps protected routes authenticated when API_AUTH_TOKEN is configured', async () => {

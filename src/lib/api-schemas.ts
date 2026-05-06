@@ -5,6 +5,10 @@ const kt1AddressSchema = z
   .string()
   .trim()
   .regex(/^KT1[1-9A-HJ-NP-Za-km-z]{33}$/, 'Invalid KT1 contract address');
+const tezosImplicitAddressSchema = z
+  .string()
+  .trim()
+  .regex(/^tz[1-4][1-9A-HJ-NP-Za-km-z]{33}$/, 'Invalid Tezos wallet address');
 const evmAddressSchema = z
   .string()
   .trim()
@@ -134,6 +138,12 @@ export const e2eRunPayloadSchema = z.object({
 export const contractIntrospectionQuerySchema = z.object({
   networkId: networkIdSchema,
   contractAddress: kt1AddressSchema,
+});
+
+export const contractDiscoveryQuerySchema = z.object({
+  networkId: networkIdSchema,
+  walletAddress: tezosImplicitAddressSchema,
+  limit: z.coerce.number().int().min(1).max(50).default(25),
 });
 
 const guidedContractTypeSchema = z.enum([

@@ -16,6 +16,7 @@ Environment=NODE_ENV=production
 Environment=PORT=3001
 Environment=KILN_PYTHON=/opt/platform/venvs/kiln/bin/python
 Environment=KILN_ACTIVITY_LOG_PATH=/var/log/kiln/activity.log
+Environment=KILN_USER_DB_PATH=/var/lib/kiln/kiln-users.json
 Environment=KILN_EXPORT_ROOT=/var/lib/kiln/exports
 Environment=KILN_REFERENCE_ROOT=/var/lib/kiln/reference
 # Absolute node path matches the nodesource deb; server-provision.sh

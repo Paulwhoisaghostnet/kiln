@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   contractIntrospectionQuerySchema,
+  contractDiscoveryQuerySchema,
   e2eRunPayloadSchema,
   executePayloadSchema,
   uploadPayloadSchema,
@@ -13,6 +14,7 @@ import {
 import { getDefaultNetworkId } from '../../lib/networks.js';
 import type { ApiAppServices } from '../app-services.js';
 import { asMessage, validationErrorMessage } from '../http.js';
+import { discoverTezosContractsForWallet } from '../../lib/tezos-contract-discovery.js';
 import {
   DeploymentBlockedError,
   deployContract,
@@ -191,6 +193,45 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
       res.status(500).json({ error: asMessage(error) });
     }
   });
+
+  router.get(
+    '/api/kiln/contracts/discover',
+    services.requireApiToken,
+    async (req, res) => {
+      const payload = contractDiscoveryQuerySchema.safeParse(req.query);
+      if (!payload.success) {
+        res.status(400).json({
+          error: validationErrorMessage(payload.error),
+        });
+        return;
+      }
+
+      try {
+        const network = selectNetworkForRequest(services.env, payload.data.networkId);
+        if (network.ecosystem !== 'tezos') {
+          res.status(412).json({
+            error: `Network ${network.label} is EVM — use the EVM contract tooling for Solidity contracts.`,
+          });
+          return;
+        }
+        const discovery = await discoverTezosContractsForWallet({
+          networkId: network.id,
+          walletAddress: payload.data.walletAddress,
+          limit: payload.data.limit,
+        });
+        res.json({
+          success: true,
+          networkId: network.id,
+          ecosystem: network.ecosystem,
+          walletAddress: payload.data.walletAddress,
+          indexer: discovery.indexer,
+          contracts: discovery.contracts,
+        });
+      } catch (error) {
+        res.status(500).json({ error: asMessage(error) });
+      }
+    },
+  );
 
   router.get(
     '/api/kiln/contracts/introspect',

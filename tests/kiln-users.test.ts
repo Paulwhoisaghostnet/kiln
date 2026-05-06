@@ -19,6 +19,7 @@ async function tempDbPath() {
 
 function baseEnv(overrides: Record<string, string | number | undefined> = {}) {
   return {
+    NODE_ENV: overrides.NODE_ENV as 'development' | 'test' | 'production' | undefined,
     KILN_USER_DB_PATH: overrides.KILN_USER_DB_PATH as string | undefined,
     KILN_MCP_ACCESSLIST: overrides.KILN_MCP_ACCESSLIST as string | undefined,
     KILN_MCP_BLOCKLIST: overrides.KILN_MCP_BLOCKLIST as string | undefined,
@@ -98,5 +99,14 @@ describe('KilnUserStore', () => {
 
     expect(access.status).toBe('blocked');
     expect(access.reason).toBe('Wallet is present on the MCP blocklist.');
+  });
+
+  it('defaults production user state to /var/lib/kiln', () => {
+    const store = createKilnUserStore({
+      env: baseEnv({ NODE_ENV: 'production' }),
+      walletSignatureVerifier: () => true,
+    });
+
+    expect(store.path).toBe('/var/lib/kiln/kiln-users.json');
   });
 });

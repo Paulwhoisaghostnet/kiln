@@ -61,6 +61,12 @@ type DeployMode = 'connected' | 'puppet';
 type ContractSourceType = 'michelson' | 'smartpy' | 'solidity';
 
 type TabKey = 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
+type SurfaceKey = 'guided' | 'workbench' | 'account';
+type WorkbenchToolKey = 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
+type FlowMode = 'guided' | 'workbench';
+
+const guidedStepOrder: TabKey[] = ['setup', 'build', 'validate', 'deploy', 'test', 'handoff'];
+const workbenchToolOrder: WorkbenchToolKey[] = ['build', 'validate', 'deploy', 'test', 'handoff'];
 
 interface LogEntry {
   time: string;
@@ -121,6 +127,7 @@ interface E2ERunResponse {
 
 interface ConnectedWalletState {
   address: string;
+  networkId: KilnNetworkId;
   networkName: string | null;
   rpcUrl: string | null;
   target: WalletConnectTarget;
@@ -158,6 +165,34 @@ interface KilnAuthSession {
   token: string;
   expiresAt: string;
   user: KilnAuthUser;
+}
+
+interface LinkedKilnWallet {
+  id: string;
+  kind: KilnWalletKind;
+  address: string;
+  networkId: string;
+  label: string;
+  addedAt: string;
+  verifiedAt?: string;
+  source: 'connected' | 'signed';
+}
+
+interface DiscoveredTezosContract {
+  address: string;
+  kind: string;
+  originatedAt: string | null;
+  level: number | null;
+  operationHash: string | null;
+  creator: string | null;
+  source: 'creator' | 'sender' | 'initiator';
+  typeHash?: number;
+  codeHash?: number;
+}
+
+interface DiscoveredTezosContractWithProject extends DiscoveredTezosContract {
+  projectName: string | null;
+  projectId: string | null;
 }
 
 interface WorkflowRunResponse extends WorkflowSummary {
@@ -315,6 +350,8 @@ function hasMichelsonSectionLocal(
 }
 
 const PROJECT_STORE_KEY = 'kiln.projects.v1';
+const USER_HANDLE_KEY = 'kiln.userHandle.v1';
+const LINKED_WALLETS_KEY = 'kiln.linkedWallets.v1';
 
 function newProjectId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -381,6 +418,76 @@ function persistProjectStore(store: KilnProjectStore): void {
   window.localStorage.setItem(PROJECT_STORE_KEY, JSON.stringify(store));
 }
 
+function loadUserHandle(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  return window.localStorage.getItem(USER_HANDLE_KEY) ?? '';
+}
+
+function persistUserHandle(handle: string): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(USER_HANDLE_KEY, handle);
+}
+
+function loadLinkedWallets(): LinkedKilnWallet[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LINKED_WALLETS_KEY) ?? '[]') as unknown;
+    return Array.isArray(parsed) ? (parsed as LinkedKilnWallet[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistLinkedWallets(wallets: LinkedKilnWallet[]): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(LINKED_WALLETS_KEY, JSON.stringify(wallets));
+}
+
+function linkedWalletId(kind: KilnWalletKind, address: string, networkId: string): string {
+  return `${kind}:${networkId}:${address.toLowerCase()}`;
+}
+
+function surfaceFromHash(hash: string): SurfaceKey {
+  if (hash === 'settings' || hash === 'account') {
+    return 'account';
+  }
+  if (hash === 'workbench' || hash.startsWith('tool-')) {
+    return 'workbench';
+  }
+  return 'guided';
+}
+
+function guidedStepFromHash(hash: string): TabKey {
+  if (hash.startsWith('guided-')) {
+    const step = hash.replace('guided-', '');
+    return isTabKey(step) ? step : 'setup';
+  }
+  return isTabKey(hash) ? hash : 'setup';
+}
+
+function workbenchToolFromHash(hash: string): WorkbenchToolKey {
+  const raw = hash.startsWith('tool-') ? hash.replace('tool-', '') : hash;
+  return isWorkbenchToolKey(raw) ? raw : 'build';
+}
+
+function routeHash(surface: SurfaceKey, guidedStep: TabKey, workbenchTool: WorkbenchToolKey): string {
+  if (surface === 'account') {
+    return 'account';
+  }
+  if (surface === 'workbench') {
+    return `tool-${workbenchTool}`;
+  }
+  return guidedStep === 'setup' ? 'guided' : `guided-${guidedStep}`;
+}
+
 export default function App() {
   const { mode, setMode, t, tip } = useKilnView();
   const { networkId, network, isTezos, isEvm, can, requestNetworkChange } = useKilnNetwork();
@@ -428,18 +535,31 @@ export default function App() {
   const [isGeneratingMcpToken, setIsGeneratingMcpToken] = useState(false);
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const [isLoadingContract, setIsLoadingContract] = useState(false);
-  const [accountSettingsOpen, setAccountSettingsOpen] = useState(() => {
+  const [discoveredContracts, setDiscoveredContracts] = useState<DiscoveredTezosContract[]>([]);
+  const [isDiscoveringContracts, setIsDiscoveringContracts] = useState(false);
+  const [contractDiscoveryError, setContractDiscoveryError] = useState<string | null>(null);
+  const [userHandle, setUserHandleState] = useState(() => loadUserHandle());
+  const [linkedWallets, setLinkedWallets] = useState<LinkedKilnWallet[]>(() =>
+    loadLinkedWallets(),
+  );
+  const [activeSurface, setActiveSurface] = useState<SurfaceKey>(() => {
     if (typeof window === 'undefined') {
-      return false;
+      return 'guided';
     }
-    return window.location.hash.replace('#', '') === 'settings';
+    return surfaceFromHash(window.location.hash.replace('#', ''));
   });
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window === 'undefined') {
       return 'setup';
     }
     const hash = window.location.hash.replace('#', '');
-    return isTabKey(hash) ? hash : 'setup';
+    return guidedStepFromHash(hash);
+  });
+  const [activeTool, setActiveTool] = useState<WorkbenchToolKey>(() => {
+    if (typeof window === 'undefined') {
+      return 'build';
+    }
+    return workbenchToolFromHash(window.location.hash.replace('#', ''));
   });
   const [terminalOpen, setTerminalOpen] = useState(() => {
     if (typeof window === 'undefined') {
@@ -459,6 +579,22 @@ export default function App() {
   const activeProject =
     projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
     projectStore.projects[0];
+  const discoveredContractsWithProjects = useMemo<DiscoveredTezosContractWithProject[]>(
+    () =>
+      discoveredContracts.map((contract) => {
+        const project = projectStore.projects.find(
+          (candidate) =>
+            candidate.networkId === networkId &&
+            candidate.contractAddress === contract.address,
+        );
+        return {
+          ...contract,
+          projectName: project?.name ?? null,
+          projectId: project?.id ?? null,
+        };
+      }),
+    [discoveredContracts, projectStore.projects, networkId],
+  );
 
   const buildHeaders = (includeJson = false): HeadersInit => {
     const headers: Record<string, string> = {};
@@ -531,6 +667,54 @@ export default function App() {
     });
   };
 
+  const setUserHandle = (nextHandle: string) => {
+    setUserHandleState(nextHandle);
+    persistUserHandle(nextHandle);
+  };
+
+  const rememberLinkedWallet = (wallet: Omit<LinkedKilnWallet, 'id' | 'addedAt'>) => {
+    setLinkedWallets((prev) => {
+      const id = linkedWalletId(wallet.kind, wallet.address, wallet.networkId);
+      const existing = prev.find((candidate) => candidate.id === id);
+      const nextWallet: LinkedKilnWallet = {
+        ...wallet,
+        id,
+        addedAt: existing?.addedAt ?? new Date().toISOString(),
+        verifiedAt: wallet.verifiedAt ?? existing?.verifiedAt,
+        source: wallet.source === 'signed' ? 'signed' : existing?.source ?? wallet.source,
+      };
+      const next = [
+        nextWallet,
+        ...prev.filter((candidate) => candidate.id !== id),
+      ];
+      persistLinkedWallets(next);
+      return next;
+    });
+  };
+
+  const linkConnectedWalletToAccount = () => {
+    if (!connectedWallet) {
+      addLog('Connect a Tezos wallet before linking it to this browser account.', 'error');
+      return;
+    }
+    rememberLinkedWallet({
+      kind: 'tezos',
+      address: connectedWallet.address,
+      networkId: connectedWallet.networkId,
+      label: connectedWallet.networkName ?? network.label,
+      source: 'connected',
+    });
+    addLog(`Linked wallet ${connectedWallet.address} for ${network.label}.`, 'success');
+  };
+
+  const removeLinkedWallet = (walletId: string) => {
+    setLinkedWallets((prev) => {
+      const next = prev.filter((wallet) => wallet.id !== walletId);
+      persistLinkedWallets(next);
+      return next;
+    });
+  };
+
   const createNewProject = () => {
     const project = createSavedProject({
       name: `Kiln Project ${projectStore.projects.length + 1}`,
@@ -580,23 +764,25 @@ export default function App() {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // Sync the current tab with the URL hash so deep-links land on the right step.
+  // Sync the current product surface with the URL hash so deep-links land on
+  // guided steps, standalone tools, or account settings.
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
-    window.location.hash = activeTab;
-  }, [activeTab]);
+    window.location.hash = routeHash(activeSurface, activeTab, activeTool);
+  }, [activeSurface, activeTab, activeTool]);
 
   useEffect(() => {
     const handler = () => {
       const next = window.location.hash.replace('#', '');
-      if (next === 'settings') {
-        setAccountSettingsOpen(true);
-        return;
+      const surface = surfaceFromHash(next);
+      setActiveSurface(surface);
+      if (surface === 'guided') {
+        setActiveTab(guidedStepFromHash(next));
       }
-      if (isTabKey(next)) {
-        setActiveTab(next);
+      if (surface === 'workbench') {
+        setActiveTool(workbenchToolFromHash(next));
       }
     };
     window.addEventListener('hashchange', handler);
@@ -634,6 +820,15 @@ export default function App() {
     applyProjectState(pending);
     addLog(`Loaded project: ${pending.name}`, 'info');
   }, [networkId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isTezos || !connectedWallet) {
+      setDiscoveredContracts([]);
+      setContractDiscoveryError(null);
+      return;
+    }
+    void discoverConnectedWalletContracts(false);
+  }, [isTezos, networkId, connectedWallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!activeProject) {
@@ -701,6 +896,7 @@ export default function App() {
         }
         const next = {
           address: session.address,
+          networkId: session.networkId,
           networkName: session.networkName,
           rpcUrl: session.rpcUrl,
           target: 'beacon' as const,
@@ -755,6 +951,7 @@ export default function App() {
       }
       const next = {
         address: wallet.address,
+        networkId: wallet.networkId,
         networkName: wallet.networkName,
         rpcUrl: wallet.rpcUrl,
         target: 'beacon' as const,
@@ -828,6 +1025,55 @@ export default function App() {
       setBalancesStatus('error');
       setBalancesError(message);
       addLog(message, 'error');
+    }
+  };
+
+  const discoverConnectedWalletContracts = async (showEmptyLog = false) => {
+    if (!isTezos || !connectedWallet) {
+      setDiscoveredContracts([]);
+      setContractDiscoveryError(null);
+      return;
+    }
+
+    setIsDiscoveringContracts(true);
+    setContractDiscoveryError(null);
+    try {
+      const params = new URLSearchParams({
+        networkId,
+        walletAddress: connectedWallet.address,
+        limit: '25',
+      });
+      const response = await fetch(`/api/kiln/contracts/discover?${params.toString()}`, {
+        headers: buildHeaders(),
+      });
+      const payload = (await response.json()) as
+        | {
+            success: true;
+            contracts: DiscoveredTezosContract[];
+            error?: string;
+          }
+        | { error?: string };
+      if (!response.ok || !('contracts' in payload)) {
+        throw new Error(payload.error ?? 'Contract discovery failed.');
+      }
+
+      setDiscoveredContracts(payload.contracts);
+      if (payload.contracts.length > 0) {
+        addLog(
+          `Discovered ${payload.contracts.length} contract(s) originated by ${connectedWallet.address}.`,
+          'success',
+        );
+      } else if (showEmptyLog) {
+        addLog(`No previous contracts found for ${connectedWallet.address} on ${network.label}.`, 'info');
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown contract discovery error';
+      setDiscoveredContracts([]);
+      setContractDiscoveryError(message);
+      addLog(`Contract discovery failed: ${message}`, 'error');
+    } finally {
+      setIsDiscoveringContracts(false);
     }
   };
 
@@ -909,12 +1155,20 @@ export default function App() {
       const wallet = await connectShadownetWallet('beacon', networkId);
       const next = {
         address: wallet.address,
+        networkId: wallet.networkId,
         networkName: wallet.networkName,
         rpcUrl: wallet.rpcUrl,
         target: 'beacon' as const,
       };
       connectedWalletRef.current = next;
       setConnectedWallet(next);
+      rememberLinkedWallet({
+        kind: 'tezos',
+        address: wallet.address,
+        networkId: wallet.networkId,
+        label: wallet.networkName ?? network.label,
+        source: 'connected',
+      });
       addLog(`Connected wallet ${wallet.address} on ${network.label}.`, 'success');
     } catch (error) {
       addLog(
@@ -946,98 +1200,127 @@ export default function App() {
     }
   };
 
-  const sessionHeaders = (includeJson = false): HeadersInit => {
+  const sessionHeaders = (
+    includeJson = false,
+    session: KilnAuthSession | null = authSession,
+  ): HeadersInit => {
     const headers = buildHeaders(includeJson) as Record<string, string>;
-    if (authSession?.token) {
-      headers.authorization = `Bearer ${authSession.token}`;
+    if (session?.token) {
+      headers.authorization = `Bearer ${session.token}`;
     }
     return headers;
+  };
+
+  const sessionMatchesActiveWallet = (session: KilnAuthSession | null): boolean => {
+    if (!session || session.user.lastLoginNetworkId !== networkId) {
+      return false;
+    }
+    if (isTezos) {
+      return Boolean(connectedWallet && session.user.walletAddress === connectedWallet.address);
+    }
+    return session.user.walletKind === 'evm';
+  };
+
+  const loginWalletForKiln = async (
+    evmTarget: EvmWalletTarget = 'auto',
+  ): Promise<KilnAuthSession> => {
+    let walletKind: KilnWalletKind;
+    let walletAddress: string;
+    let signature: string;
+    let publicKey: string | undefined;
+
+    if (isTezos) {
+      if (!connectedWallet) {
+        throw new Error('Connect a Tezos wallet before verifying a Kiln account.');
+      }
+      walletKind = 'tezos';
+      walletAddress = connectedWallet.address;
+    } else {
+      const { connectEvmWallet, getConnectedEvmWallet } = await import('./lib/evm-wallet');
+      const wallet =
+        (await getConnectedEvmWallet(networkId, evmTarget)) ??
+        (await connectEvmWallet(networkId, evmTarget));
+      walletKind = 'evm';
+      walletAddress = wallet.address;
+    }
+
+    const challengeResponse = await fetch('/api/kiln/auth/challenge', {
+      method: 'POST',
+      headers: buildHeaders(true),
+      body: JSON.stringify({ walletKind, walletAddress, networkId }),
+    });
+    const challenge = (await challengeResponse.json()) as
+      | {
+          challengeId: string;
+          message: string;
+          messageBytes: string;
+          error?: string;
+        }
+      | { error?: string };
+    if (!challengeResponse.ok || !('challengeId' in challenge)) {
+      throw new Error(challenge.error ?? 'Unable to create wallet login challenge.');
+    }
+
+    if (walletKind === 'tezos') {
+      const { signKilnAuthChallenge } = await import('./lib/shadownet-wallet');
+      const signed = await signKilnAuthChallenge(challenge.message, networkId);
+      if (signed.address !== walletAddress) {
+        throw new Error(
+          `Signed wallet ${signed.address} does not match connected Settings wallet ${walletAddress}. Reconnect before signing.`,
+        );
+      }
+      signature = signed.signature;
+      publicKey = signed.publicKey;
+    } else {
+      const { signEvmAuthChallenge } = await import('./lib/evm-wallet');
+      const signed = await signEvmAuthChallenge(challenge.message, networkId, evmTarget);
+      signature = signed.signature;
+    }
+
+    const verifyResponse = await fetch('/api/kiln/auth/verify', {
+      method: 'POST',
+      headers: buildHeaders(true),
+      body: JSON.stringify({
+        challengeId: challenge.challengeId,
+        signature,
+        publicKey,
+      }),
+    });
+    const verified = (await verifyResponse.json()) as
+      | {
+          sessionToken: string;
+          expiresAt: string;
+          user: KilnAuthUser;
+          error?: string;
+        }
+      | { error?: string };
+    if (!verifyResponse.ok || !('sessionToken' in verified)) {
+      throw new Error(verified.error ?? 'Wallet login verification failed.');
+    }
+
+    const nextSession = {
+      token: verified.sessionToken,
+      expiresAt: verified.expiresAt,
+      user: verified.user,
+    };
+    setAuthSession(nextSession);
+    rememberLinkedWallet({
+      kind: verified.user.walletKind,
+      address: verified.user.walletAddress,
+      networkId: verified.user.lastLoginNetworkId ?? networkId,
+      label: network.label,
+      source: 'signed',
+      verifiedAt: new Date().toISOString(),
+    });
+    addLog(`Wallet ownership verified for Kiln account: ${verified.user.walletAddress}.`, 'success');
+    return nextSession;
   };
 
   const startMcpWalletLogin = async (evmTarget: EvmWalletTarget = 'auto') => {
     setIsMcpLoggingIn(true);
     setMcpToken(null);
     try {
-      let walletKind: KilnWalletKind;
-      let walletAddress: string;
-      let signature: string;
-      let publicKey: string | undefined;
-
-      if (isTezos) {
-        if (!connectedWallet) {
-          throw new Error('Connect a Tezos wallet on the Setup tab before requesting MCP access.');
-        }
-        walletKind = 'tezos';
-        walletAddress = connectedWallet.address;
-      } else {
-        const { connectEvmWallet, getConnectedEvmWallet } = await import('./lib/evm-wallet');
-        const wallet =
-          (await getConnectedEvmWallet(networkId, evmTarget)) ??
-          (await connectEvmWallet(networkId, evmTarget));
-        walletKind = 'evm';
-        walletAddress = wallet.address;
-      }
-
-      const challengeResponse = await fetch('/api/kiln/auth/challenge', {
-        method: 'POST',
-        headers: buildHeaders(true),
-        body: JSON.stringify({ walletKind, walletAddress, networkId }),
-      });
-      const challenge = (await challengeResponse.json()) as
-        | {
-            challengeId: string;
-            message: string;
-            messageBytes: string;
-            error?: string;
-          }
-        | { error?: string };
-      if (!challengeResponse.ok || !('challengeId' in challenge)) {
-        throw new Error(challenge.error ?? 'Unable to create wallet login challenge.');
-      }
-
-      if (walletKind === 'tezos') {
-        const { signKilnAuthChallenge } = await import('./lib/shadownet-wallet');
-        const signed = await signKilnAuthChallenge(challenge.message, networkId);
-        if (signed.address !== walletAddress) {
-          throw new Error(
-            `Signed wallet ${signed.address} does not match connected Settings wallet ${walletAddress}. Reconnect before signing.`,
-          );
-        }
-        signature = signed.signature;
-        publicKey = signed.publicKey;
-      } else {
-        const { signEvmAuthChallenge } = await import('./lib/evm-wallet');
-        const signed = await signEvmAuthChallenge(challenge.message, networkId, evmTarget);
-        signature = signed.signature;
-      }
-
-      const verifyResponse = await fetch('/api/kiln/auth/verify', {
-        method: 'POST',
-        headers: buildHeaders(true),
-        body: JSON.stringify({
-          challengeId: challenge.challengeId,
-          signature,
-          publicKey,
-        }),
-      });
-      const verified = (await verifyResponse.json()) as
-        | {
-            sessionToken: string;
-            expiresAt: string;
-            user: KilnAuthUser;
-            error?: string;
-          }
-        | { error?: string };
-      if (!verifyResponse.ok || !('sessionToken' in verified)) {
-        throw new Error(verified.error ?? 'Wallet login verification failed.');
-      }
-
-      setAuthSession({
-        token: verified.sessionToken,
-        expiresAt: verified.expiresAt,
-        user: verified.user,
-      });
-      addLog(`Wallet ownership verified for Kiln account: ${verified.user.walletAddress}.`, 'success');
+      await loginWalletForKiln(evmTarget);
     } catch (error) {
       addLog(
         `Wallet verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -1048,36 +1331,63 @@ export default function App() {
     }
   };
 
-  const requestMcpAccess = async () => {
-    if (!authSession) {
-      addLog('Wallet login is required before requesting MCP access.', 'error');
-      return;
+  const ensureWalletLogin = async (
+    evmTarget: EvmWalletTarget = 'auto',
+  ): Promise<KilnAuthSession | null> => {
+    if (sessionMatchesActiveWallet(authSession)) {
+      return authSession;
     }
+
+    setIsMcpLoggingIn(true);
+    setMcpToken(null);
+    setApiKey(null);
+    try {
+      addLog('Requesting a wallet signature for Kiln account access...', 'info');
+      return await loginWalletForKiln(evmTarget);
+    } catch (error) {
+      addLog(
+        `Wallet verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+      return null;
+    } finally {
+      setIsMcpLoggingIn(false);
+    }
+  };
+
+  const requestMcpAccessForSession = async (
+    session: KilnAuthSession,
+  ): Promise<KilnAuthSession> => {
+    const response = await fetch('/api/kiln/mcp/access/request', {
+      method: 'POST',
+      headers: sessionHeaders(true, session),
+      body: JSON.stringify({}),
+    });
+    const payload = (await response.json()) as
+      | { access: KilnAuthUser['access']; error?: string }
+      | { error?: string };
+    if (!response.ok || !('access' in payload) || payload.access.status !== 'approved') {
+      throw new Error(payload.error ?? 'MCP access was not approved.');
+    }
+
+    const nextSession = {
+      ...session,
+      user: { ...session.user, access: payload.access },
+    };
+    setAuthSession(nextSession);
+    addLog('MCP access approved by Kiln access worker.', 'success');
+    return nextSession;
+  };
+
+  const requestMcpAccess = async () => {
     setIsRequestingMcpAccess(true);
     setMcpToken(null);
     try {
-      const response = await fetch('/api/kiln/mcp/access/request', {
-        method: 'POST',
-        headers: sessionHeaders(true),
-        body: JSON.stringify({}),
-      });
-      const payload = (await response.json()) as
-        | { access: KilnAuthUser['access']; error?: string }
-        | { error?: string };
-      if ('access' in payload) {
-        setAuthSession((prev) =>
-          prev
-            ? {
-                ...prev,
-                user: { ...prev.user, access: payload.access },
-              }
-            : prev,
-        );
+      const session = await ensureWalletLogin();
+      if (!session) {
+        return;
       }
-      if (!response.ok || !('access' in payload) || payload.access.status !== 'approved') {
-        throw new Error(payload.error ?? 'MCP access was not approved.');
-      }
-      addLog('MCP access approved by Kiln access worker.', 'success');
+      await requestMcpAccessForSession(session);
     } catch (error) {
       addLog(
         `MCP access request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -1088,16 +1398,32 @@ export default function App() {
     }
   };
 
-  const generateMcpToken = async () => {
-    if (!authSession) {
-      addLog('Wallet login is required before generating an MCP token.', 'error');
-      return;
+  const ensureApprovedAccess = async (): Promise<KilnAuthSession | null> => {
+    const session = await ensureWalletLogin();
+    if (!session) {
+      return null;
     }
+    if (session.user.access.status === 'approved') {
+      return session;
+    }
+    setIsRequestingMcpAccess(true);
+    try {
+      return await requestMcpAccessForSession(session);
+    } finally {
+      setIsRequestingMcpAccess(false);
+    }
+  };
+
+  const generateMcpToken = async () => {
     setIsGeneratingMcpToken(true);
     try {
+      const session = await ensureApprovedAccess();
+      if (!session) {
+        return;
+      }
       const response = await fetch('/api/kiln/mcp/token', {
         method: 'POST',
-        headers: sessionHeaders(true),
+        headers: sessionHeaders(true, session),
         body: JSON.stringify({}),
       });
       const payload = (await response.json()) as
@@ -1112,14 +1438,7 @@ export default function App() {
         throw new Error(payload.error ?? 'Unable to generate MCP token.');
       }
       setMcpToken(payload.token);
-      setAuthSession((prev) =>
-        prev
-          ? {
-              ...prev,
-              user: payload.user,
-            }
-          : prev,
-      );
+      setAuthSession({ ...session, user: payload.user });
       addLog(`MCP token generated; expires ${new Date(payload.expiresAt).toLocaleString()}.`, 'success');
     } catch (error) {
       addLog(
@@ -1132,15 +1451,15 @@ export default function App() {
   };
 
   const generateApiKey = async () => {
-    if (!authSession) {
-      addLog('Wallet login is required before generating an API key.', 'error');
-      return;
-    }
     setIsGeneratingApiKey(true);
     try {
+      const session = await ensureApprovedAccess();
+      if (!session) {
+        return;
+      }
       const response = await fetch('/api/kiln/api-key', {
         method: 'POST',
-        headers: sessionHeaders(true),
+        headers: sessionHeaders(true, session),
         body: JSON.stringify({}),
       });
       const payload = (await response.json()) as
@@ -1155,14 +1474,7 @@ export default function App() {
         throw new Error(payload.error ?? 'Unable to generate API key.');
       }
       setApiKey(payload.token);
-      setAuthSession((prev) =>
-        prev
-          ? {
-              ...prev,
-              user: payload.user,
-            }
-          : prev,
-      );
+      setAuthSession({ ...session, user: payload.user });
       addLog(`API key generated; expires ${new Date(payload.expiresAt).toLocaleString()}.`, 'success');
     } catch (error) {
       addLog(
@@ -1481,9 +1793,14 @@ export default function App() {
     );
   };
 
-  const handleTezosDeploy = async () => {
+  const handleTezosDeploy = async ({
+    allowDirectShadownetDeploy = false,
+  }: {
+    allowDirectShadownetDeploy?: boolean;
+  } = {}) => {
     let workflow = lastWorkflow;
     const canDirectShadownetDeploy =
+      allowDirectShadownetDeploy &&
       network.id === 'tezos-shadownet' &&
       contractSourceType === 'michelson' &&
       michelsonCode.trim().length > 0;
@@ -1705,11 +2022,6 @@ export default function App() {
   >(() => {
     const hasSource = isEvm ? solidityCode.trim().length > 0 : michelsonCode.trim().length > 0;
     const hasClearance = isEvm ? Boolean(lastSolidityCompile?.entry) : Boolean(clearanceId);
-    const canDirectDeploy =
-      isTezos &&
-      network.id === 'tezos-shadownet' &&
-      contractSourceType === 'michelson' &&
-      michelsonCode.trim().length > 0;
     const hasContract = Boolean(contractAddress);
     return [
       {
@@ -1741,7 +2053,7 @@ export default function App() {
         label: t('tabDeployLabel'),
         icon: <Rocket className="w-4 h-4" />,
         tipKey: 'tabDeployLabel',
-        ready: hasClearance || canDirectDeploy,
+        ready: hasClearance,
         done: hasContract,
       },
       {
@@ -1749,7 +2061,7 @@ export default function App() {
         label: t('tabTestLabel'),
         icon: <FlaskConical className="w-4 h-4" />,
         tipKey: 'tabTestLabel',
-        ready: true,
+        ready: hasContract,
         done: false,
       },
       {
@@ -1777,9 +2089,22 @@ export default function App() {
     t,
   ]);
 
-  const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
-  const prev = activeIndex > 0 ? tabs[activeIndex - 1] : null;
-  const next = activeIndex >= 0 && activeIndex < tabs.length - 1 ? tabs[activeIndex + 1] : null;
+  useEffect(() => {
+    if (activeSurface !== 'guided') {
+      return;
+    }
+    const activeStep = tabs.find((tab) => tab.key === activeTab);
+    if (!activeStep || activeStep.ready) {
+      return;
+    }
+    const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
+    const fallback =
+      [...tabs.slice(0, activeIndex)].reverse().find((tab) => tab.ready) ??
+      tabs.find((tab) => tab.ready);
+    if (fallback) {
+      setActiveTab(fallback.key);
+    }
+  }, [activeSurface, activeTab, tabs]);
 
   const sessionSummary = useMemo(
     () => ({
@@ -1800,6 +2125,216 @@ export default function App() {
     [isEvm, solidityCode, michelsonCode, contractSourceType, lastSolidityCompile, clearanceId, contractAddress],
   );
 
+  const workbenchTools = useMemo<
+    Array<{
+      key: WorkbenchToolKey;
+      label: string;
+      icon: React.ReactNode;
+      description: string;
+      status: string;
+    }>
+  >(
+    () => [
+      {
+        key: 'build',
+        label: 'Build tools',
+        icon: <Hammer className="w-4 h-4" />,
+        description: 'Create, paste, upload, compile, or inspect contract source without entering the locked path.',
+        status: (isEvm ? solidityCode : michelsonCode).trim() ? 'source loaded' : 'empty buffer',
+      },
+      {
+        key: 'validate',
+        label: 'Validate',
+        icon: <ShieldCheck className="w-4 h-4" />,
+        description: 'Run checks on whatever source is currently loaded.',
+        status: isEvm
+          ? lastSolidityCompile?.entry
+            ? 'compiled'
+            : 'not compiled'
+          : clearanceId
+            ? 'clearance ready'
+            : 'no clearance',
+      },
+      {
+        key: 'deploy',
+        label: 'Deploy',
+        icon: <Rocket className="w-4 h-4" />,
+        description: 'Deploy loaded Michelson to Shadownet or use wallet-signed deploys when available.',
+        status: contractAddress ? 'contract live' : 'no contract',
+      },
+      {
+        key: 'test',
+        label: 'Test',
+        icon: <FlaskConical className="w-4 h-4" />,
+        description: 'Load any KT1, discover wallet originations, and run Bert/Ernie checks where supported.',
+        status: discoveredContracts.length > 0 ? `${discoveredContracts.length} discovered` : 'standalone',
+      },
+      {
+        key: 'handoff',
+        label: 'Handoff',
+        icon: <Package className="w-4 h-4" />,
+        description: 'Export source, compiled artifacts, and release bundles.',
+        status: lastWorkflow || lastSolidityCompile ? 'artifacts ready' : 'no artifacts',
+      },
+    ],
+    [
+      isEvm,
+      solidityCode,
+      michelsonCode,
+      lastSolidityCompile,
+      clearanceId,
+      contractAddress,
+      discoveredContracts.length,
+      lastWorkflow,
+    ],
+  );
+
+  const renderStep = (step: TabKey, flowMode: FlowMode): React.ReactNode => {
+    if (step === 'setup') {
+      return (
+        <SetupTab
+          balances={balances}
+          balancesStatus={balancesStatus}
+          balancesError={balancesError}
+          fetchBalances={fetchBalances}
+          connectedWallet={connectedWallet}
+          onConnect={connectWallet}
+          onDisconnect={disconnectWallet}
+          isConnectingWallet={isConnectingWallet}
+          onOpenWorkbench={() => {
+            setActiveSurface('workbench');
+            setActiveTool('build');
+          }}
+        />
+      );
+    }
+    if (step === 'build') {
+      return (
+        <BuildTab
+          isTezos={isTezos}
+          flowMode={flowMode}
+          contractSourceType={contractSourceType}
+          setContractSourceType={setContractSourceType}
+          michelsonCode={michelsonCode}
+          setMichelsonCode={setMichelsonCode}
+          solidityCode={solidityCode}
+          setSolidityCode={setSolidityCode}
+          initialStorage={initialStorage}
+          setInitialStorage={setInitialStorage}
+          contractUploadInputRef={contractUploadInputRef}
+          openContractFilePicker={openContractFilePicker}
+          handleFileUpload={handleFileUpload}
+          onApplyGuidedDraft={applyGuidedMichelsonDraft}
+          buildHeaders={buildHeaders}
+          addLog={addLog}
+          onCompiled={setLastSolidityCompile}
+          entrypoints={abi.map((entrypoint) => entrypoint.name)}
+          contractAddress={contractAddress}
+          clearanceId={clearanceId}
+          projectName={activeProject?.name ?? 'Kiln Browser Workspace'}
+          verifiedEvmWalletAddress={verifiedEvmWalletAddress}
+          isAssociatingEvmWallet={isMcpLoggingIn}
+          onAssociateEvmWallet={startMcpWalletLogin}
+          onDeployedEvm={(info) => {
+            setContractAddress(info.contractAddress);
+            addLog(`EVM contract live at ${info.contractAddress}.`, 'success');
+            if (flowMode === 'guided') {
+              setActiveTab('test');
+            } else {
+              setActiveTool('test');
+            }
+          }}
+        />
+      );
+    }
+    if (step === 'validate') {
+      return (
+        <ValidateTab
+          isTezos={isTezos}
+          isRunningWorkflow={isRunningWorkflow}
+          hasSource={isTezos ? michelsonCode.trim().length > 0 : solidityCode.trim().length > 0}
+          runWorkflow={runTezosWorkflow}
+          workflow={lastWorkflow}
+          solidityResult={lastSolidityCompile}
+        />
+      );
+    }
+    if (step === 'deploy') {
+      return (
+        <DeployTab
+          isTezos={isTezos}
+          flowMode={flowMode}
+          deployMode={deployMode}
+          setDeployMode={setDeployMode}
+          useConnectedWalletAsContractAdmin={useConnectedWalletAsContractAdmin}
+          setUseConnectedWalletAsContractAdmin={setUseConnectedWalletAsContractAdmin}
+          connectedWallet={connectedWallet}
+          verifiedTezosWalletAddress={verifiedTezosWalletAddress}
+          clearanceId={clearanceId}
+          lastWorkflow={lastWorkflow}
+          solidityResult={lastSolidityCompile}
+          contractAddress={contractAddress}
+          isDeploying={isDeploying}
+          isValidating={isValidating}
+          onTezosDeploy={() =>
+            handleTezosDeploy({
+              allowDirectShadownetDeploy: flowMode === 'workbench',
+            })
+          }
+          canPuppet={can('puppetWallets')}
+          directDeployAvailable={
+            flowMode === 'workbench' &&
+            network.id === 'tezos-shadownet' &&
+            contractSourceType === 'michelson' &&
+            michelsonCode.trim().length > 0
+          }
+          onReconnect={() => setActiveSurface('account')}
+        />
+      );
+    }
+    if (step === 'test') {
+      return (
+        <TestTab
+          isTezos={isTezos}
+          flowMode={flowMode}
+          contractAddress={contractAddress}
+          abi={abi}
+          onExecute={handleExecute}
+          e2eEntrypoint={e2eEntrypoint}
+          setE2EEntrypoint={setE2EEntrypoint}
+          e2eArgs={e2eArgs}
+          setE2EArgs={setE2EArgs}
+          runE2E={runPostDeployE2E}
+          isRunningE2E={isRunningE2E}
+          canPuppet={can('puppetWallets') && can('postdeployE2E')}
+          onLoadContract={loadExistingContract}
+          isLoadingContract={isLoadingContract}
+          connectedWallet={connectedWallet}
+          discoveredContracts={discoveredContractsWithProjects}
+          isDiscoveringContracts={isDiscoveringContracts}
+          contractDiscoveryError={contractDiscoveryError}
+          onDiscoverContracts={() => discoverConnectedWalletContracts(true)}
+        />
+      );
+    }
+    return (
+      <HandoffTab
+        isTezos={isTezos}
+        hasTezosSource={michelsonCode.trim().length > 0}
+        hasSoliditySource={solidityCode.trim().length > 0}
+        hasCompiledMichelson={Boolean(lastWorkflow?.artifacts.michelson)}
+        hasSolidityCompile={Boolean(lastSolidityCompile?.entry)}
+        isExportingBundle={isExportingBundle}
+        exportCurrentSource={exportCurrentSource}
+        exportLatestMichelson={exportLatestMichelson}
+        exportSolidityBytecode={exportSolidityBytecode}
+        exportMainnetBundle={exportMainnetBundle}
+        contractAddress={contractAddress}
+        networkLabel={network.label}
+      />
+    );
+  };
+
   return (
     <div
       className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col"
@@ -1810,6 +2345,8 @@ export default function App() {
         mode={mode}
         setMode={setMode}
         fetchBalances={fetchBalances}
+        activeSurface={activeSurface}
+        onSurfaceChange={setActiveSurface}
       />
 
       {network.tier === 'mainnet' ? (
@@ -1818,23 +2355,48 @@ export default function App() {
         </div>
       ) : null}
 
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-6 space-y-6">
-        <ProjectAccountBar
-          projects={projectStore.projects}
-          activeProject={activeProject}
-          authSession={authSession}
-          accountSettingsOpen={accountSettingsOpen}
-          setAccountSettingsOpen={setAccountSettingsOpen}
-          onSelectProject={selectProject}
-          onCreateProject={createNewProject}
-          onRenameProject={renameActiveProject}
-        />
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-6">
+        {activeSurface === 'guided' ? (
+          <GuidedFlowScreen
+            tabs={tabs}
+            activeTab={activeTab}
+            onStepChange={setActiveTab}
+            renderStep={(step) => renderStep(step, 'guided')}
+            projects={projectStore.projects}
+            activeProject={activeProject}
+            onSelectProject={selectProject}
+            onCreateProject={createNewProject}
+            onRenameProject={renameActiveProject}
+            summary={sessionSummary}
+            onOpenWorkbench={() => {
+              setActiveSurface('workbench');
+              setActiveTool('build');
+            }}
+          />
+        ) : null}
 
-        {accountSettingsOpen ? (
-          <div className="bg-base-100 rounded-2xl border border-base-200 p-6">
+        {activeSurface === 'workbench' ? (
+          <WorkbenchScreen
+            tools={workbenchTools}
+            activeTool={activeTool}
+            onToolChange={setActiveTool}
+            renderTool={(tool) => renderStep(tool, 'workbench')}
+            summary={sessionSummary}
+            connectedWallet={connectedWallet}
+            onOpenAccount={() => setActiveSurface('account')}
+          />
+        ) : null}
+
+        {activeSurface === 'account' ? (
+          <div className="bg-base-100 rounded-2xl border border-base-200 p-4 md:p-6">
             <SettingsTab
               isTezos={isTezos}
               isEvm={isEvm}
+              userHandle={userHandle}
+              setUserHandle={setUserHandle}
+              linkedWallets={linkedWallets}
+              onLinkConnectedWallet={linkConnectedWalletToAccount}
+              onRemoveLinkedWallet={removeLinkedWallet}
               connectedWallet={connectedWallet}
               onConnect={connectWallet}
               onDisconnect={disconnectWallet}
@@ -1855,202 +2417,6 @@ export default function App() {
             />
           </div>
         ) : null}
-
-        <SessionSummary summary={sessionSummary} />
-
-        <div className="bg-base-100 rounded-2xl shadow-lg border border-base-200 overflow-hidden">
-          <div className="flex items-stretch overflow-x-auto border-b border-base-300">
-            {tabs.map((tab, idx) => {
-              const isActive = tab.key === activeTab;
-              const isLocked = !tab.ready;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => {
-                    if (!isLocked) {
-                      setActiveTab(tab.key);
-                    }
-                  }}
-                  title={
-                    isLocked
-                      ? 'Locked — complete earlier steps.'
-                      : (tip(tab.tipKey) ?? undefined)
-                  }
-                  className={`relative flex-1 min-w-[120px] px-3 md:px-4 py-4 text-left border-r border-base-300 last:border-r-0 transition-colors ${
-                    isActive
-                      ? 'bg-base-200/60'
-                      : isLocked
-                        ? 'cursor-not-allowed bg-base-300/20'
-                        : 'hover:bg-base-200/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`flex items-center justify-center w-6 h-6 rounded-full text-[0.65rem] font-bold ${
-                          tab.done
-                            ? 'bg-success text-success-content'
-                            : isActive
-                              ? 'bg-primary text-primary-content'
-                              : 'bg-base-300 text-base-content/60'
-                        }`}
-                      >
-                        {tab.done ? <CheckCircle2 className="w-3 h-3" /> : idx + 1}
-                      </div>
-                      <span className={`font-semibold text-sm ${isActive ? '' : 'text-base-content/90'}`}>
-                        {tab.label}
-                      </span>
-                    </div>
-                    {isLocked ? <Lock className="w-3 h-3 text-base-content/40" /> : tab.icon}
-                  </div>
-                  {isActive ? (
-                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="p-6">
-            {activeTab === 'setup' ? (
-              <SetupTab
-                balances={balances}
-                balancesStatus={balancesStatus}
-                balancesError={balancesError}
-                fetchBalances={fetchBalances}
-                connectedWallet={connectedWallet}
-                onConnect={connectWallet}
-                onDisconnect={disconnectWallet}
-                isConnectingWallet={isConnectingWallet}
-              />
-            ) : null}
-            {activeTab === 'build' ? (
-              <BuildTab
-                isTezos={isTezos}
-                contractSourceType={contractSourceType}
-                setContractSourceType={setContractSourceType}
-                michelsonCode={michelsonCode}
-                setMichelsonCode={setMichelsonCode}
-                solidityCode={solidityCode}
-                setSolidityCode={setSolidityCode}
-                initialStorage={initialStorage}
-                setInitialStorage={setInitialStorage}
-                contractUploadInputRef={contractUploadInputRef}
-                openContractFilePicker={openContractFilePicker}
-                handleFileUpload={handleFileUpload}
-                onApplyGuidedDraft={applyGuidedMichelsonDraft}
-                buildHeaders={buildHeaders}
-                addLog={addLog}
-                onCompiled={setLastSolidityCompile}
-                entrypoints={abi.map((entrypoint) => entrypoint.name)}
-                contractAddress={contractAddress}
-                clearanceId={clearanceId}
-                projectName={activeProject?.name ?? 'Kiln Browser Workspace'}
-                verifiedEvmWalletAddress={verifiedEvmWalletAddress}
-                isAssociatingEvmWallet={isMcpLoggingIn}
-                onAssociateEvmWallet={startMcpWalletLogin}
-                onDeployedEvm={(info) => {
-                  setContractAddress(info.contractAddress);
-                  addLog(`EVM contract live at ${info.contractAddress}.`, 'success');
-                  setActiveTab('test');
-                }}
-              />
-            ) : null}
-            {activeTab === 'validate' ? (
-              <ValidateTab
-                isTezos={isTezos}
-                isRunningWorkflow={isRunningWorkflow}
-                hasSource={isTezos ? michelsonCode.trim().length > 0 : solidityCode.trim().length > 0}
-                runWorkflow={runTezosWorkflow}
-                workflow={lastWorkflow}
-                solidityResult={lastSolidityCompile}
-              />
-            ) : null}
-            {activeTab === 'deploy' ? (
-              <DeployTab
-                isTezos={isTezos}
-                deployMode={deployMode}
-                setDeployMode={setDeployMode}
-                useConnectedWalletAsContractAdmin={useConnectedWalletAsContractAdmin}
-                setUseConnectedWalletAsContractAdmin={setUseConnectedWalletAsContractAdmin}
-                connectedWallet={connectedWallet}
-                verifiedTezosWalletAddress={verifiedTezosWalletAddress}
-                clearanceId={clearanceId}
-                lastWorkflow={lastWorkflow}
-                solidityResult={lastSolidityCompile}
-                contractAddress={contractAddress}
-                isDeploying={isDeploying}
-                isValidating={isValidating}
-                onTezosDeploy={handleTezosDeploy}
-                canPuppet={can('puppetWallets')}
-                directDeployAvailable={
-                  network.id === 'tezos-shadownet' &&
-                  contractSourceType === 'michelson' &&
-                  michelsonCode.trim().length > 0
-                }
-                onReconnect={() => setAccountSettingsOpen(true)}
-              />
-            ) : null}
-            {activeTab === 'test' ? (
-              <TestTab
-                isTezos={isTezos}
-                contractAddress={contractAddress}
-                abi={abi}
-                onExecute={handleExecute}
-                e2eEntrypoint={e2eEntrypoint}
-                setE2EEntrypoint={setE2EEntrypoint}
-                e2eArgs={e2eArgs}
-                setE2EArgs={setE2EArgs}
-                runE2E={runPostDeployE2E}
-                isRunningE2E={isRunningE2E}
-                canPuppet={can('puppetWallets') && can('postdeployE2E')}
-                onLoadContract={loadExistingContract}
-                isLoadingContract={isLoadingContract}
-              />
-            ) : null}
-            {activeTab === 'handoff' ? (
-              <HandoffTab
-                isTezos={isTezos}
-                hasTezosSource={michelsonCode.trim().length > 0}
-                hasSoliditySource={solidityCode.trim().length > 0}
-                hasCompiledMichelson={Boolean(lastWorkflow?.artifacts.michelson)}
-                hasSolidityCompile={Boolean(lastSolidityCompile?.entry)}
-                isExportingBundle={isExportingBundle}
-                exportCurrentSource={exportCurrentSource}
-                exportLatestMichelson={exportLatestMichelson}
-                exportSolidityBytecode={exportSolidityBytecode}
-                exportMainnetBundle={exportMainnetBundle}
-                contractAddress={contractAddress}
-                networkLabel={network.label}
-              />
-            ) : null}
-          </div>
-
-          <div className="border-t border-base-300 p-3 flex items-center justify-between flex-wrap gap-2 bg-base-200/30">
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost gap-1"
-              onClick={() => prev?.ready && setActiveTab(prev.key)}
-              disabled={!prev?.ready}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              {prev ? prev.label : 'Back'}
-            </button>
-            <div className="text-xs text-base-content/60">
-              Step {activeIndex + 1} of {tabs.length}
-            </div>
-            <button
-              type="button"
-              className="btn btn-sm btn-primary gap-1"
-              onClick={() => next?.ready && setActiveTab(next.key)}
-              disabled={!next?.ready}
-            >
-              {next ? next.label : 'Done'}
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
       </div>
 
       <TerminalDock
@@ -2082,7 +2448,11 @@ export default function App() {
 }
 
 function isTabKey(value: string): value is TabKey {
-  return ['setup', 'build', 'validate', 'deploy', 'test', 'handoff'].includes(value);
+  return guidedStepOrder.includes(value as TabKey);
+}
+
+function isWorkbenchToolKey(value: string): value is WorkbenchToolKey {
+  return workbenchToolOrder.includes(value as WorkbenchToolKey);
 }
 
 /** Bottom spacer so the terminal dock never covers the tab nav. */
@@ -2107,13 +2477,22 @@ function Header({
   mode,
   setMode,
   fetchBalances,
+  activeSurface,
+  onSurfaceChange,
 }: {
   networkHealth: 'checking' | 'online' | 'offline';
   mode: 'builder' | 'eli5';
   setMode: (next: 'builder' | 'eli5') => void;
   fetchBalances: () => Promise<void>;
+  activeSurface: SurfaceKey;
+  onSurfaceChange: (next: SurfaceKey) => void;
 }) {
   const { t, tip } = useKilnView();
+  const surfaceButtons: Array<{ key: SurfaceKey; label: string; icon: React.ReactNode }> = [
+    { key: 'guided', label: 'Guided', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+    { key: 'workbench', label: 'Workbench', icon: <Hammer className="w-3.5 h-3.5" /> },
+    { key: 'account', label: 'Account', icon: <UserCircle className="w-3.5 h-3.5" /> },
+  ];
   return (
     <header className="sticky top-0 z-40 bg-base-100/95 backdrop-blur border-b border-base-300">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4 flex-wrap">
@@ -2130,6 +2509,21 @@ function Header({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="join join-horizontal shrink-0" aria-label="Kiln path selector">
+            {surfaceButtons.map((surface) => (
+              <button
+                key={surface.key}
+                type="button"
+                className={`btn btn-xs join-item gap-1 ${
+                  activeSurface === surface.key ? 'btn-primary' : 'btn-ghost border border-base-300'
+                }`}
+                onClick={() => onSurfaceChange(surface.key)}
+              >
+                {surface.icon}
+                {surface.label}
+              </button>
+            ))}
+          </div>
           <NetworkStatusPill health={networkHealth} />
           <NetworkSwitcher />
           <div className="join join-horizontal shrink-0">
@@ -2167,21 +2561,274 @@ function Header({
   );
 }
 
+function GuidedFlowScreen({
+  tabs,
+  activeTab,
+  onStepChange,
+  renderStep,
+  projects,
+  activeProject,
+  onSelectProject,
+  onCreateProject,
+  onRenameProject,
+  summary,
+  onOpenWorkbench,
+}: {
+  tabs: Array<{
+    key: TabKey;
+    label: string;
+    icon: React.ReactNode;
+    tipKey: Parameters<ReturnType<typeof useKilnView>['tip']>[0];
+    ready: boolean;
+    done: boolean;
+  }>;
+  activeTab: TabKey;
+  onStepChange: (next: TabKey) => void;
+  renderStep: (step: TabKey) => React.ReactNode;
+  projects: SavedKilnProject[];
+  activeProject?: SavedKilnProject;
+  onSelectProject: (projectId: string) => void;
+  onCreateProject: () => void;
+  onRenameProject: (name: string) => void;
+  summary: { source: string | null; clearance: string | null; contract: string };
+  onOpenWorkbench: () => void;
+}) {
+  const { tip } = useKilnView();
+  const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
+  const prev = activeIndex > 0 ? tabs[activeIndex - 1] : null;
+  const next = activeIndex >= 0 && activeIndex < tabs.length - 1 ? tabs[activeIndex + 1] : null;
+  const readyCount = tabs.filter((tab) => tab.done).length;
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-primary/30 bg-base-100 p-4 md:p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2 max-w-3xl">
+            <div className="badge badge-primary badge-outline">Locked guided path</div>
+            <h2 className="text-2xl font-bold leading-tight">
+              Guided Shadownet launch
+            </h2>
+            <p className="text-sm text-base-content/70">
+              Use this path when Kiln creates or injects the contract for a project. Deploy stays locked until validation grants clearance, then testing and handoff continue from the saved project state.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline gap-2"
+            onClick={onOpenWorkbench}
+          >
+            <Hammer className="w-4 h-4" />
+            Open standalone tools
+          </button>
+        </div>
+      </div>
+
+      <ProjectAccountBar
+        projects={projects}
+        activeProject={activeProject}
+        onSelectProject={onSelectProject}
+        onCreateProject={onCreateProject}
+        onRenameProject={onRenameProject}
+      />
+
+      <SessionSummary summary={summary} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] gap-5">
+        <aside className="rounded-2xl border border-base-200 bg-base-100 p-3 h-fit">
+          <div className="px-2 py-2 text-xs uppercase tracking-wider text-base-content/60">
+            Project flow · {Math.min(activeIndex + 1, tabs.length)} / {tabs.length}
+          </div>
+          <div className="space-y-2">
+            {tabs.map((tab, idx) => {
+              const isActive = tab.key === activeTab;
+              const isLocked = !tab.ready;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    if (!isLocked) {
+                      onStepChange(tab.key);
+                    }
+                  }}
+                  title={isLocked ? 'Locked until earlier project work is complete.' : (tip(tab.tipKey) ?? undefined)}
+                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                    isActive
+                      ? 'border-primary bg-primary/10'
+                      : isLocked
+                        ? 'border-base-300 bg-base-200/30 cursor-not-allowed opacity-70'
+                        : 'border-base-300 hover:border-primary/40 hover:bg-base-200/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        tab.done
+                          ? 'bg-success text-success-content'
+                          : isActive
+                            ? 'bg-primary text-primary-content'
+                            : 'bg-base-300 text-base-content/70'
+                      }`}
+                    >
+                      {tab.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-sm truncate">{tab.label}</span>
+                        {isLocked ? <Lock className="w-3.5 h-3.5 text-base-content/40" /> : tab.icon}
+                      </div>
+                      <div className="text-[0.68rem] text-base-content/55">
+                        {tab.done ? 'complete' : isLocked ? 'locked' : isActive ? 'current screen' : 'available'}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 rounded-xl bg-base-200/50 p-3 text-xs text-base-content/65">
+            {readyCount} of {tabs.length} checkpoints complete. Deployment requires validation clearance in this path.
+          </div>
+        </aside>
+
+        <section className="rounded-2xl border border-base-200 bg-base-100 shadow-lg overflow-hidden">
+          <div className="border-b border-base-300 bg-base-200/30 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-base-content/55">
+                Guided screen
+              </div>
+              <h3 className="font-bold">{tabs[activeIndex]?.label ?? 'Setup'}</h3>
+            </div>
+            <div className="text-xs text-base-content/60">
+              State is saved to the selected Kiln project.
+            </div>
+          </div>
+          <div className="p-4 md:p-6">{renderStep(activeTab)}</div>
+          <div className="border-t border-base-300 p-3 flex items-center justify-between flex-wrap gap-2 bg-base-200/30">
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost gap-1"
+              onClick={() => prev?.ready && onStepChange(prev.key)}
+              disabled={!prev?.ready}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {prev ? prev.label : 'Back'}
+            </button>
+            <div className="text-xs text-base-content/60">
+              Step {activeIndex + 1} of {tabs.length}
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary gap-1"
+              onClick={() => next?.ready && onStepChange(next.key)}
+              disabled={!next?.ready}
+            >
+              {next ? next.label : 'Done'}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function WorkbenchScreen({
+  tools,
+  activeTool,
+  onToolChange,
+  renderTool,
+  summary,
+  connectedWallet,
+  onOpenAccount,
+}: {
+  tools: Array<{
+    key: WorkbenchToolKey;
+    label: string;
+    icon: React.ReactNode;
+    description: string;
+    status: string;
+  }>;
+  activeTool: WorkbenchToolKey;
+  onToolChange: (next: WorkbenchToolKey) => void;
+  renderTool: (tool: WorkbenchToolKey) => React.ReactNode;
+  summary: { source: string | null; clearance: string | null; contract: string };
+  connectedWallet: ConnectedWalletState | null;
+  onOpenAccount: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-secondary/30 bg-base-100 p-4 md:p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2 max-w-3xl">
+            <div className="badge badge-secondary badge-outline">Standalone workbench</div>
+            <h2 className="text-2xl font-bold leading-tight">Contract tools, no required login</h2>
+            <p className="text-sm text-base-content/70">
+              Use any stage directly: paste source, validate it, deploy loaded Michelson to Shadownet, or test an existing KT1. Connecting a wallet adds contract discovery and wallet-specific context.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline gap-2"
+            onClick={onOpenAccount}
+          >
+            <UserCircle className="w-4 h-4" />
+            {connectedWallet ? 'Wallet context' : 'Connect wallet'}
+          </button>
+        </div>
+      </div>
+
+      <SessionSummary summary={summary} />
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+        {tools.map((tool) => (
+          <button
+            key={tool.key}
+            type="button"
+            onClick={() => onToolChange(tool.key)}
+            className={`rounded-xl border p-3 text-left transition-colors min-h-32 ${
+              activeTool === tool.key
+                ? 'border-secondary bg-secondary/10'
+                : 'border-base-300 bg-base-100 hover:border-secondary/40 hover:bg-base-200/40'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-sm">{tool.label}</span>
+              {tool.icon}
+            </div>
+            <p className="mt-2 text-xs text-base-content/65 line-clamp-3">{tool.description}</p>
+            <div className="mt-3 badge badge-xs badge-outline">{tool.status}</div>
+          </button>
+        ))}
+      </div>
+
+      <section className="rounded-2xl border border-base-200 bg-base-100 shadow-lg overflow-hidden">
+        <div className="border-b border-base-300 bg-base-200/30 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-base-content/55">
+              Standalone tool
+            </div>
+            <h3 className="font-bold">{tools.find((tool) => tool.key === activeTool)?.label}</h3>
+          </div>
+          <div className="text-xs text-base-content/60">
+            No guided lockout is applied here.
+          </div>
+        </div>
+        <div className="p-4 md:p-6">{renderTool(activeTool)}</div>
+      </section>
+    </div>
+  );
+}
+
 function ProjectAccountBar({
   projects,
   activeProject,
-  authSession,
-  accountSettingsOpen,
-  setAccountSettingsOpen,
   onSelectProject,
   onCreateProject,
   onRenameProject,
 }: {
   projects: SavedKilnProject[];
   activeProject?: SavedKilnProject;
-  authSession: KilnAuthSession | null;
-  accountSettingsOpen: boolean;
-  setAccountSettingsOpen: (next: boolean) => void;
   onSelectProject: (projectId: string) => void;
   onCreateProject: () => void;
   onRenameProject: (name: string) => void;
@@ -2223,14 +2870,7 @@ function ProjectAccountBar({
             ? `Saved ${new Date(activeProject.updatedAt).toLocaleTimeString()}`
             : 'Autosave ready'}
         </div>
-        <button
-          type="button"
-          className={`btn btn-sm gap-2 ${accountSettingsOpen ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setAccountSettingsOpen(!accountSettingsOpen)}
-        >
-          <UserCircle className="w-4 h-4" />
-          {authSession ? 'Account verified' : 'Account settings'}
-        </button>
+        <span className="badge badge-outline">Project state</span>
       </div>
     </div>
   );
@@ -2287,6 +2927,7 @@ function SetupTab({
   onConnect,
   onDisconnect,
   isConnectingWallet,
+  onOpenWorkbench,
 }: {
   balances: BalancesResponse | null;
   balancesStatus: 'loading' | 'ready' | 'error' | 'unsupported';
@@ -2296,6 +2937,7 @@ function SetupTab({
   onConnect: () => Promise<void>;
   onDisconnect: () => Promise<void>;
   isConnectingWallet: boolean;
+  onOpenWorkbench: () => void;
 }) {
   const { network, isTezos, isEvm, requestNetworkChange, pickable } = useKilnNetwork();
   const { t } = useKilnView();
@@ -2308,6 +2950,31 @@ function SetupTab({
         </h2>
         <KilnCopy k="networkPickerBody" as="p" className="text-sm text-base-content/60 mt-1" />
         <KilnCopy k="tabSetupIntro" as="p" className="text-xs text-base-content/50 mt-1" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-4">
+          <div className="text-xs uppercase tracking-wider text-primary font-semibold">
+            Guided mode
+          </div>
+          <h3 className="font-bold mt-1">Project launch with guardrails</h3>
+          <p className="text-xs text-base-content/65 mt-2">
+            Build or inject a contract, validate it, then unlock deployment only after Kiln issues clearance.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="rounded-xl border border-base-300 bg-base-100 p-4 text-left hover:border-secondary/50 hover:bg-base-200/40 transition-colors"
+          onClick={onOpenWorkbench}
+        >
+          <div className="text-xs uppercase tracking-wider text-secondary font-semibold">
+            Standalone mode
+          </div>
+          <h3 className="font-bold mt-1">Open the tool workbench</h3>
+          <p className="text-xs text-base-content/65 mt-2">
+            Skip the guided lock path and use build, validate, deploy, test, or export tools one at a time.
+          </p>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2478,6 +3145,11 @@ function SetupTab({
 function SettingsTab({
   isTezos,
   isEvm,
+  userHandle,
+  setUserHandle,
+  linkedWallets,
+  onLinkConnectedWallet,
+  onRemoveLinkedWallet,
   connectedWallet,
   onConnect,
   onDisconnect,
@@ -2498,6 +3170,11 @@ function SettingsTab({
 }: {
   isTezos: boolean;
   isEvm: boolean;
+  userHandle: string;
+  setUserHandle: (next: string) => void;
+  linkedWallets: LinkedKilnWallet[];
+  onLinkConnectedWallet: () => void;
+  onRemoveLinkedWallet: (walletId: string) => void;
   connectedWallet: ConnectedWalletState | null;
   onConnect: () => Promise<void>;
   onDisconnect: () => Promise<void>;
@@ -2520,261 +3197,357 @@ function SettingsTab({
   const accessStatus = access?.status ?? 'none';
   const tokenMeta = authSession?.user.currentMcpToken;
   const apiTokenMeta = authSession?.user.currentApiToken;
-  const walletLabel = authSession?.user.walletAddress ?? connectedWallet?.address ?? 'No wallet login';
-  const walletKindLabel = authSession?.user.walletKind ?? (isEvm ? 'evm' : 'tezos');
   const { network } = useKilnNetwork();
+  const signedWalletLabel = authSession?.user.walletAddress ?? 'not signed';
+  const walletKindLabel = authSession?.user.walletKind ?? (isEvm ? 'evm' : 'tezos');
+  const connectedNetworkLabel =
+    connectedWallet?.networkId === network.id
+      ? network.label
+      : connectedWallet?.networkId ?? null;
+  const canStartWalletBackedAction =
+    isTezos ? Boolean(connectedWallet) : true;
   const walletVerifiedForNetwork =
     authSession?.user.lastLoginNetworkId === network.id &&
     (!connectedWallet || authSession.user.walletAddress === connectedWallet.address);
-  const canRequestAccess = Boolean(authSession) && !isRequestingMcpAccess;
+  const canRequestAccess =
+    canStartWalletBackedAction && !isRequestingMcpAccess && !isMcpLoggingIn;
   const canGenerateToken =
-    Boolean(authSession) && accessStatus === 'approved' && !isGeneratingMcpToken;
+    canStartWalletBackedAction &&
+    accessStatus !== 'blocked' &&
+    !isGeneratingMcpToken &&
+    !isMcpLoggingIn;
   const canGenerateApiKey =
-    Boolean(authSession) && accessStatus === 'approved' && !isGeneratingApiKey;
+    canStartWalletBackedAction &&
+    accessStatus !== 'blocked' &&
+    !isGeneratingApiKey &&
+    !isMcpLoggingIn;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-bold flex items-center gap-2">
+        <div className="badge badge-primary badge-outline">Account surface</div>
+        <h2 className="text-2xl font-bold flex items-center gap-2 mt-2">
           <Settings className="w-5 h-5 text-primary" />
-          Settings
+          Account and access
         </h2>
-            <p className="text-sm text-base-content/60 mt-1">
-          Connect and verify the wallet Kiln is allowed to use for this network, then generate agent access when needed.
+        <p className="text-sm text-base-content/60 mt-1">
+          Wallet connection adds account context and contract discovery. Token issuance asks for wallet verification only when credentials are needed.
         </p>
       </div>
 
-      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-              <Wallet className="w-4 h-4" />
-              Verified wallet
-            </h3>
-            <p className="text-xs text-base-content/60 mt-1">
-              {isTezos
-                ? `Stores the exact Beacon wallet allowed to deploy on ${network.label}.`
-                : 'Uses Temple, MetaMask, or another EIP-1193 wallet for Etherlink.'}
-            </p>
+      <details className="collapse collapse-arrow rounded-xl border border-base-300 bg-base-100" open>
+        <summary className="collapse-title font-bold">User handle</summary>
+        <div className="collapse-content space-y-3">
+          <p className="text-xs text-base-content/60">
+            Local browser identity for project organization. Wallets and contracts still remain the source of truth.
+          </p>
+          <input
+            className="input input-bordered w-full max-w-md"
+            value={userHandle}
+            onChange={(event) => setUserHandle(event.target.value)}
+            placeholder="Choose a Kiln handle"
+            aria-label="Kiln user handle"
+          />
+        </div>
+      </details>
+
+      <details className="collapse collapse-arrow rounded-xl border border-base-300 bg-base-100" open>
+        <summary className="collapse-title font-bold">Wallet connection</summary>
+        <div className="collapse-content space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+                <Wallet className="w-4 h-4" />
+                Connected wallet
+              </h3>
+              <p className="text-xs text-base-content/60 mt-1">
+                {isTezos
+                  ? `Beacon is scoped to ${network.label}. Kiln records the wallet network it actually receives from Beacon.`
+                  : 'Uses an EIP-1193 wallet for Etherlink.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {isTezos ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    disabled={isConnectingWallet}
+                    onClick={() => {
+                      void onConnect();
+                    }}
+                  >
+                    {isConnectingWallet ? 'Connecting...' : connectedWallet ? 'Reconnect' : 'Connect wallet'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    disabled={!connectedWallet}
+                    onClick={() => {
+                      void onDisconnect();
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                disabled={!connectedWallet}
+                onClick={onLinkConnectedWallet}
+              >
+                Link connected wallet
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="rounded-lg bg-base-200/50 border border-base-300 p-3 text-xs font-mono break-all">
+            {isTezos ? <div>Connected wallet: {connectedWallet?.address ?? 'none'}</div> : null}
             {isTezos ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  disabled={isConnectingWallet}
-                  onClick={() => {
-                    void onConnect();
-                  }}
-                >
-                  {isConnectingWallet ? 'Connecting…' : connectedWallet ? 'Reconnect' : 'Connect'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={!connectedWallet}
-                  onClick={() => {
-                    void onDisconnect();
-                  }}
-                >
-                  Disconnect
-                </button>
-              </>
+              <div>
+                Connected network:{' '}
+                {connectedNetworkLabel
+                  ? `${connectedNetworkLabel}${connectedWallet?.networkName ? ` (${connectedWallet.networkName})` : ''}`
+                  : 'none'}
+              </div>
             ) : null}
-            <button
-              type="button"
-              className="btn btn-sm btn-primary gap-2"
-              disabled={isMcpLoggingIn || (isTezos && !connectedWallet)}
-              onClick={() => {
-                void onLogin();
-              }}
+            {isTezos ? <div>Connected RPC: {connectedWallet?.rpcUrl ?? 'none'}</div> : null}
+            <div>Signed account: {signedWalletLabel}</div>
+            <div>Kind: {walletKindLabel}</div>
+            <div>Signed network: {authSession?.user.lastLoginNetworkId ?? 'not signed'}</div>
+            {authSession ? <div>Session expires: {new Date(authSession.expiresAt).toLocaleString()}</div> : null}
+          </div>
+          {authSession ? (
+            <div
+              className={`alert text-xs ${
+                walletVerifiedForNetwork ? 'alert-success' : 'alert-warning'
+              }`}
             >
-              <KeyRound className="w-4 h-4" />
-              {isMcpLoggingIn ? 'Signing…' : authSession ? 'Re-verify' : 'Sign wallet'}
-            </button>
-          </div>
+              <span>
+                {walletVerifiedForNetwork
+                  ? `Wallet ownership verified for ${network.label}.`
+                  : `Wallet login is not verified for the active ${network.label} signer.`}
+              </span>
+            </div>
+          ) : null}
         </div>
-        <div className="rounded-lg bg-base-200/50 border border-base-300 p-3 text-xs font-mono break-all">
-          {isTezos ? <div>Connected: {connectedWallet?.address ?? 'none'}</div> : null}
-          <div>Wallet: {walletLabel}</div>
-          <div>Kind: {walletKindLabel}</div>
-          <div>Network: {authSession?.user.lastLoginNetworkId ?? 'not verified'}</div>
-          {authSession ? <div>Session expires: {new Date(authSession.expiresAt).toLocaleString()}</div> : null}
-        </div>
-        {authSession ? (
-          <div
-            className={`alert text-xs ${
-              walletVerifiedForNetwork ? 'alert-success' : 'alert-warning'
-            }`}
-          >
-            <span>
-              {walletVerifiedForNetwork
-                ? `Deployment wallet verified for ${network.label}.`
-                : `Wallet login is not verified for the active ${network.label} signer.`}
-            </span>
-          </div>
-        ) : null}
-      </section>
+      </details>
 
-      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-              <PlugZap className="w-4 h-4" />
-              MCP access
-            </h3>
-            <p className="text-xs text-base-content/60 mt-1">
-              Kiln allows verified wallets unless they are on the blocklist; rate limits still apply.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-secondary gap-2"
-            disabled={!canRequestAccess}
-            onClick={() => {
-              void onRequestAccess();
-            }}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            {isRequestingMcpAccess ? 'Checking…' : 'Request access'}
-          </button>
+      <details className="collapse collapse-arrow rounded-xl border border-base-300 bg-base-100" open>
+        <summary className="collapse-title font-bold">
+          Linked wallets ({linkedWallets.length})
+        </summary>
+        <div className="collapse-content space-y-3">
+          {linkedWallets.length > 0 ? (
+            <div className="grid grid-cols-1 gap-2">
+              {linkedWallets.map((wallet) => (
+                <div
+                  key={wallet.id}
+                  className="rounded-lg border border-base-300 bg-base-200/30 p-3 flex items-start justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="font-mono text-xs break-all">{wallet.address}</div>
+                    <div className="mt-1 flex flex-wrap gap-2 text-[0.68rem] text-base-content/60">
+                      <span>{wallet.kind}</span>
+                      <span>{wallet.label || wallet.networkId}</span>
+                      <span>{wallet.source === 'signed' ? 'verified' : 'connected'}</span>
+                      {wallet.verifiedAt ? <span>{new Date(wallet.verifiedAt).toLocaleString()}</span> : null}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost"
+                    onClick={() => onRemoveLinkedWallet(wallet.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-base-300 p-4 text-xs text-base-content/60">
+              No linked wallets yet. Connect a wallet and link it to make Kiln user-centric.
+            </div>
+          )}
         </div>
-        <div
-          className={`alert text-xs ${
-            accessStatus === 'approved'
-              ? 'alert-success'
-              : accessStatus === 'blocked'
-                ? 'alert-error'
-                : 'alert-info'
-          }`}
-        >
-          <span>
-            Status: {accessStatus}
-            {access?.reason ? ` · ${access.reason}` : ''}
-          </span>
-        </div>
-      </section>
+      </details>
 
-      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-              <KeyRound className="w-4 h-4" />
-              Agent token
-            </h3>
-            <p className="text-xs text-base-content/60 mt-1">
-              The full token is shown only when generated. It expires after 24 hours.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-primary gap-2"
-            disabled={!canGenerateToken}
-            onClick={() => {
-              void onGenerateToken();
-            }}
-          >
-            <KeyRound className="w-4 h-4" />
-            {isGeneratingMcpToken ? 'Generating…' : 'Generate token'}
-          </button>
-        </div>
-
-        {tokenMeta ? (
-          <div className="rounded-lg border border-base-300 bg-base-200/40 p-3 text-xs space-y-1">
-            <div className="font-mono">Token id: {tokenMeta.id}</div>
-            <div>Expires: {new Date(tokenMeta.expiresAt).toLocaleString()}</div>
-          </div>
-        ) : null}
-
-        {mcpToken ? (
-          <div className="space-y-2">
-            <textarea
-              className="textarea textarea-bordered w-full font-mono text-xs min-h-24"
-              readOnly
-              value={mcpToken}
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-outline gap-2"
-              onClick={() => {
-                void onCopyToken();
-              }}
+      <details className="collapse collapse-arrow rounded-xl border border-base-300 bg-base-100" open>
+        <summary className="collapse-title font-bold">MCP and API access</summary>
+        <div className="collapse-content space-y-4">
+          <div className="rounded-lg border border-base-300 bg-base-200/30 p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+                  <PlugZap className="w-4 h-4" />
+                  MCP access
+                </h3>
+                <p className="text-xs text-base-content/60 mt-1">
+                  Verify account signs a one-time message, then access is approved unless the wallet is blocked.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline gap-2"
+                  disabled={isMcpLoggingIn || (isTezos && !connectedWallet)}
+                  title="Sign a one-time message to create the Kiln account used for MCP and API tokens."
+                  onClick={() => {
+                    void onLogin();
+                  }}
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {isMcpLoggingIn ? 'Signing...' : authSession ? 'Re-verify account' : 'Verify account'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary gap-2"
+                  disabled={!canRequestAccess}
+                  onClick={() => {
+                    void onRequestAccess();
+                  }}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  {isRequestingMcpAccess ? 'Checking...' : 'Request access'}
+                </button>
+              </div>
+            </div>
+            <div
+              className={`alert text-xs ${
+                accessStatus === 'approved'
+                  ? 'alert-success'
+                  : accessStatus === 'blocked'
+                    ? 'alert-error'
+                    : 'alert-info'
+              }`}
             >
-              <ClipboardCopy className="w-4 h-4" />
-              Copy token
-            </button>
+              <span>
+                Status: {accessStatus === 'none' ? 'not requested' : accessStatus}
+                {access?.reason ? ` · ${access.reason}` : ''}
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className="text-xs text-base-content/60 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-base-content/40" />
-            Generate a token after access is approved.
-          </div>
-        )}
-      </section>
 
-      <section className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-              <KeyRound className="w-4 h-4" />
-              API key
-            </h3>
-            <p className="text-xs text-base-content/60 mt-1">
-              Use this as <code className="bg-base-200 px-1 rounded">x-kiln-token</code> for protected HTTP routes and scripts.
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <section className="rounded-lg border border-base-300 bg-base-200/30 p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4" />
+                    Agent token
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    Full token is shown only once. Kiln requests access first when needed.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary gap-2"
+                  disabled={!canGenerateToken}
+                  onClick={() => {
+                    void onGenerateToken();
+                  }}
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {isGeneratingMcpToken ? 'Generating...' : 'Generate token'}
+                </button>
+              </div>
+              {tokenMeta ? (
+                <div className="rounded-lg border border-base-300 bg-base-100 p-3 text-xs space-y-1">
+                  <div className="font-mono">Token id: {tokenMeta.id}</div>
+                  <div>Expires: {new Date(tokenMeta.expiresAt).toLocaleString()}</div>
+                </div>
+              ) : null}
+              {mcpToken ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="textarea textarea-bordered w-full font-mono text-xs min-h-24"
+                    readOnly
+                    value={mcpToken}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline gap-2"
+                    onClick={() => {
+                      void onCopyToken();
+                    }}
+                  >
+                    <ClipboardCopy className="w-4 h-4" />
+                    Copy token
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-base-content/60 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-base-content/40" />
+                  No active token shown.
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-base-300 bg-base-200/30 p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4" />
+                    API key
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    Use as <code className="bg-base-300 px-1 rounded">x-kiln-token</code> for protected HTTP routes.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary gap-2"
+                  disabled={!canGenerateApiKey}
+                  onClick={() => {
+                    void onGenerateApiKey();
+                  }}
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {isGeneratingApiKey ? 'Generating...' : 'Generate API key'}
+                </button>
+              </div>
+              {apiTokenMeta ? (
+                <div className="rounded-lg border border-base-300 bg-base-100 p-3 text-xs space-y-1">
+                  <div className="font-mono">Key id: {apiTokenMeta.id}</div>
+                  <div>Expires: {new Date(apiTokenMeta.expiresAt).toLocaleString()}</div>
+                </div>
+              ) : null}
+              {apiKey ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="textarea textarea-bordered w-full font-mono text-xs min-h-24"
+                    readOnly
+                    value={apiKey}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline gap-2"
+                    onClick={() => {
+                      void onCopyApiKey();
+                    }}
+                  >
+                    <ClipboardCopy className="w-4 h-4" />
+                    Copy API key
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-base-content/60 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-base-content/40" />
+                  No active API key shown.
+                </div>
+              )}
+            </section>
           </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-primary gap-2"
-            disabled={!canGenerateApiKey}
-            onClick={() => {
-              void onGenerateApiKey();
-            }}
-          >
-            <KeyRound className="w-4 h-4" />
-            {isGeneratingApiKey ? 'Generating…' : 'Generate API key'}
-          </button>
         </div>
-
-        {apiTokenMeta ? (
-          <div className="rounded-lg border border-base-300 bg-base-200/40 p-3 text-xs space-y-1">
-            <div className="font-mono">Key id: {apiTokenMeta.id}</div>
-            <div>Expires: {new Date(apiTokenMeta.expiresAt).toLocaleString()}</div>
-          </div>
-        ) : null}
-
-        {apiKey ? (
-          <div className="space-y-2">
-            <textarea
-              className="textarea textarea-bordered w-full font-mono text-xs min-h-24"
-              readOnly
-              value={apiKey}
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-outline gap-2"
-              onClick={() => {
-                void onCopyApiKey();
-              }}
-            >
-              <ClipboardCopy className="w-4 h-4" />
-              Copy API key
-            </button>
-          </div>
-        ) : (
-          <div className="text-xs text-base-content/60 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-base-content/40" />
-            Generate an API key after access is approved.
-          </div>
-        )}
-      </section>
+      </details>
     </div>
   );
 }
 
 function BuildTab({
   isTezos,
+  flowMode,
   contractSourceType,
   setContractSourceType,
   michelsonCode,
@@ -2800,6 +3573,7 @@ function BuildTab({
   onDeployedEvm,
 }: {
   isTezos: boolean;
+  flowMode: FlowMode;
   contractSourceType: ContractSourceType;
   setContractSourceType: (next: ContractSourceType) => void;
   michelsonCode: string;
@@ -2834,6 +3608,18 @@ function BuildTab({
           <KilnCopy k="tabBuildLabel" />
         </h2>
         <KilnCopy k="tabBuildIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+      </div>
+
+      <div
+        className={`alert text-xs ${
+          flowMode === 'guided' ? 'alert-info' : 'alert-warning'
+        }`}
+      >
+        <span>
+          {flowMode === 'guided'
+            ? 'Guided build is part of the locked project path. Continue to Validate before deployment unlocks.'
+            : 'Workbench build is standalone. You can use the output here without joining the guided project path.'}
+        </span>
       </div>
 
       {isTezos ? (
@@ -3071,6 +3857,7 @@ function ValidateTab({
 
 function DeployTab({
   isTezos,
+  flowMode,
   deployMode,
   setDeployMode,
   useConnectedWalletAsContractAdmin,
@@ -3089,6 +3876,7 @@ function DeployTab({
   onReconnect,
 }: {
   isTezos: boolean;
+  flowMode: FlowMode;
   deployMode: DeployMode;
   setDeployMode: (next: DeployMode) => void;
   useConnectedWalletAsContractAdmin: boolean;
@@ -3172,6 +3960,18 @@ function DeployTab({
           <KilnCopy k="tabDeployLabel" />
         </h2>
         <KilnCopy k="tabDeployIntro" as="p" className="text-sm text-base-content/60 mt-1" />
+      </div>
+
+      <div
+        className={`alert text-xs ${
+          flowMode === 'guided' ? 'alert-info' : 'alert-warning'
+        }`}
+      >
+        <span>
+          {flowMode === 'guided'
+            ? 'Guided deployment is locked to validation clearance. Loaded-source direct deploy is intentionally unavailable in this path.'
+            : 'Standalone deployment can use loaded Michelson on Shadownet without guided clearance. Use Validate separately when you want a clearance record.'}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup">
@@ -3338,6 +4138,7 @@ function DeployTab({
 
 function TestTab({
   isTezos,
+  flowMode,
   contractAddress,
   abi,
   onExecute,
@@ -3350,8 +4151,14 @@ function TestTab({
   canPuppet,
   onLoadContract,
   isLoadingContract,
+  connectedWallet,
+  discoveredContracts,
+  isDiscoveringContracts,
+  contractDiscoveryError,
+  onDiscoverContracts,
 }: {
   isTezos: boolean;
+  flowMode: FlowMode;
   contractAddress: string;
   abi: AbiEntrypoint[];
   onExecute: (entrypoint: string, args: unknown[], wallet: WalletType) => Promise<void>;
@@ -3364,6 +4171,11 @@ function TestTab({
   canPuppet: boolean;
   onLoadContract: (address: string) => Promise<void>;
   isLoadingContract: boolean;
+  connectedWallet: ConnectedWalletState | null;
+  discoveredContracts: DiscoveredTezosContractWithProject[];
+  isDiscoveringContracts: boolean;
+  contractDiscoveryError: string | null;
+  onDiscoverContracts: () => Promise<void>;
 }) {
   const { t, tip } = useKilnView();
   const [contractAddressDraft, setContractAddressDraft] = useState(contractAddress);
@@ -3381,12 +4193,43 @@ function TestTab({
         </h2>
         <KilnCopy k="tabTestIntro" as="p" className="text-sm text-base-content/60 mt-1" />
       </div>
+      <div
+        className={`alert text-xs ${
+          flowMode === 'guided' ? 'alert-info' : 'alert-warning'
+        }`}
+      >
+        <span>
+          {flowMode === 'guided'
+            ? 'Guided testing follows the deployed project contract.'
+            : 'Standalone testing accepts any KT1 and can discover contracts originated by the connected wallet.'}
+        </span>
+      </div>
       {isTezos ? (
         <div className="rounded-xl border border-base-300 bg-base-200/30 p-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <FileSearch className="w-4 h-4 text-primary" />
             Load existing contract
           </h3>
+          <div className="flex items-center justify-between gap-3 flex-wrap text-xs text-base-content/70">
+            <div className="font-mono break-all">
+              Wallet: {connectedWallet?.address ?? 'connect a Tezos wallet to discover contracts'}
+            </div>
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost gap-2"
+              disabled={!connectedWallet || isDiscoveringContracts}
+              onClick={() => {
+                void onDiscoverContracts();
+              }}
+            >
+              {isDiscoveringContracts ? (
+                <span className="loading loading-spinner" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              Discover
+            </button>
+          </div>
           <div className="flex flex-col md:flex-row gap-2">
             <input
               className="input input-sm input-bordered flex-1 font-mono"
@@ -3408,6 +4251,62 @@ function TestTab({
               Load tests
             </button>
           </div>
+          {contractDiscoveryError ? (
+            <div className="alert alert-warning text-xs">
+              <span>{contractDiscoveryError}</span>
+            </div>
+          ) : null}
+          {connectedWallet ? (
+            <div className="space-y-2">
+              <div className="text-xs uppercase tracking-wider text-base-content/60">
+                Recent wallet deployments
+              </div>
+              {isDiscoveringContracts ? (
+                <div className="rounded-lg border border-base-300 bg-base-100 p-3 text-xs text-base-content/60">
+                  Checking {connectedWallet.networkId} for originated contracts…
+                </div>
+              ) : discoveredContracts.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {discoveredContracts.map((contract) => (
+                    <button
+                      key={contract.address}
+                      type="button"
+                      className="text-left rounded-lg border border-base-300 bg-base-100 p-3 hover:border-primary/50 hover:bg-base-200/40 transition-colors"
+                      onClick={() => {
+                        setContractAddressDraft(contract.address);
+                        void onLoadContract(contract.address);
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-mono text-xs break-all">{contract.address}</span>
+                        <span className="badge badge-xs badge-outline">{contract.kind}</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.7rem] text-base-content/60">
+                        <span>
+                          {contract.originatedAt
+                            ? new Date(contract.originatedAt).toLocaleString()
+                            : 'time unknown'}
+                        </span>
+                        <span>source: {contract.source}</span>
+                        {contract.projectName ? (
+                          <span className="text-success">project: {contract.projectName}</span>
+                        ) : (
+                          <span>project: none linked</span>
+                        )}
+                        {contract.operationHash ? (
+                          <span className="font-mono">op: {contract.operationHash}</span>
+                        ) : null}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-base-300 bg-base-100 p-3 text-xs text-base-content/60">
+                  No contracts found yet for this wallet on the connected network.
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {!contractAddress ? (
