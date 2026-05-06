@@ -660,9 +660,8 @@ async function ensureSignPermission(handle: TezosWalletHandle): Promise<BeaconAc
 
   if (!activeAccount?.address || !accountHasScope(activeAccount, PermissionScope.SIGN)) {
     await handle.wallet.requestPermissions({
-      network: buildBeaconPermissionNetwork(handle.networkId),
       scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
-    } as never);
+    });
     activeAccount = (await handle.wallet.client.getActiveAccount()) as
       | BeaconAccountLike
       | null;
@@ -683,9 +682,8 @@ export async function connectShadownetWallet(
 
     await handle.wallet.clearActiveAccount();
     await handle.wallet.requestPermissions({
-      network: buildBeaconPermissionNetwork(networkId),
       scopes: [PermissionScope.OPERATION_REQUEST],
-    } as never);
+    });
 
     const activeAccount = await getVerifiedActiveAccount(handle, networkId);
 

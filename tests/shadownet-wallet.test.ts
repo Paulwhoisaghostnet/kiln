@@ -88,7 +88,12 @@ const mocks = vi.hoisted(() => {
       opResponse: {},
     },
     setWalletProvider: vi.fn(),
-    requestPermissions: vi.fn(async () => {
+    requestPermissions: vi.fn(async (input?: { network?: unknown }) => {
+      if (input?.network) {
+        throw new Error(
+          '[BEACON] the "network" property is no longer accepted in input. Please provide it when instantiating DAppClient.',
+        );
+      }
       state.activeAccount = state.grantedAccount;
     }),
     clearActiveAccount: vi.fn(async () => {
@@ -260,11 +265,6 @@ describe('shadownet-wallet', () => {
     expect(mocks.state.open).not.toHaveBeenCalled();
     expect(mocks.state.requestPermissions).toHaveBeenCalledTimes(1);
     expect(mocks.state.requestPermissions).toHaveBeenCalledWith({
-      network: {
-        type: 'shadownet',
-        name: 'shadownet',
-        rpcUrl: 'https://rpc.shadownet.teztnets.com',
-      },
       scopes: ['operation_request'],
     });
     expect(localStorage.getItem('beacon:stale')).toBeNull();
@@ -404,7 +404,7 @@ describe('shadownet-wallet', () => {
     });
   });
 
-  it('requests sign permission against the active Tezos network', async () => {
+  it('requests sign permission without Beacon network input', async () => {
     mocks.state.grantedAccount = {
       address: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
       publicKey: 'edpkTestPublicKey',
@@ -420,11 +420,6 @@ describe('shadownet-wallet', () => {
     await walletModule.signKilnAuthChallenge('hello');
 
     expect(mocks.state.requestPermissions).toHaveBeenNthCalledWith(2, {
-      network: {
-        type: 'shadownet',
-        name: 'shadownet',
-        rpcUrl: 'https://rpc.shadownet.teztnets.com',
-      },
       scopes: ['operation_request', 'sign'],
     });
   });
