@@ -61,7 +61,7 @@ type DeployMode = 'connected' | 'puppet';
 type ContractSourceType = 'michelson' | 'smartpy' | 'solidity';
 
 type TabKey = 'setup' | 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
-type SurfaceKey = 'guided' | 'workbench' | 'account';
+type SurfaceKey = 'dashboard' | 'guided' | 'workbench' | 'account';
 type WorkbenchToolKey = 'build' | 'validate' | 'deploy' | 'test' | 'handoff';
 type FlowMode = 'guided' | 'workbench';
 
@@ -223,6 +223,39 @@ interface ContractIntrospectionResponse {
   entrypoints: AbiEntrypoint[];
 }
 
+interface KilnContractDeployment {
+  id: string;
+  networkId: KilnNetworkId;
+  address: string;
+  deployedAt: string;
+  versionId: string;
+  sourceHash: string;
+  origin: 'deployed' | 'imported';
+}
+
+interface KilnProjectContractItem {
+  id: string;
+  title: string;
+  domain: string;
+  role: string;
+  purpose: string;
+  relation: string;
+  createdAt: string;
+  updatedAt: string;
+  sourceType: ContractSourceType;
+  michelsonCode: string;
+  solidityCode: string;
+  initialStorage: string;
+  clearanceId: string | null;
+  abi: AbiEntrypoint[];
+  e2eEntrypoint: string;
+  e2eArgs: string;
+  lastWorkflow: WorkflowRunResponse | null;
+  lastSolidityCompile: SolidityCompileResult | null;
+  currentVersionId: string;
+  deployments: KilnContractDeployment[];
+}
+
 interface SavedKilnProject {
   id: string;
   name: string;
@@ -241,6 +274,11 @@ interface SavedKilnProject {
   deployMode: DeployMode;
   lastWorkflow: WorkflowRunResponse | null;
   lastSolidityCompile: SolidityCompileResult | null;
+  contracts: KilnProjectContractItem[];
+  activeContractId: string;
+  lastSurface: 'guided' | 'workbench';
+  lastGuidedStep: TabKey;
+  lastWorkbenchTool: WorkbenchToolKey;
 }
 
 interface KilnProjectStore {
@@ -360,11 +398,186 @@ function newProjectId(): string {
   return `project-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function fingerprintString(input: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function contractVersionId(input: {
+  sourceType: ContractSourceType;
+  michelsonCode: string;
+  solidityCode: string;
+  initialStorage: string;
+}): string {
+  const source =
+    input.sourceType === 'solidity' ? input.solidityCode : input.michelsonCode;
+  return fingerprintString(
+    JSON.stringify({
+      sourceType: input.sourceType,
+      source,
+      initialStorage: input.initialStorage,
+    }),
+  );
+}
+
+function deploymentId(networkId: KilnNetworkId, address: string): string {
+  return `${networkId}:${address}`;
+}
+
+function createProjectContract(input?: {
+  title?: string;
+  domain?: string;
+  role?: string;
+  purpose?: string;
+  relation?: string;
+  sourceType?: ContractSourceType;
+  michelsonCode?: string;
+  solidityCode?: string;
+  initialStorage?: string;
+  clearanceId?: string | null;
+  abi?: AbiEntrypoint[];
+  e2eEntrypoint?: string;
+  e2eArgs?: string;
+  lastWorkflow?: WorkflowRunResponse | null;
+  lastSolidityCompile?: SolidityCompileResult | null;
+  deployments?: KilnContractDeployment[];
+}): KilnProjectContractItem {
+  const now = new Date().toISOString();
+  const sourceType = input?.sourceType ?? 'michelson';
+  const michelsonCode = input?.michelsonCode ?? '';
+  const solidityCode = input?.solidityCode ?? '';
+  const initialStorage = input?.initialStorage ?? 'Unit';
+  return {
+    id: newProjectId(),
+    title: input?.title ?? 'Primary contract',
+    domain: input?.domain ?? 'Core',
+    role: input?.role ?? 'platform',
+    purpose: input?.purpose ?? 'Primary contract for this Kiln project.',
+    relation: input?.relation ?? 'Root contract',
+    createdAt: now,
+    updatedAt: now,
+    sourceType,
+    michelsonCode,
+    solidityCode,
+    initialStorage,
+    clearanceId: input?.clearanceId ?? null,
+    abi: input?.abi ?? [],
+    e2eEntrypoint: input?.e2eEntrypoint ?? '',
+    e2eArgs: input?.e2eArgs ?? '[]',
+    lastWorkflow: input?.lastWorkflow ?? null,
+    lastSolidityCompile: input?.lastSolidityCompile ?? null,
+    currentVersionId: contractVersionId({
+      sourceType,
+      michelsonCode,
+      solidityCode,
+      initialStorage,
+    }),
+    deployments: input?.deployments ?? [],
+  };
+}
+
+function normalizeSavedProject(project: SavedKilnProject): SavedKilnProject {
+  const deployments =
+    project.contractAddress && /^KT1|^0x/i.test(project.contractAddress)
+      ? [
+          {
+            id: deploymentId(project.networkId, project.contractAddress),
+            networkId: project.networkId,
+            address: project.contractAddress,
+            deployedAt: project.updatedAt,
+            versionId: contractVersionId({
+              sourceType: project.contractSourceType,
+              michelsonCode: project.michelsonCode,
+              solidityCode: project.solidityCode,
+              initialStorage: project.initialStorage,
+            }),
+            sourceHash: contractVersionId({
+              sourceType: project.contractSourceType,
+              michelsonCode: project.michelsonCode,
+              solidityCode: project.solidityCode,
+              initialStorage: project.initialStorage,
+            }),
+            origin: 'deployed' as const,
+          },
+        ]
+      : [];
+  const contracts =
+    Array.isArray(project.contracts) && project.contracts.length > 0
+      ? project.contracts.map((contract) => ({
+          ...createProjectContract(contract),
+          ...contract,
+          currentVersionId:
+            contract.currentVersionId ??
+            contractVersionId({
+              sourceType: contract.sourceType,
+              michelsonCode: contract.michelsonCode,
+              solidityCode: contract.solidityCode,
+              initialStorage: contract.initialStorage,
+            }),
+          deployments: Array.isArray(contract.deployments) ? contract.deployments : [],
+        }))
+      : [
+          createProjectContract({
+            title: 'Primary contract',
+            domain: 'Core',
+            role: project.contractAddress ? 'deployed contract' : 'platform',
+            purpose: project.contractAddress
+              ? 'Migrated from the original single-contract project state.'
+              : 'Primary contract for this Kiln project.',
+            relation: 'Root contract',
+            sourceType: project.contractSourceType,
+            michelsonCode: project.michelsonCode,
+            solidityCode: project.solidityCode,
+            initialStorage: project.initialStorage,
+            clearanceId: project.clearanceId,
+            abi: project.abi,
+            e2eEntrypoint: project.e2eEntrypoint,
+            e2eArgs: project.e2eArgs,
+            lastWorkflow: project.lastWorkflow,
+            lastSolidityCompile: project.lastSolidityCompile,
+            deployments,
+          }),
+        ];
+  const activeContractId =
+    project.activeContractId && contracts.some((contract) => contract.id === project.activeContractId)
+      ? project.activeContractId
+      : contracts[0]?.id ?? '';
+  const activeContract =
+    contracts.find((contract) => contract.id === activeContractId) ?? contracts[0];
+  return {
+    ...project,
+    contracts,
+    activeContractId,
+    contractSourceType: activeContract?.sourceType ?? project.contractSourceType,
+    michelsonCode: activeContract?.michelsonCode ?? project.michelsonCode,
+    solidityCode: activeContract?.solidityCode ?? project.solidityCode,
+    initialStorage: activeContract?.initialStorage ?? project.initialStorage,
+    clearanceId: activeContract?.clearanceId ?? project.clearanceId,
+    abi: activeContract?.abi ?? project.abi,
+    e2eEntrypoint: activeContract?.e2eEntrypoint ?? project.e2eEntrypoint,
+    e2eArgs: activeContract?.e2eArgs ?? project.e2eArgs,
+    contractAddress:
+      activeContract?.deployments.find((deployment) => deployment.networkId === project.networkId)
+        ?.address ??
+      project.contractAddress,
+    lastWorkflow: activeContract?.lastWorkflow ?? project.lastWorkflow,
+    lastSolidityCompile: activeContract?.lastSolidityCompile ?? project.lastSolidityCompile,
+    lastSurface: project.lastSurface ?? 'guided',
+    lastGuidedStep: project.lastGuidedStep ?? 'setup',
+    lastWorkbenchTool: project.lastWorkbenchTool ?? 'build',
+  };
+}
+
 function createSavedProject(input: {
   name: string;
   networkId: KilnNetworkId;
 }): SavedKilnProject {
   const now = new Date().toISOString();
+  const primaryContract = createProjectContract();
   return {
     id: newProjectId(),
     name: input.name,
@@ -383,6 +596,11 @@ function createSavedProject(input: {
     deployMode: 'connected',
     lastWorkflow: null,
     lastSolidityCompile: null,
+    contracts: [primaryContract],
+    activeContractId: primaryContract.id,
+    lastSurface: 'guided',
+    lastGuidedStep: 'setup',
+    lastWorkbenchTool: 'build',
   };
 }
 
@@ -396,7 +614,9 @@ function loadProjectStore(): KilnProjectStore {
   }
   try {
     const parsed = JSON.parse(window.localStorage.getItem(PROJECT_STORE_KEY) ?? '{}') as Partial<KilnProjectStore>;
-    const projects = Array.isArray(parsed.projects) ? parsed.projects : [];
+    const projects = Array.isArray(parsed.projects)
+      ? (parsed.projects as SavedKilnProject[]).map(normalizeSavedProject)
+      : [];
     if (projects.length === 0) {
       return { projects: [fallback], activeProjectId: fallback.id };
     }
@@ -456,6 +676,9 @@ function linkedWalletId(kind: KilnWalletKind, address: string, networkId: string
 }
 
 function surfaceFromHash(hash: string): SurfaceKey {
+  if (hash === 'dashboard') {
+    return 'dashboard';
+  }
   if (hash === 'settings' || hash === 'account') {
     return 'account';
   }
@@ -479,6 +702,9 @@ function workbenchToolFromHash(hash: string): WorkbenchToolKey {
 }
 
 function routeHash(surface: SurfaceKey, guidedStep: TabKey, workbenchTool: WorkbenchToolKey): string {
+  if (surface === 'dashboard') {
+    return 'dashboard';
+  }
   if (surface === 'account') {
     return 'account';
   }
@@ -546,20 +772,40 @@ export default function App() {
     if (typeof window === 'undefined') {
       return 'guided';
     }
-    return surfaceFromHash(window.location.hash.replace('#', ''));
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      return surfaceFromHash(hash);
+    }
+    const lastProject =
+      projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
+      projectStore.projects[0];
+    return lastProject?.lastSurface ?? 'guided';
   });
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window === 'undefined') {
       return 'setup';
     }
     const hash = window.location.hash.replace('#', '');
-    return guidedStepFromHash(hash);
+    if (hash) {
+      return guidedStepFromHash(hash);
+    }
+    const lastProject =
+      projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
+      projectStore.projects[0];
+    return lastProject?.lastGuidedStep ?? 'setup';
   });
   const [activeTool, setActiveTool] = useState<WorkbenchToolKey>(() => {
     if (typeof window === 'undefined') {
       return 'build';
     }
-    return workbenchToolFromHash(window.location.hash.replace('#', ''));
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      return workbenchToolFromHash(hash);
+    }
+    const lastProject =
+      projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
+      projectStore.projects[0];
+    return lastProject?.lastWorkbenchTool ?? 'build';
   });
   const [terminalOpen, setTerminalOpen] = useState(() => {
     if (typeof window === 'undefined') {
@@ -579,13 +825,22 @@ export default function App() {
   const activeProject =
     projectStore.projects.find((project) => project.id === projectStore.activeProjectId) ??
     projectStore.projects[0];
+  const activeContract =
+    activeProject?.contracts.find((contract) => contract.id === activeProject.activeContractId) ??
+    activeProject?.contracts[0];
   const discoveredContractsWithProjects = useMemo<DiscoveredTezosContractWithProject[]>(
     () =>
       discoveredContracts.map((contract) => {
         const project = projectStore.projects.find(
           (candidate) =>
             candidate.networkId === networkId &&
-            candidate.contractAddress === contract.address,
+            candidate.contracts.some((item) =>
+              item.deployments.some(
+                (deployment) =>
+                  deployment.networkId === networkId &&
+                  deployment.address === contract.address,
+              ),
+            ),
         );
         return {
           ...contract,
@@ -622,42 +877,87 @@ export default function App() {
   };
 
   const applyProjectState = (project: SavedKilnProject) => {
+    const normalized = normalizeSavedProject(project);
+    const projectContract =
+      normalized.contracts.find((contract) => contract.id === normalized.activeContractId) ??
+      normalized.contracts[0];
     hydratingProjectRef.current = true;
-    setContractSourceType(project.contractSourceType);
-    setMichelsonCode(project.michelsonCode);
-    setSolidityCode(project.solidityCode);
-    setInitialStorage(project.initialStorage || 'Unit');
-    setContractAddress(project.contractAddress);
-    setClearanceId(project.clearanceId);
-    setAbi(project.abi ?? []);
-    setE2EEntrypoint(project.e2eEntrypoint);
-    setE2EArgs(project.e2eArgs || '[]');
-    setDeployMode(project.deployMode);
-    setLastWorkflow(project.lastWorkflow);
-    setLastSolidityCompile(project.lastSolidityCompile);
+    setContractSourceType(projectContract?.sourceType ?? normalized.contractSourceType);
+    setMichelsonCode(projectContract?.michelsonCode ?? normalized.michelsonCode);
+    setSolidityCode(projectContract?.solidityCode ?? normalized.solidityCode);
+    setInitialStorage(projectContract?.initialStorage || normalized.initialStorage || 'Unit');
+    setContractAddress(
+      projectContract?.deployments.find((deployment) => deployment.networkId === normalized.networkId)
+        ?.address ??
+        normalized.contractAddress,
+    );
+    setClearanceId(projectContract?.clearanceId ?? normalized.clearanceId);
+    setAbi(projectContract?.abi ?? normalized.abi ?? []);
+    setE2EEntrypoint(projectContract?.e2eEntrypoint ?? normalized.e2eEntrypoint);
+    setE2EArgs(projectContract?.e2eArgs || normalized.e2eArgs || '[]');
+    setDeployMode(normalized.deployMode);
+    setLastWorkflow(projectContract?.lastWorkflow ?? normalized.lastWorkflow);
+    setLastSolidityCompile(projectContract?.lastSolidityCompile ?? normalized.lastSolidityCompile);
     window.setTimeout(() => {
       hydratingProjectRef.current = false;
     }, 0);
   };
 
-  const snapshotActiveProject = (): SavedKilnProject => ({
-    ...(activeProject ??
-      createSavedProject({ name: 'My Kiln Project', networkId: network.id })),
-    updatedAt: new Date().toISOString(),
-    networkId: network.id,
-    contractSourceType,
-    michelsonCode,
-    solidityCode,
-    initialStorage,
-    contractAddress,
-    clearanceId,
-    abi,
-    e2eEntrypoint,
-    e2eArgs,
-    deployMode,
-    lastWorkflow,
-    lastSolidityCompile,
-  });
+  const snapshotActiveProject = (): SavedKilnProject => {
+    const base = activeProject ?? createSavedProject({ name: 'My Kiln Project', networkId: network.id });
+    const normalized = normalizeSavedProject(base);
+    const activeContractId = normalized.activeContractId || normalized.contracts[0]?.id;
+    const versionId = contractVersionId({
+      sourceType: contractSourceType,
+      michelsonCode,
+      solidityCode,
+      initialStorage,
+    });
+    const contracts = normalized.contracts.map((contract) =>
+      contract.id === activeContractId
+        ? {
+            ...contract,
+            updatedAt: new Date().toISOString(),
+            sourceType: contractSourceType,
+            michelsonCode,
+            solidityCode,
+            initialStorage,
+            clearanceId,
+            abi,
+            e2eEntrypoint,
+            e2eArgs,
+            lastWorkflow,
+            lastSolidityCompile,
+            currentVersionId: versionId,
+          }
+        : contract,
+    );
+    return {
+      ...normalized,
+      updatedAt: new Date().toISOString(),
+      networkId: network.id,
+      contractSourceType,
+      michelsonCode,
+      solidityCode,
+      initialStorage,
+      contractAddress,
+      clearanceId,
+      abi,
+      e2eEntrypoint,
+      e2eArgs,
+      deployMode,
+      lastWorkflow,
+      lastSolidityCompile,
+      contracts,
+      activeContractId: activeContractId ?? normalized.activeContractId,
+      lastSurface:
+        activeSurface === 'workbench' || activeSurface === 'guided'
+          ? activeSurface
+          : normalized.lastSurface,
+      lastGuidedStep: activeTab,
+      lastWorkbenchTool: activeTool,
+    };
+  };
 
   const updateProjectStore = (updater: (store: KilnProjectStore) => KilnProjectStore) => {
     setProjectStore((prev) => {
@@ -715,6 +1015,178 @@ export default function App() {
     });
   };
 
+  const applyContractState = (contract: KilnProjectContractItem, projectNetworkId = network.id) => {
+    hydratingProjectRef.current = true;
+    setContractSourceType(contract.sourceType);
+    setMichelsonCode(contract.michelsonCode);
+    setSolidityCode(contract.solidityCode);
+    setInitialStorage(contract.initialStorage || 'Unit');
+    setContractAddress(
+      contract.deployments.find((deployment) => deployment.networkId === projectNetworkId)?.address ?? '',
+    );
+    setClearanceId(contract.clearanceId);
+    setAbi(contract.abi ?? []);
+    setE2EEntrypoint(contract.e2eEntrypoint);
+    setE2EArgs(contract.e2eArgs || '[]');
+    setLastWorkflow(contract.lastWorkflow);
+    setLastSolidityCompile(contract.lastSolidityCompile);
+    window.setTimeout(() => {
+      hydratingProjectRef.current = false;
+    }, 0);
+  };
+
+  const createContractForActiveProject = () => {
+    const project = activeProject;
+    if (!project) {
+      return;
+    }
+    const nextContract = createProjectContract({
+      title: `Contract ${project.contracts.length + 1}`,
+      domain: 'Core',
+      role: 'component',
+      purpose: 'Describe what this contract does for the project.',
+      relation: 'Related to the project root',
+    });
+    updateProjectStore((prev) => ({
+      ...prev,
+      projects: prev.projects.map((candidate) =>
+        candidate.id === project.id
+          ? {
+              ...candidate,
+              updatedAt: new Date().toISOString(),
+              activeContractId: nextContract.id,
+              contracts: [...candidate.contracts, nextContract],
+            }
+          : candidate,
+      ),
+    }));
+    applyContractState(nextContract, project.networkId);
+    addLog(`Created project contract item: ${nextContract.title}`, 'success');
+  };
+
+  const selectProjectContract = (contractId: string) => {
+    const project = activeProject;
+    const contract = project?.contracts.find((candidate) => candidate.id === contractId);
+    if (!project || !contract) {
+      return;
+    }
+    updateProjectStore((prev) => ({
+      ...prev,
+      projects: prev.projects.map((candidate) =>
+        candidate.id === project.id
+          ? {
+              ...candidate,
+              updatedAt: new Date().toISOString(),
+              activeContractId: contract.id,
+            }
+          : candidate,
+      ),
+    }));
+    applyContractState(contract, project.networkId);
+    addLog(`Loaded contract item: ${contract.title}`, 'info');
+  };
+
+  const updateActiveContractMetadata = (
+    patch: Partial<Pick<KilnProjectContractItem, 'title' | 'domain' | 'role' | 'purpose' | 'relation'>>,
+  ) => {
+    const project = activeProject;
+    if (!project) {
+      return;
+    }
+    updateProjectStore((prev) => ({
+      ...prev,
+      projects: prev.projects.map((candidate) =>
+        candidate.id === project.id
+          ? {
+              ...candidate,
+              updatedAt: new Date().toISOString(),
+              contracts: candidate.contracts.map((contract) =>
+                contract.id === candidate.activeContractId
+                  ? { ...contract, ...patch, updatedAt: new Date().toISOString() }
+                  : contract,
+              ),
+            }
+          : candidate,
+      ),
+    }));
+  };
+
+  const associateDeploymentWithActiveContract = (
+    address: string,
+    deploymentNetworkId: KilnNetworkId,
+    origin: KilnContractDeployment['origin'],
+  ) => {
+    const trimmed = address.trim();
+    if (!trimmed || !activeProject) {
+      return;
+    }
+    const sourceHash = contractVersionId({
+      sourceType: contractSourceType,
+      michelsonCode,
+      solidityCode,
+      initialStorage,
+    });
+    const deployment: KilnContractDeployment = {
+      id: deploymentId(deploymentNetworkId, trimmed),
+      networkId: deploymentNetworkId,
+      address: trimmed,
+      deployedAt: new Date().toISOString(),
+      versionId: sourceHash,
+      sourceHash,
+      origin,
+    };
+    updateProjectStore((prev) => ({
+      ...prev,
+      projects: prev.projects.map((project) => {
+        if (project.id !== activeProject.id) {
+          return project;
+        }
+        const contracts = project.contracts.map((contract) =>
+          contract.id === project.activeContractId
+            ? {
+                ...contract,
+                updatedAt: new Date().toISOString(),
+                sourceType: contractSourceType,
+                michelsonCode,
+                solidityCode,
+                initialStorage,
+                clearanceId,
+                abi,
+                e2eEntrypoint,
+                e2eArgs,
+                lastWorkflow,
+                lastSolidityCompile,
+                currentVersionId: sourceHash,
+                deployments: [
+                  deployment,
+                  ...contract.deployments.filter(
+                    (candidate) => candidate.networkId !== deploymentNetworkId,
+                  ),
+                ],
+              }
+            : contract,
+        );
+        return {
+          ...project,
+          updatedAt: new Date().toISOString(),
+          networkId: deploymentNetworkId,
+          contractAddress: trimmed,
+          contractSourceType,
+          michelsonCode,
+          solidityCode,
+          initialStorage,
+          clearanceId,
+          abi,
+          e2eEntrypoint,
+          e2eArgs,
+          lastWorkflow,
+          lastSolidityCompile,
+          contracts,
+        };
+      }),
+    }));
+  };
+
   const createNewProject = () => {
     const project = createSavedProject({
       name: `Kiln Project ${projectStore.projects.length + 1}`,
@@ -724,6 +1196,9 @@ export default function App() {
       projects: [...prev.projects, project],
       activeProjectId: project.id,
     }));
+    setActiveSurface('guided');
+    setActiveTab('setup');
+    setActiveTool('build');
     applyProjectState(project);
     addLog(`Created project: ${project.name}`, 'success');
   };
@@ -744,15 +1219,25 @@ export default function App() {
     if (!project) {
       return;
     }
-    updateProjectStore((prev) => ({ ...prev, activeProjectId: project.id }));
-    pendingProjectHydrationRef.current = project;
-    if (project.networkId !== networkId) {
-      requestNetworkChange(project.networkId);
+    const normalized = normalizeSavedProject(project);
+    updateProjectStore((prev) => ({
+      ...prev,
+      activeProjectId: normalized.id,
+      projects: prev.projects.map((candidate) =>
+        candidate.id === normalized.id ? normalized : candidate,
+      ),
+    }));
+    setActiveSurface(normalized.lastSurface);
+    setActiveTab(normalized.lastGuidedStep);
+    setActiveTool(normalized.lastWorkbenchTool);
+    pendingProjectHydrationRef.current = normalized;
+    if (normalized.networkId !== networkId) {
+      requestNetworkChange(normalized.networkId);
       return;
     }
     pendingProjectHydrationRef.current = null;
-    applyProjectState(project);
-    addLog(`Loaded project: ${project.name}`, 'info');
+    applyProjectState(normalized);
+    addLog(`Loaded project: ${normalized.name}`, 'info');
   };
 
   useEffect(() => {
@@ -872,7 +1357,34 @@ export default function App() {
     deployMode,
     lastWorkflow,
     lastSolidityCompile,
+    activeSurface,
+    activeTab,
+    activeTool,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!activeProject || (activeSurface !== 'guided' && activeSurface !== 'workbench')) {
+      return;
+    }
+    setProjectStore((prev) => {
+      const next = {
+        ...prev,
+        projects: prev.projects.map((project) =>
+          project.id === prev.activeProjectId
+            ? {
+                ...project,
+                updatedAt: new Date().toISOString(),
+                lastSurface: activeSurface,
+                lastGuidedStep: activeTab,
+                lastWorkbenchTool: activeTool,
+              }
+            : project,
+        ),
+      };
+      persistProjectStore(next);
+      return next;
+    });
+  }, [activeSurface, activeTab, activeTool]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isTezos) {
@@ -1102,6 +1614,7 @@ export default function App() {
       setContractAddress(payload.contractAddress);
       setAbi(payload.entrypoints);
       setE2EEntrypoint(payload.entrypoints[0]?.name ?? '');
+      associateDeploymentWithActiveContract(payload.contractAddress, networkId, 'imported');
       addLog(
         `Loaded ${payload.entrypoints.length} entrypoint(s) from ${payload.contractAddress}.`,
         'success',
@@ -1745,6 +2258,7 @@ export default function App() {
     }
     setContractAddress(payload.contractAddress);
     setAbi(payload.entrypoints);
+    associateDeploymentWithActiveContract(payload.contractAddress, networkId, 'deployed');
     addLog(`Deployed via Bert: ${payload.contractAddress}`, 'success');
   };
 
@@ -1783,6 +2297,7 @@ export default function App() {
       networkId,
     );
     setContractAddress(result.contractAddress);
+    associateDeploymentWithActiveContract(result.contractAddress, networkId, 'deployed');
     setAbi(
       workflow.artifacts.entrypointMetadata ??
         workflow.artifacts.entrypoints.map((name) => ({ name, args: [] })),
@@ -2237,6 +2752,7 @@ export default function App() {
           onAssociateEvmWallet={startMcpWalletLogin}
           onDeployedEvm={(info) => {
             setContractAddress(info.contractAddress);
+            associateDeploymentWithActiveContract(info.contractAddress, network.id, 'deployed');
             addLog(`EVM contract live at ${info.contractAddress}.`, 'success');
             if (flowMode === 'guided') {
               setActiveTab('test');
@@ -2356,6 +2872,26 @@ export default function App() {
       ) : null}
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-6">
+        {activeSurface === 'dashboard' ? (
+          <DashboardScreen
+            projects={projectStore.projects}
+            activeProject={activeProject}
+            activeContract={activeContract}
+            onSelectProject={selectProject}
+            onCreateProject={createNewProject}
+            onRenameProject={renameActiveProject}
+            onCreateContract={createContractForActiveProject}
+            onSelectContract={selectProjectContract}
+            onUpdateContract={updateActiveContractMetadata}
+            onOpenProject={() => {
+              const targetSurface = activeProject?.lastSurface ?? 'guided';
+              setActiveSurface(targetSurface);
+              setActiveTab(activeProject?.lastGuidedStep ?? 'setup');
+              setActiveTool(activeProject?.lastWorkbenchTool ?? 'build');
+            }}
+          />
+        ) : null}
+
         {activeSurface === 'guided' ? (
           <GuidedFlowScreen
             tabs={tabs}
@@ -2489,6 +3025,7 @@ function Header({
 }) {
   const { t, tip } = useKilnView();
   const surfaceButtons: Array<{ key: SurfaceKey; label: string; icon: React.ReactNode }> = [
+    { key: 'dashboard', label: 'Dashboard', icon: <Boxes className="w-3.5 h-3.5" /> },
     { key: 'guided', label: 'Guided', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
     { key: 'workbench', label: 'Workbench', icon: <Hammer className="w-3.5 h-3.5" /> },
     { key: 'account', label: 'Account', icon: <UserCircle className="w-3.5 h-3.5" /> },
@@ -2558,6 +3095,321 @@ function Header({
         </div>
       </div>
     </header>
+  );
+}
+
+function DashboardScreen({
+  projects,
+  activeProject,
+  activeContract,
+  onSelectProject,
+  onCreateProject,
+  onRenameProject,
+  onCreateContract,
+  onSelectContract,
+  onUpdateContract,
+  onOpenProject,
+}: {
+  projects: SavedKilnProject[];
+  activeProject?: SavedKilnProject;
+  activeContract?: KilnProjectContractItem;
+  onSelectProject: (projectId: string) => void;
+  onCreateProject: () => void;
+  onRenameProject: (name: string) => void;
+  onCreateContract: () => void;
+  onSelectContract: (contractId: string) => void;
+  onUpdateContract: (
+    patch: Partial<Pick<KilnProjectContractItem, 'title' | 'domain' | 'role' | 'purpose' | 'relation'>>,
+  ) => void;
+  onOpenProject: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-base-200 bg-base-100 p-4 md:p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2 max-w-3xl">
+            <div className="badge badge-primary badge-outline">Project dashboard</div>
+            <h2 className="text-2xl font-bold leading-tight">Projects and contract families</h2>
+            <p className="text-sm text-base-content/70">
+              Pick up the last opened project, inspect its contract domains, or start a new project. Each contract exists here before deploy and keeps its Shadownet/Mainnet addresses by version.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" className="btn btn-sm btn-outline gap-2" onClick={onCreateProject}>
+              <FolderPlus className="w-4 h-4" />
+              New project
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary gap-2"
+              disabled={!activeProject}
+              onClick={onOpenProject}
+            >
+              <ChevronRight className="w-4 h-4" />
+              Open last state
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)] gap-5">
+        <aside className="rounded-2xl border border-base-200 bg-base-100 p-3 h-fit">
+          <div className="px-2 py-2 text-xs uppercase tracking-wider text-base-content/60">
+            Projects
+          </div>
+          <div className="space-y-2">
+            {projects.map((project) => {
+              const isActive = activeProject?.id === project.id;
+              const deployedCount = project.contracts.reduce(
+                (count, contract) => count + contract.deployments.length,
+                0,
+              );
+              return (
+                <button
+                  key={project.id}
+                  type="button"
+                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                    isActive
+                      ? 'border-primary bg-primary/10'
+                      : 'border-base-300 hover:border-primary/40 hover:bg-base-200/40'
+                  }`}
+                  onClick={() => onSelectProject(project.id)}
+                >
+                  <div className="font-semibold text-sm truncate">{project.name}</div>
+                  <div className="mt-1 flex flex-wrap gap-2 text-[0.68rem] text-base-content/60">
+                    <span>{project.contracts.length} contract(s)</span>
+                    <span>{deployedCount} deployment(s)</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        <section className="rounded-2xl border border-base-200 bg-base-100 shadow-lg overflow-hidden">
+          {activeProject ? (
+            <>
+              <div className="border-b border-base-300 bg-base-200/30 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="text-xs uppercase tracking-wider text-base-content/55">
+                    Project viewer
+                  </div>
+                  <input
+                    className="input input-sm input-bordered mt-1 w-full max-w-md font-semibold"
+                    value={activeProject.name}
+                    onChange={(event) => onRenameProject(event.target.value)}
+                    aria-label="Project name"
+                  />
+                </div>
+                <button type="button" className="btn btn-sm btn-outline gap-2" onClick={onCreateContract}>
+                  <FolderPlus className="w-4 h-4" />
+                  Add contract item
+                </button>
+              </div>
+              <div className="p-4 md:p-6 space-y-5">
+                <ProjectContractTree
+                  project={activeProject}
+                  activeContractId={activeContract?.id ?? activeProject.activeContractId}
+                  onSelectContract={onSelectContract}
+                />
+                {activeContract ? (
+                  <ProjectContractEditor
+                    contract={activeContract}
+                    onUpdate={onUpdateContract}
+                  />
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="p-8 text-center text-sm text-base-content/60">
+              Create a project to start organizing contract families.
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ProjectContractTree({
+  project,
+  activeContractId,
+  onSelectContract,
+}: {
+  project: SavedKilnProject;
+  activeContractId: string;
+  onSelectContract: (contractId: string) => void;
+}) {
+  const domains = project.contracts.reduce<Record<string, KilnProjectContractItem[]>>(
+    (groups, contract) => {
+      const domain = contract.domain.trim() || 'Unsorted';
+      groups[domain] = [...(groups[domain] ?? []), contract];
+      return groups;
+    },
+    {},
+  );
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+          Contract family tree
+        </h3>
+        <p className="text-xs text-base-content/60 mt-1">
+          Domains group contracts by the capability they power: marketplace, token factory, auctions, swaps, minters, or any other app area.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        {Object.entries(domains).map(([domain, contracts]) => (
+          <div key={domain} className="rounded-xl border border-base-300 bg-base-200/30 p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Boxes className="w-4 h-4 text-primary" />
+              {domain}
+            </div>
+            <div className="mt-3 space-y-2">
+              {contracts.map((contract) => {
+                const isActive = contract.id === activeContractId;
+                const shadownet = contract.deployments.find((deployment) =>
+                  deployment.networkId.includes('shadownet'),
+                );
+                const mainnet = contract.deployments.find((deployment) =>
+                  deployment.networkId.includes('mainnet'),
+                );
+                const fullyDeployed =
+                  Boolean(shadownet && mainnet) &&
+                  shadownet?.versionId === mainnet?.versionId &&
+                  shadownet?.versionId === contract.currentVersionId;
+                return (
+                  <button
+                    key={contract.id}
+                    type="button"
+                    onClick={() => onSelectContract(contract.id)}
+                    className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                      isActive
+                        ? 'border-primary bg-primary/10'
+                        : 'border-base-300 bg-base-100 hover:border-primary/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-sm truncate">{contract.title}</span>
+                      <span className={`badge badge-xs ${fullyDeployed ? 'badge-success' : 'badge-outline'}`}>
+                        {fullyDeployed ? 'final' : contract.role || 'contract'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-base-content/65 line-clamp-2">
+                      {contract.purpose || 'Purpose not set.'}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <DeploymentBadge label="Shadownet" deployment={shadownet} />
+                      <DeploymentBadge label="Mainnet" deployment={mainnet} />
+                    </div>
+                    <div className="mt-2 text-[0.68rem] text-base-content/55">
+                      {contract.relation || 'No relationship note yet.'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DeploymentBadge({
+  label,
+  deployment,
+}: {
+  label: string;
+  deployment?: KilnContractDeployment;
+}) {
+  return (
+    <span className={`badge badge-xs ${deployment ? 'badge-success' : 'badge-outline'}`}>
+      {label}: {deployment ? deployment.address.slice(0, 8) : 'none'}
+    </span>
+  );
+}
+
+function ProjectContractEditor({
+  contract,
+  onUpdate,
+}: {
+  contract: KilnProjectContractItem;
+  onUpdate: (
+    patch: Partial<Pick<KilnProjectContractItem, 'title' | 'domain' | 'role' | 'purpose' | 'relation'>>,
+  ) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-base-300 bg-base-200/30 p-4 space-y-3">
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
+          Active contract item
+        </h3>
+        <p className="text-xs text-base-content/60 mt-1">
+          This item is the contract currently loaded into Guided or Workbench tools.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <label className="form-control">
+          <span className="label-text text-xs uppercase tracking-wider">Title</span>
+          <input
+            className="input input-sm input-bordered"
+            value={contract.title}
+            onChange={(event) => onUpdate({ title: event.target.value })}
+          />
+        </label>
+        <label className="form-control">
+          <span className="label-text text-xs uppercase tracking-wider">Domain</span>
+          <input
+            className="input input-sm input-bordered"
+            value={contract.domain}
+            onChange={(event) => onUpdate({ domain: event.target.value })}
+            placeholder="Marketplace"
+          />
+        </label>
+        <label className="form-control">
+          <span className="label-text text-xs uppercase tracking-wider">Role</span>
+          <input
+            className="input input-sm input-bordered"
+            value={contract.role}
+            onChange={(event) => onUpdate({ role: event.target.value })}
+            placeholder="auction, token factory, minter"
+          />
+        </label>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="form-control">
+          <span className="label-text text-xs uppercase tracking-wider">Purpose</span>
+          <textarea
+            className="textarea textarea-bordered text-sm min-h-24"
+            value={contract.purpose}
+            onChange={(event) => onUpdate({ purpose: event.target.value })}
+          />
+        </label>
+        <label className="form-control">
+          <span className="label-text text-xs uppercase tracking-wider">Relation</span>
+          <textarea
+            className="textarea textarea-bordered text-sm min-h-24"
+            value={contract.relation}
+            onChange={(event) => onUpdate({ relation: event.target.value })}
+            placeholder="Consumes the token factory output; feeds marketplace listings."
+          />
+        </label>
+      </div>
+      <div className="rounded-lg bg-base-100 border border-base-300 p-3 text-xs font-mono space-y-1">
+        <div>Version: {contract.currentVersionId}</div>
+        {contract.deployments.length > 0 ? (
+          contract.deployments.map((deployment) => (
+            <div key={deployment.id}>
+              {deployment.networkId}: {deployment.address} ({deployment.origin})
+            </div>
+          ))
+        ) : (
+          <div>No deployment addresses associated yet.</div>
+        )}
+      </div>
+    </div>
   );
 }
 

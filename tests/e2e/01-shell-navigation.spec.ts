@@ -11,6 +11,15 @@ test.describe('UI shell smoke', () => {
     await page.goto(`${baseUrl}/#setup`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { name: /Tezos Kiln/i })).toBeVisible();
+
+    await page.getByRole('button', { name: /Dashboard/i }).first().click();
+    await expect(page).toHaveURL(/#dashboard$/);
+    await expect(page.getByRole('heading', { name: /Projects and contract families/i })).toBeVisible();
+    await expect(page.getByText(/Contract family tree/i)).toBeVisible();
+    await page.getByRole('button', { name: /Add contract item/i }).click();
+    await expect(page.getByRole('button', { name: /Contract 2/i })).toBeVisible();
+    await page.getByRole('button', { name: /Guided/i }).first().click();
+
     await expect(page.getByRole('heading', { name: /Guided Shadownet launch/i })).toBeVisible();
     const guidedRail = page.getByRole('complementary');
 
