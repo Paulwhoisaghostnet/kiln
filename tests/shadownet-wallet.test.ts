@@ -259,6 +259,9 @@ describe('shadownet-wallet', () => {
     });
     expect(mocks.state.open).not.toHaveBeenCalled();
     expect(mocks.state.requestPermissions).toHaveBeenCalledTimes(1);
+    expect(mocks.state.requestPermissions).toHaveBeenCalledWith({
+      scopes: ['operation_request'],
+    });
     expect(localStorage.getItem('beacon:stale')).toBeNull();
     expect(localStorage.getItem('beacon-sdk:stale')).toBeNull();
     expect(localStorage.getItem('app:keep')).toBe('1');
@@ -370,6 +373,7 @@ describe('shadownet-wallet', () => {
       signature: 'edsigKilnAuth',
       publicKey: 'edpkTestPublicKey',
       messageBytes: '68656c6c6f',
+      address: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
     });
     expect(mocks.state.requestSignPayload).toHaveBeenCalledWith({
       signingType: 'micheline',
@@ -392,6 +396,26 @@ describe('shadownet-wallet', () => {
       signingType: 'raw',
       payload: '68656c6c6f',
       sourceAddress: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+    });
+  });
+
+  it('requests sign permission against the active Tezos network', async () => {
+    mocks.state.grantedAccount = {
+      address: 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+      publicKey: 'edpkTestPublicKey',
+      scopes: ['operation_request'],
+      network: {
+        name: 'shadownet',
+        rpcUrl: 'https://rpc.shadownet.teztnets.com',
+      },
+    };
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+    await walletModule.connectShadownetWallet('temple');
+
+    await walletModule.signKilnAuthChallenge('hello');
+
+    expect(mocks.state.requestPermissions).toHaveBeenNthCalledWith(2, {
+      scopes: ['operation_request', 'sign'],
     });
   });
 
@@ -528,6 +552,25 @@ describe('shadownet-wallet', () => {
       ),
     ).rejects.toThrow(/Wallet connected to mainnet/);
     expect(mocks.state.originate).not.toHaveBeenCalled();
+  });
+
+  it('blocks Settings signer reuse when the active Beacon account changed', async () => {
+    const walletModule = await import('../src/lib/shadownet-wallet.js');
+    await walletModule.connectShadownetWallet('temple');
+    mocks.state.activeAccount = {
+      address: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6',
+      network: {
+        name: 'shadownet',
+        rpcUrl: 'https://rpc.shadownet.teztnets.com',
+      },
+    };
+
+    await expect(
+      walletModule.assertConnectedShadownetWallet(
+        'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb',
+        'tezos-shadownet',
+      ),
+    ).rejects.toThrow(/does not match expected signer/);
   });
 
   it('replaces burn placeholder with connected wallet address in initial storage', async () => {

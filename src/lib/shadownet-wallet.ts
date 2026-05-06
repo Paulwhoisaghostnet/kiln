@@ -27,6 +27,7 @@ export interface SignedKilnAuthChallenge {
   signature: string;
   publicKey: string;
   messageBytes: string;
+  address: string;
 }
 
 /** Fixed address used in compiled storage as admin placeholder until deploy. */
@@ -45,6 +46,12 @@ type BeaconAccountNetwork = {
   type?: string;
   name?: string;
   rpcUrl?: string;
+};
+
+type BeaconPermissionNetwork = {
+  type: NetworkType;
+  name: string;
+  rpcUrl: string;
 };
 
 type BeaconAccountLike = {
@@ -132,6 +139,15 @@ function clearStaleBeaconStorage(): void {
 function normalizedBeaconNetworkName(networkId: KilnNetworkId): string {
   const profile = getNetworkProfile(networkId);
   return profile.beaconNetworkName ?? profile.id.replace('tezos-', '');
+}
+
+function buildBeaconPermissionNetwork(networkId: KilnNetworkId): BeaconPermissionNetwork {
+  const profile = getNetworkProfile(networkId);
+  return {
+    type: resolveBeaconNetworkType(networkId),
+    name: normalizedBeaconNetworkName(networkId),
+    rpcUrl: profile.defaultRpcUrl,
+  };
 }
 
 function normalizedNetworkValue(value: unknown): string | null {
@@ -276,15 +292,16 @@ async function ensureToolkit(networkId: KilnNetworkId): Promise<TezosWalletHandl
       );
     }
 
+    const beaconNetwork = buildBeaconPermissionNetwork(networkId);
     const wallet = new BeaconWallet({
       name: 'Tezos Kiln',
       iconUrl: '/favicon.ico',
-      network: {
-        type: resolveBeaconNetworkType(networkId) as never,
-        name: normalizedBeaconNetworkName(networkId),
-        rpcUrl: profile.defaultRpcUrl,
-      },
+      network: beaconNetwork,
     });
+    // Taquito wraps Beacon's singleton DAppClient; when the user switches
+    // between Shadownet and Mainnet, later constructor options can be ignored.
+    // Keep the client network aligned before any permission or operation request.
+    (wallet.client as unknown as { network: BeaconPermissionNetwork }).network = beaconNetwork;
 
     const toolkit = new TezosToolkit(profile.defaultRpcUrl);
     toolkit.setWalletProvider(wallet);
@@ -333,6 +350,20 @@ async function assertExpectedNetwork(
       `Kiln RPC chain mismatch: expected ${profile.chainId} (${profile.label}), got ${chainId}.`,
     );
   }
+}
+
+async function getVerifiedActiveAccount(
+  handle: TezosWalletHandle,
+  networkId: KilnNetworkId,
+): Promise<BeaconAccountLike> {
+  await assertExpectedNetwork(handle, networkId);
+  const activeAccount = (await handle.wallet.client.getActiveAccount()) as
+    | BeaconAccountLike
+    | null;
+  if (!activeAccount?.address) {
+    throw new Error('Wallet connected but no active account address was returned.');
+  }
+  return activeAccount;
 }
 
 function findContractAddress(node: unknown): string | null {
@@ -628,14 +659,11 @@ export async function connectShadownetWallet(
   const handle = await ensureToolkit(networkId);
 
   await handle.wallet.clearActiveAccount();
-  await handle.wallet.requestPermissions();
+  await handle.wallet.requestPermissions({
+    scopes: [PermissionScope.OPERATION_REQUEST],
+  });
 
-  await assertExpectedNetwork(handle, networkId);
-
-  const activeAccount = await handle.wallet.client.getActiveAccount();
-  if (!activeAccount?.address) {
-    throw new Error('Wallet connected but no active account address was returned.');
-  }
+  const activeAccount = await getVerifiedActiveAccount(handle, networkId);
 
   return connectedWalletStateFromAccount(activeAccount, networkId) as ConnectedWalletState;
 }
@@ -653,6 +681,21 @@ export async function getConnectedShadownetWallet(
   return connectedWalletStateFromAccount(activeAccount, networkId);
 }
 
+export async function assertConnectedShadownetWallet(
+  expectedAddress: string,
+  networkId: KilnNetworkId = getDefaultNetworkId(),
+): Promise<ConnectedWalletState> {
+  const handle = await ensureToolkit(networkId);
+  const activeAccount = await getVerifiedActiveAccount(handle, networkId);
+  if (activeAccount.address !== expectedAddress) {
+    throw new Error(
+      `Connected wallet ${activeAccount.address} does not match expected signer ${expectedAddress}. Reconnect the wallet selected in Settings.`,
+    );
+  }
+
+  return connectedWalletStateFromAccount(activeAccount, networkId) as ConnectedWalletState;
+}
+
 export async function signKilnAuthChallenge(
   message: string,
   networkId: KilnNetworkId = getDefaultNetworkId(),
@@ -663,6 +706,10 @@ export async function signKilnAuthChallenge(
   const activeAccount = await ensureSignPermission(handle);
   await assertExpectedNetwork(handle, networkId);
 
+  const activeAddress = activeAccount.address;
+  if (!activeAddress) {
+    throw new Error('Wallet connected but no active account address was returned.');
+  }
   const publicKey = activeAccount.publicKey || (await handle.wallet.getPK());
   if (!publicKey) {
     throw new Error(
@@ -692,9 +739,9 @@ export async function signKilnAuthChallenge(
     try {
       const { signature } = await client.requestSignPayload({
         ...request,
-        sourceAddress: activeAccount.address,
+        sourceAddress: activeAddress,
       });
-      return { signature, publicKey, messageBytes };
+      return { signature, publicKey, messageBytes, address: activeAddress };
     } catch (error) {
       lastError = error;
     }
@@ -719,7 +766,7 @@ export async function originateWithConnectedWallet(
   networkId: KilnNetworkId = getDefaultNetworkId(),
 ): Promise<ConnectedOriginationResult> {
   const handle = await ensureToolkit(networkId);
-  await assertExpectedNetwork(handle, networkId);
+  await getVerifiedActiveAccount(handle, networkId);
 
   const operation = await handle.toolkit.wallet
     .originate({ code, init: initialStorage })

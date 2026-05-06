@@ -689,6 +689,11 @@ export default function App() {
       if (walletKind === 'tezos') {
         const { signKilnAuthChallenge } = await import('./lib/shadownet-wallet');
         const signed = await signKilnAuthChallenge(challenge.message, networkId);
+        if (signed.address !== walletAddress) {
+          throw new Error(
+            `Signed wallet ${signed.address} does not match connected Settings wallet ${walletAddress}. Reconnect before signing.`,
+          );
+        }
         signature = signed.signature;
         publicKey = signed.publicKey;
       } else {
@@ -1077,9 +1082,11 @@ export default function App() {
       );
     }
     const {
+      assertConnectedShadownetWallet,
       assignConnectedWalletAsAdmin,
       originateWithConnectedWallet,
     } = await import('./lib/shadownet-wallet');
+    await assertConnectedShadownetWallet(connectedWallet.address, networkId);
     const storageForDeployment = useConnectedWalletAsContractAdmin
       ? assignConnectedWalletAsAdmin(
           workflow.artifacts.initialStorage,
