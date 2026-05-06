@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { createApiApp } from '../src/server-app.js';
 import type { AppEnv } from '../src/lib/env.js';
 import type { WalletType } from '../src/lib/types.js';
+import type { TezosServiceLike } from '../src/lib/tezos-service.js';
 import { buildWorkflowDrivenSimulationSteps } from '../src/lib/workflow-discovery.js';
 
 const walletAAddress = 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb';
@@ -943,7 +944,7 @@ describe('createApiApp', () => {
 
     const response = await request(app).post('/api/kiln/predeploy/validate').send({
       code: michelson,
-      initialStorage: 'Unit',
+      initialStorage: '(Pair "KT1AFA2mwNUMNd4SsujE1YYp29vd8BZejyKW" 0)',
     });
 
     expect(response.status).toBe(200);
@@ -981,11 +982,12 @@ describe('createApiApp', () => {
       }),
     ]);
     expect(response.body.injectedCode).toContain(tokenAddresses.bronze);
+    expect(response.body.injectedInitialStorage).toContain(tokenAddresses.bronze);
     expect(calls.validate).toEqual([
       {
         wallet: 'A',
         code: expect.stringContaining(tokenAddresses.bronze),
-        initialStorage: 'Unit',
+        initialStorage: expect.stringContaining(tokenAddresses.bronze),
       },
     ]);
   });
@@ -1216,6 +1218,67 @@ describe('createApiApp', () => {
       args: ['100', '1'],
       options: { amountMutez: 2_000_000 },
     });
+  });
+
+  it('returns contract execution failures as handled results with dependency context', async () => {
+    const missingTokenAddress = 'KT1DUZ2nf4Dd1F2BNm3zeg1TwAnA1iKZXbHD';
+    const app = createApiApp({
+      env: baseEnv(),
+      createTezosService: (wallet: WalletType) =>
+        ({
+          async getAddress() {
+            return wallet === 'A' ? walletAAddress : walletBAddress;
+          },
+          async getBalance() {
+            return 1;
+          },
+          async validateOrigination() {
+            return {
+              gasLimit: 1,
+              storageLimit: 1,
+              suggestedFeeMutez: 1,
+              minimalFeeMutez: 1,
+            };
+          },
+          async originateContract() {
+            return contractAddress;
+          },
+          async callContract() {
+            throw new Error('FA2_TRANSFER_ENTRYPOINT_MISSING');
+          },
+          async getContractStorage() {
+            return {
+              wtf_token_address: missingTokenAddress,
+              wtf_token_id: 0,
+            };
+          },
+          async getContractEntrypoints(address: string) {
+            if (address === contractAddress) {
+              return [
+                {
+                  name: 'purchase',
+                  args: [],
+                  sampleJsArgs: [{ listing_id: 0, amount_wtf_units: 1 }],
+                },
+              ];
+            }
+            throw new Error('Http error response: (404)');
+          },
+        }) satisfies TezosServiceLike,
+    });
+
+    const response = await request(app).post('/api/kiln/execute').send({
+      contractAddress,
+      entrypoint: 'purchase',
+      args: [{ listing_id: 0, amount_wtf_units: 1 }],
+      wallet: 'B',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toContain(
+      `payment token ${missingTokenAddress} from contract storage is not available`,
+    );
   });
 
   it('introspects existing Tezos contracts for standalone testing', async () => {

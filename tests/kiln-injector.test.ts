@@ -66,6 +66,21 @@ describe('injectKilnTokens', () => {
     expect(injected.initialStorage).toContain('KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg');
     expect(injected.initialStorage).not.toContain('KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn');
   });
+
+  it('does not rewrite already-injected dummy token addresses', () => {
+    const dummyToken = 'KT1VsSxSXUkgw6zkBGgUuDXXuJs9ToPqkrCg';
+    const injected = injectKilnTokenArtifacts(
+      {
+        code: `code { PUSH address "${dummyToken}" ; DROP }`,
+        initialStorage: `(Pair "${dummyToken}" 0)`,
+      },
+      `${dummyToken},KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn`,
+    );
+
+    expect(injected.code).toContain(dummyToken);
+    expect(injected.initialStorage).toContain(dummyToken);
+    expect(injected.initialStorage).not.toContain('KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn');
+  });
 });
 
 describe('resolveDummyTokens', () => {

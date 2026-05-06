@@ -16,6 +16,7 @@ import type { ApiAppServices } from '../app-services.js';
 import { asMessage, validationErrorMessage } from '../http.js';
 import { discoverTezosContractsForWallet } from '../../lib/tezos-contract-discovery.js';
 import {
+  ContractExecutionError,
   DeploymentBlockedError,
   deployContract,
   executeContractCall,
@@ -104,6 +105,10 @@ export function createRuntimeRouter(services: ApiAppServices): Router {
       } catch (error) {
         if (error instanceof NetworkCapabilityError) {
           res.status(412).json({ error: error.message, capability: error.capability });
+          return;
+        }
+        if (error instanceof ContractExecutionError) {
+          res.json({ success: false, error: error.message });
           return;
         }
         console.error('Execute Error:', error);

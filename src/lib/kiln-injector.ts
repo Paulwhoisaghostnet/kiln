@@ -147,12 +147,16 @@ export function createKilnTokenInjector(
     );
   }
 
+  const dummyTokenSet = new Set(dummyTokens);
   let tokenIndex = 0;
   const replacements = new Map<string, string>();
 
   return {
     inject(text: string): string {
       return text.replace(kt1InCodeRegex, (match) => {
+        if (dummyTokenSet.has(match)) {
+          return match;
+        }
         const existing = replacements.get(match);
         if (existing) {
           return existing;

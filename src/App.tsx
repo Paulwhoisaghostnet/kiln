@@ -97,8 +97,9 @@ interface UploadResponse {
 
 interface ExecuteResponse {
   success: boolean;
-  hash: string;
-  level: number | null;
+  hash?: string;
+  level?: number | null;
+  error?: string;
 }
 
 interface E2ERunResponse {
@@ -207,6 +208,16 @@ interface WorkflowRunResponse extends WorkflowSummary {
     entrypointMetadata?: AbiEntrypoint[];
     codeHash: string;
   };
+}
+
+interface PredeployValidationResponse {
+  success: boolean;
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+  injectedCode: string;
+  injectedInitialStorage?: string;
+  error?: string;
 }
 
 interface BundleExportResponse {
@@ -2592,6 +2603,43 @@ export default function App() {
     addLog(`Deployed via Bert: ${payload.contractAddress}`, 'success');
   };
 
+  const prepareTezosDeploymentArtifacts = async (
+    code: string,
+    storage: string,
+  ): Promise<{ code: string; initialStorage: string }> => {
+    const response = await fetch('/api/kiln/predeploy/validate', {
+      method: 'POST',
+      headers: buildHeaders(true),
+      body: JSON.stringify({
+        networkId,
+        code,
+        initialStorage: storage,
+      }),
+    });
+    const payload = (await response.json()) as PredeployValidationResponse | { error?: string };
+    if (!response.ok || !('injectedCode' in payload)) {
+      throw new Error(
+        'error' in payload && payload.error
+          ? payload.error
+          : 'Unable to prepare contract artifacts for wallet deployment.',
+      );
+    }
+    if (!payload.valid) {
+      throw new Error(
+        payload.issues.length > 0
+          ? payload.issues.join('; ')
+          : 'Predeploy validation did not pass.',
+      );
+    }
+    if (payload.warnings.length > 0) {
+      addLog(`Predeploy prep warning: ${payload.warnings.join('; ')}`, 'info');
+    }
+    return {
+      code: payload.injectedCode,
+      initialStorage: payload.injectedInitialStorage ?? storage,
+    };
+  };
+
   const deployTezosWithConnectedWallet = async (
     workflow: Pick<WorkflowRunResponse, 'artifacts'>,
   ) => {
@@ -2615,14 +2663,18 @@ export default function App() {
       originateWithConnectedWallet,
     } = await import('./lib/shadownet-wallet');
     await assertConnectedShadownetWallet(connectedWallet.address, networkId);
+    const preparedArtifacts = await prepareTezosDeploymentArtifacts(
+      workflow.artifacts.michelson,
+      workflow.artifacts.initialStorage,
+    );
     const storageForDeployment = useConnectedWalletAsContractAdmin
       ? assignConnectedWalletAsAdmin(
-          workflow.artifacts.initialStorage,
+          preparedArtifacts.initialStorage,
           connectedWallet.address,
         )
-      : workflow.artifacts.initialStorage;
+      : preparedArtifacts.initialStorage;
     const result = await originateWithConnectedWallet(
-      workflow.artifacts.michelson,
+      preparedArtifacts.code,
       storageForDeployment,
       networkId,
     );
@@ -2716,6 +2768,9 @@ export default function App() {
         body: JSON.stringify({ networkId, contractAddress, entrypoint, args, wallet }),
       });
       const payload = (await res.json()) as ExecuteResponse | { error?: string };
+      if ('success' in payload && payload.success === false) {
+        throw new Error(payload.error ?? 'Execution failed');
+      }
       if (!res.ok || !('hash' in payload) || !('level' in payload)) {
         throw new Error(
           'error' in payload && payload.error ? payload.error : 'Execution failed',

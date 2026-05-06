@@ -210,6 +210,8 @@ describe('runContractE2E', () => {
           },
         ],
       },
+      { name: 'transfer', args: [], sampleJsArgs: [] },
+      { name: 'update_operators', args: [], sampleJsArgs: [] },
     ];
 
     const result = await runContractE2E(
@@ -295,6 +297,107 @@ describe('runContractE2E', () => {
     ]);
   });
 
+  it('reports missing Shadownet payment token dependencies before purchase E2E', async () => {
+    const calls: Array<{
+      wallet: WalletType;
+      contractAddress: string;
+      entrypoint: string;
+      args: unknown[];
+      options?: TezosCallOptions;
+    }> = [];
+    const marketAddress = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
+    const missingTokenAddress = 'KT1DUZ2nf4Dd1F2BNm3zeg1TwAnA1iKZXbHD';
+    const entrypoints: AbiEntrypoint[] = [
+      {
+        name: 'purchase',
+        args: [],
+        sampleJsArgs: [
+          {
+            listing_id: 0,
+            amount_wtf_units: 7,
+            purchase_ref: 'kiln-e2e',
+          },
+        ],
+      },
+      { name: 'transfer', args: [], sampleJsArgs: [] },
+      { name: 'update_operators', args: [], sampleJsArgs: [] },
+    ];
+
+    const result = await runContractE2E(
+      {
+        contractAddress: marketAddress,
+        contracts: [
+          {
+            id: 'market',
+            address: marketAddress,
+            entrypoints: ['purchase'],
+          },
+        ],
+        steps: [
+          {
+            label: 'Ernie reaches purchase',
+            wallet: 'B',
+            targetContractId: 'market',
+            targetContractAddress: marketAddress,
+            entrypoint: 'purchase',
+            args: [1],
+            generatedArgs: true,
+            assertions: [],
+            expectFailure: false,
+          },
+        ],
+      },
+      (wallet) =>
+        ({
+          async getAddress() {
+            return wallet === 'A'
+              ? 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb'
+              : 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6';
+          },
+          async getBalance() {
+            return 1;
+          },
+          async validateOrigination() {
+            return {
+              gasLimit: 1,
+              storageLimit: 1,
+              suggestedFeeMutez: 1,
+              minimalFeeMutez: 1,
+            };
+          },
+          async originateContract() {
+            return marketAddress;
+          },
+          async callContract(contractAddress, entrypoint, args = [], options) {
+            calls.push({ wallet, contractAddress, entrypoint, args, options });
+            return {
+              hash: `op-${wallet}-${entrypoint}`,
+              level: 42,
+              status: 'applied',
+            };
+          },
+          async getContractEntrypoints(contractAddress) {
+            if (contractAddress === marketAddress) {
+              return entrypoints;
+            }
+            throw new Error('Http error response: (404)');
+          },
+          async getContractStorage() {
+            return {
+              wtf_token_address: missingTokenAddress,
+              wtf_token_id: 0,
+            };
+          },
+        }) satisfies TezosServiceLike,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.results[0]?.error).toContain(
+      `payment token ${missingTokenAddress} from ${marketAddress} storage is not available`,
+    );
+    expect(calls).toEqual([]);
+  });
+
   it('derives WTF in-app market purchase funding from listing price and quantity', async () => {
     const calls: Array<{
       wallet: WalletType;
@@ -317,6 +420,8 @@ describe('runContractE2E', () => {
           },
         ],
       },
+      { name: 'transfer', args: [], sampleJsArgs: [] },
+      { name: 'update_operators', args: [], sampleJsArgs: [] },
     ];
 
     const result = await runContractE2E(

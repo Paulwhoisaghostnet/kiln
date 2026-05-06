@@ -21,6 +21,7 @@ export interface PredeployValidationResult {
   warnings: string[];
   entrypoints: AbiEntrypoint[];
   injectedCode: string;
+  injectedInitialStorage: string;
   estimate: OriginationValidationResult | null;
   checks: MichelsonChecks;
 }
@@ -106,6 +107,7 @@ export async function runPredeployValidation(
     warnings,
     entrypoints,
     injectedCode,
+    injectedInitialStorage,
     estimate,
     checks,
   };

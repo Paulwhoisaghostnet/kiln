@@ -19,6 +19,7 @@ import {
 import { asMessage } from '../http.js';
 
 export class DeploymentBlockedError extends Error {}
+export class ContractExecutionError extends Error {}
 
 export interface ContractRuntimeDependencies {
   env: AppEnv;
@@ -89,12 +90,25 @@ export async function executeContractCall(
   status?: string;
 }> {
   const tezosService = createTezosService(payload.wallet);
-  const result = await tezosService.callContract(
-    payload.contractAddress,
-    payload.entrypoint,
-    payload.args,
-    { amountMutez: payload.amountMutez },
-  );
+  let result: Awaited<ReturnType<TezosServiceLike['callContract']>>;
+  try {
+    result = await tezosService.callContract(
+      payload.contractAddress,
+      payload.entrypoint,
+      payload.args,
+      { amountMutez: payload.amountMutez },
+    );
+  } catch (error) {
+    throw new ContractExecutionError(
+      await describeContractCallFailure({
+        entrypoint: payload.entrypoint,
+        args: payload.args,
+        contractAddress: payload.contractAddress,
+        tezosService,
+        error,
+      }),
+    );
+  }
 
   return {
     success: true,
@@ -295,6 +309,97 @@ function looksLikeTokenPurchase(entrypoint: string, args: unknown[]): boolean {
   );
 }
 
+function entrypointNames(entrypoints: Awaited<ReturnType<NonNullable<TezosServiceLike['getContractEntrypoints']>>>): Set<string> {
+  return new Set(entrypoints.map((entrypoint) => entrypoint.name));
+}
+
+async function assertPaymentTokenIsUsable(input: {
+  tokenAddress: string;
+  targetAddress: string;
+  tezosService: TezosServiceLike;
+}): Promise<void> {
+  if (!input.tezosService.getContractEntrypoints) {
+    return;
+  }
+  let tokenEntrypoints: Awaited<ReturnType<NonNullable<TezosServiceLike['getContractEntrypoints']>>>;
+  try {
+    tokenEntrypoints = await input.tezosService.getContractEntrypoints(input.tokenAddress);
+  } catch (error) {
+    throw new Error(
+      `Purchase setup failed: payment token ${input.tokenAddress} from ${input.targetAddress} storage is not available on this network (${asMessage(error)}). Deploy through Kiln validation or direct-deploy prep so external token addresses are replaced with Shadownet dummy FA2 tokens.`,
+    );
+  }
+
+  const names = entrypointNames(tokenEntrypoints);
+  if (!names.has('transfer')) {
+    throw new Error(
+      `Purchase setup failed: payment token ${input.tokenAddress} does not expose FA2 transfer. This is an external dependency mismatch, not a Bert/Ernie parser failure.`,
+    );
+  }
+  if (!names.has('update_operators')) {
+    throw new Error(
+      `Purchase setup failed: payment token ${input.tokenAddress} does not expose FA2 update_operators, so Bert/Ernie cannot authorize ${input.targetAddress} to spend test tokens.`,
+    );
+  }
+}
+
+async function describePurchaseDependencyFailure(input: {
+  contractAddress: string;
+  tezosService: TezosServiceLike;
+  error: unknown;
+}): Promise<string | null> {
+  if (!input.tezosService.getContractStorage) {
+    return null;
+  }
+  let storage: unknown;
+  try {
+    storage = await input.tezosService.getContractStorage(input.contractAddress);
+  } catch {
+    return null;
+  }
+  const tokenAddress = findBestKt1(storage);
+  if (!tokenAddress) {
+    return null;
+  }
+  if (!input.tezosService.getContractEntrypoints) {
+    return `Purchase failed after reading payment token ${tokenAddress} from contract storage: ${asMessage(input.error)}`;
+  }
+  try {
+    const names = entrypointNames(await input.tezosService.getContractEntrypoints(tokenAddress));
+    if (!names.has('transfer')) {
+      return `Purchase failed because payment token ${tokenAddress} from contract storage does not expose FA2 transfer. This is a Shadownet dependency/storage mismatch, not a Kiln argument parser failure.`;
+    }
+  } catch (dependencyError) {
+    return `Purchase failed because payment token ${tokenAddress} from contract storage is not available on this network (${asMessage(dependencyError)}). Deploy through Kiln validation or direct-deploy prep so token references point at Shadownet dummy FA2 contracts.`;
+  }
+  return null;
+}
+
+async function describeContractCallFailure(input: {
+  entrypoint: string;
+  args: unknown[];
+  contractAddress: string;
+  tezosService: TezosServiceLike;
+  error: unknown;
+}): Promise<string> {
+  const message = asMessage(input.error);
+  if (
+    (input.entrypoint.toLowerCase() === 'purchase' ||
+      input.entrypoint.toLowerCase() === 'buy') &&
+    /FA2_TRANSFER_ENTRYPOINT_MISSING|Http error response:\s*\(404\)|404/i.test(message)
+  ) {
+    const dependencyMessage = await describePurchaseDependencyFailure({
+      contractAddress: input.contractAddress,
+      tezosService: input.tezosService,
+      error: input.error,
+    });
+    if (dependencyMessage) {
+      return dependencyMessage;
+    }
+  }
+  return message;
+}
+
 async function readMapValue(mapLike: unknown, key: number): Promise<unknown> {
   if (!mapLike) {
     return undefined;
@@ -356,6 +461,11 @@ async function prepareTokenPurchaseResources(input: {
   if (!tokenAddress) {
     return;
   }
+  await assertPaymentTokenIsUsable({
+    tokenAddress,
+    targetAddress: input.targetAddress,
+    tezosService: input.tezosService,
+  });
   const tokenId = findNumericField(storage, ['wtf_token_id', 'currency_token_id', 'token_id']) ?? 0;
   const amount = Math.max(
     (await resolvePurchaseAmountUnits({ args: input.args, storage })) ?? 1,
