@@ -138,9 +138,13 @@ type KilnWalletKind = 'tezos' | 'evm';
 
 interface KilnAuthUser {
   id: string;
+  handle?: string;
   walletKind: KilnWalletKind;
   walletAddress: string;
   lastLoginNetworkId?: string;
+  lastLoginWalletKind?: KilnWalletKind;
+  lastLoginWalletAddress?: string;
+  linkedWallets?: KilnAuthLinkedWallet[];
   access: {
     status: 'none' | 'pending' | 'approved' | 'blocked';
     requestedAt?: string;
@@ -161,6 +165,17 @@ interface KilnAuthUser {
     revokedAt?: string;
   } | null;
   projectStoreUpdatedAt?: string | null;
+}
+
+interface KilnAuthLinkedWallet {
+  id: string;
+  walletKind: KilnWalletKind;
+  walletAddress: string;
+  networkId?: string;
+  label?: string;
+  addedAt: string;
+  verifiedAt: string;
+  lastLoginAt?: string;
 }
 
 interface KilnAuthSession {
@@ -875,6 +890,8 @@ export default function App() {
   const [isDiscoveringContracts, setIsDiscoveringContracts] = useState(false);
   const [contractDiscoveryError, setContractDiscoveryError] = useState<string | null>(null);
   const [userHandle, setUserHandleState] = useState(() => loadUserHandle());
+  const [userHandleDraft, setUserHandleDraft] = useState(() => loadUserHandle());
+  const [isSavingUserHandle, setIsSavingUserHandle] = useState(false);
   const [linkedWallets, setLinkedWallets] = useState<LinkedKilnWallet[]>(() =>
     loadLinkedWallets(),
   );
@@ -1081,11 +1098,6 @@ export default function App() {
     });
   };
 
-  const setUserHandle = (nextHandle: string) => {
-    setUserHandleState(nextHandle);
-    persistUserHandle(nextHandle);
-  };
-
   const rememberLinkedWallet = (wallet: Omit<LinkedKilnWallet, 'id' | 'addedAt'>) => {
     setLinkedWallets((prev) => {
       const id = linkedWalletId(wallet.kind, wallet.address, wallet.networkId);
@@ -1106,19 +1118,48 @@ export default function App() {
     });
   };
 
-  const linkConnectedWalletToAccount = () => {
-    if (!connectedWallet) {
-      addLog('Connect a Tezos wallet before linking it to this browser account.', 'error');
+  const mergeAccountLinkedWallets = (wallets: KilnAuthLinkedWallet[] | undefined) => {
+    if (!wallets?.length) {
       return;
     }
-    rememberLinkedWallet({
-      kind: 'tezos',
-      address: connectedWallet.address,
-      networkId: connectedWallet.networkId,
-      label: connectedWallet.networkName ?? network.label,
-      source: 'connected',
+    setLinkedWallets((prev) => {
+      const incoming = wallets.map((wallet) => {
+        const networkLabel =
+          wallet.networkId === network.id ? network.label : wallet.networkId ?? 'Kiln account';
+        const next: LinkedKilnWallet = {
+          id: linkedWalletId(
+            wallet.walletKind,
+            wallet.walletAddress,
+            wallet.networkId ?? 'account',
+          ),
+          kind: wallet.walletKind,
+          address: wallet.walletAddress,
+          networkId: wallet.networkId ?? 'account',
+          label: wallet.label ?? networkLabel,
+          addedAt: wallet.addedAt,
+          verifiedAt: wallet.verifiedAt,
+          source: 'signed',
+        };
+        return next;
+      });
+      const incomingIds = new Set(incoming.map((wallet) => wallet.id));
+      const next = [
+        ...incoming,
+        ...prev.filter((wallet) => !incomingIds.has(wallet.id)),
+      ];
+      persistLinkedWallets(next);
+      return next;
     });
-    addLog(`Linked wallet ${connectedWallet.address} for ${network.label}.`, 'success');
+  };
+
+  const syncAccountIdentityFromUser = (user: KilnAuthUser) => {
+    if (typeof user.handle === 'string') {
+      const handle = user.handle.trim();
+      setUserHandleState(handle);
+      setUserHandleDraft(handle);
+      persistUserHandle(handle);
+    }
+    mergeAccountLinkedWallets(user.linkedWallets);
   };
 
   const removeLinkedWallet = (walletId: string) => {
@@ -1365,6 +1406,8 @@ export default function App() {
 
   const handleAccountSessionExpired = (message: string) => {
     setAuthSession(null);
+    setMcpToken(null);
+    setApiKey(null);
     projectSyncReadyRef.current = false;
     lastRemoteProjectSyncRef.current = '';
     if (projectSyncTimerRef.current) {
@@ -1467,6 +1510,7 @@ export default function App() {
         throw new Error(accountPayload.error ?? `Account refresh failed (HTTP ${accountResponse.status}).`);
       }
       if ('user' in accountPayload && accountPayload.user) {
+        syncAccountIdentityFromUser(accountPayload.user as KilnAuthUser);
         setAuthSession((prev) =>
           prev?.token === session.token ? { ...prev, user: accountPayload.user as KilnAuthUser } : prev,
         );
@@ -2065,14 +2109,68 @@ export default function App() {
     return headers;
   };
 
-  const sessionMatchesActiveWallet = (session: KilnAuthSession | null): boolean => {
-    if (!session || session.user.lastLoginNetworkId !== networkId) {
+  const accountSessionIsActive = (session: KilnAuthSession | null): boolean => {
+    if (!session) {
       return false;
     }
-    if (isTezos) {
-      return Boolean(connectedWallet && session.user.walletAddress === connectedWallet.address);
+    const expiresAt = Date.parse(session.expiresAt);
+    return Number.isFinite(expiresAt) && expiresAt > Date.now();
+  };
+
+  const saveUserHandle = async () => {
+    const handle = userHandleDraft.trim();
+    const session = authSession;
+    setIsSavingUserHandle(true);
+    try {
+      setUserHandleState(handle);
+      setUserHandleDraft(handle);
+      persistUserHandle(handle);
+
+      if (!accountSessionIsActive(session) || !session) {
+        addLog(handle ? 'Saved handle locally.' : 'Cleared local handle.', 'success');
+        return;
+      }
+
+      const response = await fetch('/api/kiln/me', {
+        method: 'PUT',
+        headers: sessionHeaders(true, session),
+        body: JSON.stringify({ handle }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as
+        | { user?: KilnAuthUser; error?: string }
+        | { error?: string };
+      if (response.status === 401) {
+        handleAccountSessionExpired('Kiln account session expired. Log in again to save account settings.');
+        return;
+      }
+      if (!response.ok || !('user' in payload) || !payload.user) {
+        throw new Error(payload.error ?? 'Unable to save account profile.');
+      }
+      const nextSession = { ...session, user: payload.user };
+      setAuthSession(nextSession);
+      syncAccountIdentityFromUser(payload.user);
+      addLog(handle ? 'Saved handle to Kiln account.' : 'Cleared Kiln account handle.', 'success');
+    } catch (error) {
+      addLog(
+        `Handle save failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsSavingUserHandle(false);
     }
-    return session.user.walletKind === 'evm';
+  };
+
+  const logoutAccount = () => {
+    setAuthSession(null);
+    setMcpToken(null);
+    setApiKey(null);
+    projectSyncReadyRef.current = false;
+    lastRemoteProjectSyncRef.current = '';
+    if (projectSyncTimerRef.current) {
+      window.clearTimeout(projectSyncTimerRef.current);
+      projectSyncTimerRef.current = null;
+    }
+    addLog('Logged out of Kiln account. Connected wallet stayed available for signing.', 'info');
   };
 
   const loginWalletForKiln = async (
@@ -2158,15 +2256,21 @@ export default function App() {
       user: verified.user,
     };
     setAuthSession(nextSession);
+    syncAccountIdentityFromUser(verified.user);
     rememberLinkedWallet({
-      kind: verified.user.walletKind,
-      address: verified.user.walletAddress,
+      kind: verified.user.lastLoginWalletKind ?? verified.user.walletKind,
+      address: verified.user.lastLoginWalletAddress ?? verified.user.walletAddress,
       networkId: verified.user.lastLoginNetworkId ?? networkId,
       label: network.label,
       source: 'signed',
       verifiedAt: new Date().toISOString(),
     });
-    addLog(`Wallet ownership verified for Kiln account: ${verified.user.walletAddress}.`, 'success');
+    addLog(
+      `Kiln account login active: ${
+        verified.user.lastLoginWalletAddress ?? verified.user.walletAddress
+      }.`,
+      'success',
+    );
     return nextSession;
   };
 
@@ -2185,10 +2289,98 @@ export default function App() {
     }
   };
 
+  const linkConnectedWalletToAccount = async () => {
+    if (!connectedWallet) {
+      addLog('Connect a Tezos wallet before linking it to an account.', 'error');
+      return;
+    }
+
+    rememberLinkedWallet({
+      kind: 'tezos',
+      address: connectedWallet.address,
+      networkId: connectedWallet.networkId,
+      label: connectedWallet.networkName ?? network.label,
+      source: 'connected',
+    });
+
+    const session = authSession;
+    if (!accountSessionIsActive(session) || !session) {
+      addLog(
+        'Linked wallet in this browser. Log in to Kiln before associating it with your account.',
+        'info',
+      );
+      return;
+    }
+
+    try {
+      const challengeResponse = await fetch('/api/kiln/auth/challenge', {
+        method: 'POST',
+        headers: buildHeaders(true),
+        body: JSON.stringify({
+          walletKind: 'tezos',
+          walletAddress: connectedWallet.address,
+          networkId: connectedWallet.networkId,
+        }),
+      });
+      const challenge = (await challengeResponse.json()) as
+        | { challengeId: string; message: string; error?: string }
+        | { error?: string };
+      if (!challengeResponse.ok || !('challengeId' in challenge)) {
+        throw new Error(challenge.error ?? 'Unable to create wallet link challenge.');
+      }
+
+      const { signKilnAuthChallenge } = await import('./lib/shadownet-wallet');
+      const signed = await signKilnAuthChallenge(challenge.message, connectedWallet.networkId);
+      if (signed.address !== connectedWallet.address) {
+        throw new Error(
+          `Signed wallet ${signed.address} does not match connected wallet ${connectedWallet.address}.`,
+        );
+      }
+
+      const response = await fetch('/api/kiln/wallets/link', {
+        method: 'POST',
+        headers: sessionHeaders(true, session),
+        body: JSON.stringify({
+          challengeId: challenge.challengeId,
+          signature: signed.signature,
+          publicKey: signed.publicKey,
+          label: connectedWallet.networkName ?? network.label,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as
+        | { user?: KilnAuthUser; error?: string }
+        | { error?: string };
+      if (response.status === 401) {
+        handleAccountSessionExpired('Kiln account session expired. Log in again before linking wallets.');
+        return;
+      }
+      if (!response.ok || !('user' in payload) || !payload.user) {
+        throw new Error(payload.error ?? 'Unable to link wallet to account.');
+      }
+      const nextSession = { ...session, user: payload.user };
+      setAuthSession(nextSession);
+      syncAccountIdentityFromUser(payload.user);
+      rememberLinkedWallet({
+        kind: 'tezos',
+        address: connectedWallet.address,
+        networkId: connectedWallet.networkId,
+        label: connectedWallet.networkName ?? network.label,
+        source: 'signed',
+        verifiedAt: new Date().toISOString(),
+      });
+      addLog(`Associated ${connectedWallet.address} with this Kiln account.`, 'success');
+    } catch (error) {
+      addLog(
+        `Wallet link failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'error',
+      );
+    }
+  };
+
   const ensureWalletLogin = async (
     evmTarget: EvmWalletTarget = 'auto',
   ): Promise<KilnAuthSession | null> => {
-    if (sessionMatchesActiveWallet(authSession)) {
+    if (accountSessionIsActive(authSession)) {
       return authSession;
     }
 
@@ -2293,6 +2485,7 @@ export default function App() {
       }
       setMcpToken(payload.token);
       setAuthSession({ ...session, user: payload.user });
+      syncAccountIdentityFromUser(payload.user);
       addLog(`MCP token generated; expires ${new Date(payload.expiresAt).toLocaleString()}.`, 'success');
     } catch (error) {
       addLog(
@@ -2329,6 +2522,7 @@ export default function App() {
       }
       setApiKey(payload.token);
       setAuthSession({ ...session, user: payload.user });
+      syncAccountIdentityFromUser(payload.user);
       addLog(`API key generated; expires ${new Date(payload.expiresAt).toLocaleString()}.`, 'success');
     } catch (error) {
       addLog(
@@ -2646,17 +2840,6 @@ export default function App() {
     if (!connectedWallet) {
       throw new Error('Connect a Tezos wallet before deploying.');
     }
-    const verifiedWallet =
-      authSession?.user.walletKind === 'tezos' &&
-      authSession.user.lastLoginNetworkId === networkId
-        ? authSession.user.walletAddress
-        : null;
-    if (verifiedWallet && verifiedWallet !== connectedWallet.address) {
-      await disconnectWallet();
-      throw new Error(
-        `Connected wallet ${connectedWallet.address} does not match verified ${network.label} deployment wallet ${verifiedWallet}. Reconnect the correct wallet.`,
-      );
-    }
     const {
       assertConnectedShadownetWallet,
       assignConnectedWalletAsAdmin,
@@ -2902,12 +3085,12 @@ export default function App() {
 
   // Tab guard logic
   const verifiedEvmWalletAddress =
-    isEvm && authSession?.user.walletKind === 'evm' ? authSession.user.walletAddress : null;
+    isEvm && (authSession?.user.lastLoginWalletKind ?? authSession?.user.walletKind) === 'evm'
+      ? authSession?.user.lastLoginWalletAddress ?? authSession?.user.walletAddress ?? null
+      : null;
   const verifiedTezosWalletAddress =
-    isTezos &&
-    authSession?.user.walletKind === 'tezos' &&
-    authSession.user.lastLoginNetworkId === networkId
-      ? authSession.user.walletAddress
+    isTezos && (authSession?.user.lastLoginWalletKind ?? authSession?.user.walletKind) === 'tezos'
+      ? authSession?.user.lastLoginWalletAddress ?? authSession?.user.walletAddress ?? null
       : null;
 
   const tabs = useMemo<
@@ -3314,7 +3497,10 @@ export default function App() {
               isTezos={isTezos}
               isEvm={isEvm}
               userHandle={userHandle}
-              setUserHandle={setUserHandle}
+              userHandleDraft={userHandleDraft}
+              setUserHandleDraft={setUserHandleDraft}
+              onSaveUserHandle={saveUserHandle}
+              isSavingUserHandle={isSavingUserHandle}
               linkedWallets={linkedWallets}
               onLinkConnectedWallet={linkConnectedWalletToAccount}
               onRemoveLinkedWallet={removeLinkedWallet}
@@ -3330,6 +3516,7 @@ export default function App() {
               isGeneratingMcpToken={isGeneratingMcpToken}
               isGeneratingApiKey={isGeneratingApiKey}
               onLogin={startMcpWalletLogin}
+              onLogout={logoutAccount}
               onRequestAccess={requestMcpAccess}
               onGenerateToken={generateMcpToken}
               onCopyToken={copyMcpToken}
@@ -4383,7 +4570,10 @@ function SettingsTab({
   isTezos,
   isEvm,
   userHandle,
-  setUserHandle,
+  userHandleDraft,
+  setUserHandleDraft,
+  onSaveUserHandle,
+  isSavingUserHandle,
   linkedWallets,
   onLinkConnectedWallet,
   onRemoveLinkedWallet,
@@ -4399,6 +4589,7 @@ function SettingsTab({
   isGeneratingMcpToken,
   isGeneratingApiKey,
   onLogin,
+  onLogout,
   onRequestAccess,
   onGenerateToken,
   onCopyToken,
@@ -4408,9 +4599,12 @@ function SettingsTab({
   isTezos: boolean;
   isEvm: boolean;
   userHandle: string;
-  setUserHandle: (next: string) => void;
+  userHandleDraft: string;
+  setUserHandleDraft: (next: string) => void;
+  onSaveUserHandle: () => Promise<void>;
+  isSavingUserHandle: boolean;
   linkedWallets: LinkedKilnWallet[];
-  onLinkConnectedWallet: () => void;
+  onLinkConnectedWallet: () => Promise<void>;
   onRemoveLinkedWallet: (walletId: string) => void;
   connectedWallet: ConnectedWalletState | null;
   onConnect: () => Promise<void>;
@@ -4424,6 +4618,7 @@ function SettingsTab({
   isGeneratingMcpToken: boolean;
   isGeneratingApiKey: boolean;
   onLogin: (target?: EvmWalletTarget) => Promise<void>;
+  onLogout: () => void;
   onRequestAccess: () => Promise<void>;
   onGenerateToken: () => Promise<void>;
   onCopyToken: () => Promise<void>;
@@ -4435,29 +4630,38 @@ function SettingsTab({
   const tokenMeta = authSession?.user.currentMcpToken;
   const apiTokenMeta = authSession?.user.currentApiToken;
   const { network } = useKilnNetwork();
-  const signedWalletLabel = authSession?.user.walletAddress ?? 'not signed';
-  const walletKindLabel = authSession?.user.walletKind ?? (isEvm ? 'evm' : 'tezos');
+  const accountWalletLabel =
+    authSession?.user.lastLoginWalletAddress ??
+    authSession?.user.walletAddress ??
+    'not logged in';
+  const accountWalletKindLabel =
+    authSession?.user.lastLoginWalletKind ??
+    authSession?.user.walletKind ??
+    (isEvm ? 'evm' : 'tezos');
   const connectedNetworkLabel =
     connectedWallet?.networkId === network.id
       ? network.label
       : connectedWallet?.networkId ?? null;
-  const canStartWalletBackedAction =
-    isTezos ? Boolean(connectedWallet) : true;
-  const walletVerifiedForNetwork =
-    authSession?.user.lastLoginNetworkId === network.id &&
-    (!connectedWallet || authSession.user.walletAddress === connectedWallet.address);
+  const hasAccountSession = Boolean(authSession);
+  const connectedWalletMatchesAccount =
+    Boolean(authSession && connectedWallet && accountWalletLabel === connectedWallet.address);
+  const connectedWalletDiffersFromAccount =
+    Boolean(authSession && connectedWallet && accountWalletLabel !== connectedWallet.address);
+  const canUseAccountAction =
+    hasAccountSession || (isTezos ? Boolean(connectedWallet) : true);
   const canRequestAccess =
-    canStartWalletBackedAction && !isRequestingMcpAccess && !isMcpLoggingIn;
+    canUseAccountAction && !isRequestingMcpAccess && !isMcpLoggingIn;
   const canGenerateToken =
-    canStartWalletBackedAction &&
+    canUseAccountAction &&
     accessStatus !== 'blocked' &&
     !isGeneratingMcpToken &&
     !isMcpLoggingIn;
   const canGenerateApiKey =
-    canStartWalletBackedAction &&
+    canUseAccountAction &&
     accessStatus !== 'blocked' &&
     !isGeneratingApiKey &&
     !isMcpLoggingIn;
+  const handleDirty = userHandleDraft.trim() !== userHandle;
 
   return (
     <div className="space-y-5">
@@ -4473,18 +4677,93 @@ function SettingsTab({
       </div>
 
       <details className="collapse collapse-arrow rounded-xl border border-base-300 bg-base-100" open>
+        <summary className="collapse-title font-bold">Account session</summary>
+        <div className="collapse-content space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+                <UserCircle className="w-4 h-4" />
+                Kiln login
+              </h3>
+              <p className="text-xs text-base-content/60 mt-1">
+                Login controls project sync and account access. Wallet connection remains available for signing after logout.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline gap-2"
+                disabled={isMcpLoggingIn || (isTezos && !connectedWallet)}
+                title="Sign a one-time message to log in to the Kiln account."
+                onClick={() => {
+                  void onLogin();
+                }}
+              >
+                <KeyRound className="w-4 h-4" />
+                {isMcpLoggingIn ? 'Signing...' : hasAccountSession ? 'Switch login' : 'Log in'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                disabled={!hasAccountSession}
+                onClick={onLogout}
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+          <div className="rounded-lg bg-base-200/50 border border-base-300 p-3 text-xs font-mono break-all">
+            <div>Status: {hasAccountSession ? 'logged in' : 'public workbench'}</div>
+            <div>Account wallet: {accountWalletLabel}</div>
+            <div>Account kind: {accountWalletKindLabel}</div>
+            <div>Login network: {authSession?.user.lastLoginNetworkId ?? 'none'}</div>
+            {authSession ? <div>Session expires: {new Date(authSession.expiresAt).toLocaleString()}</div> : null}
+          </div>
+          {connectedWalletMatchesAccount ? (
+            <div className="alert alert-success text-xs">
+              <span>Connected signer is the wallet currently logged in to this account.</span>
+            </div>
+          ) : null}
+          {connectedWalletDiffersFromAccount ? (
+            <div className="alert alert-info text-xs">
+              <span>
+                Connected signer differs from the logged-in account wallet; that is allowed. Link it if it should open this account later.
+              </span>
+            </div>
+          ) : null}
+        </div>
+      </details>
+
+      <details className="collapse collapse-arrow rounded-xl border border-base-300 bg-base-100" open>
         <summary className="collapse-title font-bold">User handle</summary>
         <div className="collapse-content space-y-3">
           <p className="text-xs text-base-content/60">
-            Local browser identity for project organization. Wallets and contracts still remain the source of truth.
+            Handle is saved locally in public mode and synced to your Kiln account when logged in.
           </p>
-          <input
-            className="input input-bordered w-full max-w-md"
-            value={userHandle}
-            onChange={(event) => setUserHandle(event.target.value)}
-            placeholder="Choose a Kiln handle"
-            aria-label="Kiln user handle"
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              className="input input-bordered w-full max-w-md"
+              value={userHandleDraft}
+              onChange={(event) => setUserHandleDraft(event.target.value)}
+              placeholder="Choose a Kiln handle"
+              aria-label="Kiln user handle"
+              maxLength={64}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-primary gap-2"
+              disabled={!handleDirty || isSavingUserHandle}
+              onClick={() => {
+                void onSaveUserHandle();
+              }}
+            >
+              <Save className="w-4 h-4" />
+              {isSavingUserHandle ? 'Saving...' : 'Save handle'}
+            </button>
+          </div>
+          <div className="text-xs text-base-content/60">
+            Saved handle: {userHandle || 'none'}
+          </div>
         </div>
       </details>
 
@@ -4532,7 +4811,9 @@ function SettingsTab({
                 type="button"
                 className="btn btn-sm btn-secondary"
                 disabled={!connectedWallet}
-                onClick={onLinkConnectedWallet}
+                onClick={() => {
+                  void onLinkConnectedWallet();
+                }}
               >
                 Link connected wallet
               </button>
@@ -4549,21 +4830,12 @@ function SettingsTab({
               </div>
             ) : null}
             {isTezos ? <div>Connected RPC: {connectedWallet?.rpcUrl ?? 'none'}</div> : null}
-            <div>Signed account: {signedWalletLabel}</div>
-            <div>Kind: {walletKindLabel}</div>
-            <div>Signed network: {authSession?.user.lastLoginNetworkId ?? 'not signed'}</div>
-            {authSession ? <div>Session expires: {new Date(authSession.expiresAt).toLocaleString()}</div> : null}
+            <div>Account session: {hasAccountSession ? 'active' : 'not logged in'}</div>
           </div>
-          {authSession ? (
-            <div
-              className={`alert text-xs ${
-                walletVerifiedForNetwork ? 'alert-success' : 'alert-warning'
-              }`}
-            >
+          {connectedWallet ? (
+            <div className="alert alert-info text-xs">
               <span>
-                {walletVerifiedForNetwork
-                  ? `Wallet ownership verified for ${network.label}.`
-                  : `Wallet login is not verified for the active ${network.label} signer.`}
+                Connected wallet is the active signer for deploy and test actions on {network.label}.
               </span>
             </div>
           ) : null}
@@ -4620,22 +4892,10 @@ function SettingsTab({
                   MCP access
                 </h3>
                 <p className="text-xs text-base-content/60 mt-1">
-                  Verify account signs a one-time message, then access is approved unless the wallet is blocked.
+                  Kiln checks the logged-in account and approves access unless an associated wallet is blocked.
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline gap-2"
-                  disabled={isMcpLoggingIn || (isTezos && !connectedWallet)}
-                  title="Sign a one-time message to create the Kiln account used for MCP and API tokens."
-                  onClick={() => {
-                    void onLogin();
-                  }}
-                >
-                  <KeyRound className="w-4 h-4" />
-                  {isMcpLoggingIn ? 'Signing...' : authSession ? 'Re-verify account' : 'Verify account'}
-                </button>
                 <button
                   type="button"
                   className="btn btn-sm btn-secondary gap-2"
@@ -5179,15 +5439,12 @@ function DeployTab({
     );
   }
 
-  const connectedWalletMatchesVerifiedSigner =
-    !connectedWallet ||
-    !verifiedTezosWalletAddress ||
-    connectedWallet.address === verifiedTezosWalletAddress;
+  const connectedWalletDiffersFromAccount =
+    Boolean(connectedWallet && verifiedTezosWalletAddress) &&
+    connectedWallet?.address !== verifiedTezosWalletAddress;
   const deployReady =
     (Boolean(lastWorkflow && clearanceId) || directDeployAvailable) &&
-    (deployMode === 'puppet'
-      ? canPuppet
-      : Boolean(connectedWallet && connectedWalletMatchesVerifiedSigner));
+    (deployMode === 'puppet' ? canPuppet : Boolean(connectedWallet));
 
   return (
     <div className="space-y-4">
@@ -5233,8 +5490,8 @@ function DeployTab({
             <div className="text-[0.65rem] font-mono mt-2 text-base-content/60 space-y-1">
               <div>Connected: {connectedWallet.address}</div>
               <div>
-                Verified:{' '}
-                {verifiedTezosWalletAddress ? verifiedTezosWalletAddress : 'not signed'}
+                Account login:{' '}
+                {verifiedTezosWalletAddress ? verifiedTezosWalletAddress : 'not logged in'}
               </div>
             </div>
           ) : (
@@ -5313,7 +5570,7 @@ function DeployTab({
           <span className="opacity-60">Deployment signer: </span>
           <span
             className={
-              deployMode === 'connected' && connectedWallet && connectedWalletMatchesVerifiedSigner
+              deployMode === 'connected' && connectedWallet
                 ? 'font-mono text-success'
                 : 'text-warning'
             }
@@ -5329,9 +5586,10 @@ function DeployTab({
             the origination request.
           </div>
         ) : null}
-        {deployMode === 'connected' && connectedWallet && !connectedWalletMatchesVerifiedSigner ? (
-          <div className="text-error">
-            Connected wallet does not match the verified Settings signer.
+        {deployMode === 'connected' && connectedWalletDiffersFromAccount ? (
+          <div className="text-info">
+            Connected signer differs from the logged-in account wallet; deployment will use the
+            connected signer.
           </div>
         ) : null}
         {network.tier === 'mainnet' ? (

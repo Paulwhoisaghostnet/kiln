@@ -19,6 +19,14 @@ const verifyPayloadSchema = z.object({
   publicKey: z.string().trim().min(1).max(128).optional(),
 });
 
+const profilePayloadSchema = z.object({
+  handle: z.string().trim().max(64).optional(),
+});
+
+const linkWalletPayloadSchema = verifyPayloadSchema.extend({
+  label: z.string().trim().max(80).optional(),
+});
+
 const projectStorePayloadSchema = z.object({
   projectStore: z.unknown(),
 });
@@ -47,11 +55,24 @@ async function requireUserSession(
 function publicUser(user: KilnUser) {
   return {
     id: user.id,
+    handle: user.handle ?? '',
     walletKind: user.walletKind,
     walletAddress: user.walletAddress,
     lastLoginNetworkId: user.lastLoginNetworkId,
+    lastLoginWalletKind: user.lastLoginWalletKind ?? user.walletKind,
+    lastLoginWalletAddress: user.lastLoginWalletAddress ?? user.walletAddress,
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
+    linkedWallets: (user.linkedWallets ?? []).map((wallet) => ({
+      id: wallet.id,
+      walletKind: wallet.walletKind,
+      walletAddress: wallet.walletAddress,
+      networkId: wallet.networkId,
+      label: wallet.label,
+      addedAt: wallet.addedAt,
+      verifiedAt: wallet.verifiedAt,
+      lastLoginAt: wallet.lastLoginAt,
+    })),
     access: user.access,
     currentMcpToken: user.currentMcpToken
       ? {
@@ -143,6 +164,62 @@ export function createAuthRouter(services: ApiAppServices): Router {
       return;
     }
     res.json({ success: true, user: publicUser(user) });
+  });
+
+  router.put('/api/kiln/me', async (req, res) => {
+    const user = await requireUserSession(req, services);
+    if (!user) {
+      res.status(401).json({ error: 'Wallet login required.' });
+      return;
+    }
+    const payload = profilePayloadSchema.safeParse(req.body);
+    if (!payload.success) {
+      res.status(400).json({ error: validationErrorMessage(payload.error) });
+      return;
+    }
+
+    try {
+      const updated = await services.userStore.updateUserProfile(user.id, payload.data);
+      services.activityLogger.log({
+        timestamp: new Date().toISOString(),
+        requestId: res.locals.requestId as string | undefined,
+        event: 'account_profile_saved',
+        userId: user.id,
+        walletKind: user.walletKind,
+        walletAddress: user.walletAddress,
+      });
+      res.json({ success: true, user: publicUser(updated) });
+    } catch (error) {
+      res.status(500).json({ error: asMessage(error) });
+    }
+  });
+
+  router.post('/api/kiln/wallets/link', async (req, res) => {
+    const user = await requireUserSession(req, services);
+    if (!user) {
+      res.status(401).json({ error: 'Wallet login required.' });
+      return;
+    }
+    const payload = linkWalletPayloadSchema.safeParse(req.body);
+    if (!payload.success) {
+      res.status(400).json({ error: validationErrorMessage(payload.error) });
+      return;
+    }
+
+    try {
+      const updated = await services.userStore.linkWalletToUser(user.id, payload.data);
+      services.activityLogger.log({
+        timestamp: new Date().toISOString(),
+        requestId: res.locals.requestId as string | undefined,
+        event: 'wallet_linked_to_account',
+        userId: user.id,
+        walletKind: updated.lastLoginWalletKind ?? user.walletKind,
+        walletAddress: updated.lastLoginWalletAddress ?? user.walletAddress,
+      });
+      res.json({ success: true, user: publicUser(updated) });
+    } catch (error) {
+      res.status(409).json({ error: asMessage(error) });
+    }
   });
 
   router.get('/api/kiln/projects', async (req, res) => {

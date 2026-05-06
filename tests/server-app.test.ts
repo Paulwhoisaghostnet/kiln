@@ -1780,6 +1780,58 @@ describe('createApiApp', () => {
         updatedAt: fixedNow.toISOString(),
         projectStore,
       });
+
+      const profile = await request(app)
+        .put('/api/kiln/me')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`)
+        .send({ handle: 'wtf-dev' });
+      expect(profile.status).toBe(200);
+      expect(profile.body.user.handle).toBe('wtf-dev');
+
+      const linkChallenge = await request(app).post('/api/kiln/auth/challenge').send({
+        walletKind: 'tezos',
+        walletAddress: walletBAddress,
+        networkId: 'tezos-shadownet',
+      });
+      const linked = await request(app)
+        .post('/api/kiln/wallets/link')
+        .set('authorization', `Bearer ${verified.body.sessionToken}`)
+        .send({
+          challengeId: linkChallenge.body.challengeId,
+          signature: 'sig-valid-for-test',
+          publicKey: 'edpk-test-linked',
+          label: 'Shadownet test signer',
+        });
+      expect(linked.status).toBe(200);
+      expect(linked.body.user.linkedWallets).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            walletAddress: walletBAddress,
+            label: 'Shadownet test signer',
+          }),
+        ]),
+      );
+
+      const linkedLoginChallenge = await request(app).post('/api/kiln/auth/challenge').send({
+        walletKind: 'tezos',
+        walletAddress: walletBAddress,
+        networkId: 'tezos-shadownet',
+      });
+      const linkedLogin = await request(app).post('/api/kiln/auth/verify').send({
+        challengeId: linkedLoginChallenge.body.challengeId,
+        signature: 'sig-valid-for-test',
+        publicKey: 'edpk-test-linked',
+      });
+      expect(linkedLogin.status).toBe(200);
+      expect(linkedLogin.body.user.id).toBe(verified.body.user.id);
+      expect(linkedLogin.body.user.walletAddress).toBe(walletAAddress);
+      expect(linkedLogin.body.user.lastLoginWalletAddress).toBe(walletBAddress);
+
+      const linkedLoaded = await request(app)
+        .get('/api/kiln/projects')
+        .set('authorization', `Bearer ${linkedLogin.body.sessionToken}`);
+      expect(linkedLoaded.status).toBe(200);
+      expect(linkedLoaded.body.projectStore).toEqual(projectStore);
     } finally {
       await fs.rm(userDbPath, { force: true });
     }

@@ -136,6 +136,77 @@ describe('KilnUserStore', () => {
     expect(loaded).toEqual(saved);
   });
 
+  it('saves profile handles and lets linked wallets open the same account', async () => {
+    const fixedNow = new Date('2026-05-06T18:00:00.000Z');
+    const store = createKilnUserStore({
+      env: baseEnv({
+        KILN_USER_DB_PATH: await tempDbPath(),
+      }),
+      walletSignatureVerifier: () => true,
+      now: () => fixedNow,
+    });
+
+    const primaryChallenge = await store.createChallenge({
+      walletKind: 'tezos',
+      walletAddress: 'tz1PrimaryWallet111111111111111111111',
+      networkId: 'tezos-shadownet',
+    });
+    const { user: primaryUser } = await store.verifyChallenge({
+      challengeId: primaryChallenge.id,
+      signature: 'sig-primary',
+      publicKey: 'pk-primary',
+    });
+    const profiledUser = await store.updateUserProfile(primaryUser.id, {
+      handle: 'wtf-dev',
+    });
+    await store.saveProjectStore(primaryUser.id, {
+      projects: [{ id: 'project-1', name: 'WTF in app market' }],
+      activeProjectId: 'project-1',
+    });
+
+    const linkedChallenge = await store.createChallenge({
+      walletKind: 'tezos',
+      walletAddress: 'tz1LinkedWallet2222222222222222222222',
+      networkId: 'tezos-shadownet',
+    });
+    const linkedUser = await store.linkWalletToUser(primaryUser.id, {
+      challengeId: linkedChallenge.id,
+      signature: 'sig-linked',
+      publicKey: 'pk-linked',
+      label: 'Shadownet deployer',
+    });
+
+    const linkedLoginChallenge = await store.createChallenge({
+      walletKind: 'tezos',
+      walletAddress: 'tz1LinkedWallet2222222222222222222222',
+      networkId: 'tezos-shadownet',
+    });
+    const { user: linkedLoginUser } = await store.verifyChallenge({
+      challengeId: linkedLoginChallenge.id,
+      signature: 'sig-linked-login',
+      publicKey: 'pk-linked',
+    });
+    const loaded = await store.getProjectStore(linkedLoginUser.id);
+
+    expect(profiledUser.handle).toBe('wtf-dev');
+    expect(linkedUser.linkedWallets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          walletAddress: 'tz1LinkedWallet2222222222222222222222',
+          label: 'Shadownet deployer',
+        }),
+      ]),
+    );
+    expect(linkedLoginUser.id).toBe(primaryUser.id);
+    expect(linkedLoginUser.walletAddress).toBe('tz1PrimaryWallet111111111111111111111');
+    expect(linkedLoginUser.lastLoginWalletAddress).toBe(
+      'tz1LinkedWallet2222222222222222222222',
+    );
+    expect(loaded?.data).toMatchObject({
+      activeProjectId: 'project-1',
+    });
+  });
+
   it('defaults production user state to /var/lib/kiln', () => {
     const store = createKilnUserStore({
       env: baseEnv({ NODE_ENV: 'production' }),

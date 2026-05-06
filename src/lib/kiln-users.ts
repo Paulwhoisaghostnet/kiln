@@ -25,13 +25,19 @@ export type WalletSignatureVerifier = (
 
 export interface KilnUser {
   id: string;
+  handle?: string;
   walletKind: WalletKind;
   walletAddress: string;
   normalizedWalletAddress: string;
   publicKey?: string;
   lastLoginNetworkId?: KilnNetworkId;
+  lastLoginWalletKind?: WalletKind;
+  lastLoginWalletAddress?: string;
+  lastLoginNormalizedWalletAddress?: string;
+  lastLoginPublicKey?: string;
   createdAt: string;
   lastLoginAt: string;
+  linkedWallets?: LinkedKilnUserWallet[];
   access: {
     status: McpAccessStatus;
     requestedAt?: string;
@@ -55,6 +61,18 @@ export interface KilnUser {
     updatedAt: string;
     data: unknown;
   };
+}
+
+export interface LinkedKilnUserWallet {
+  id: string;
+  walletKind: WalletKind;
+  walletAddress: string;
+  normalizedWalletAddress: string;
+  networkId?: KilnNetworkId;
+  label?: string;
+  addedAt: string;
+  verifiedAt: string;
+  lastLoginAt?: string;
 }
 
 export interface UserSession {
@@ -241,6 +259,14 @@ function accessEntryMatches(
   return normalizedEntryAddress === normalizedWalletAddress;
 }
 
+function linkedWalletId(
+  walletKind: WalletKind,
+  normalizedWalletAddress: string,
+  networkId?: KilnNetworkId,
+): string {
+  return `${walletKind}:${networkId ?? 'any'}:${normalizedWalletAddress}`;
+}
+
 export async function defaultWalletSignatureVerifier(
   input: WalletSignatureVerificationInput,
 ): Promise<boolean> {
@@ -378,10 +404,10 @@ export class KilnUserStore {
       }
 
       challenge.usedAt = now.toISOString();
-      let user = db.users.find(
-        (row) =>
-          row.walletKind === challenge.walletKind &&
-          row.normalizedWalletAddress === challenge.normalizedWalletAddress,
+      let user = this.findUserByWallet(
+        db,
+        challenge.walletKind,
+        challenge.normalizedWalletAddress,
       );
       if (!user) {
         user = {
@@ -395,12 +421,31 @@ export class KilnUserStore {
         };
         db.users.push(user);
       }
-      user.walletAddress = challenge.walletAddress;
+      const primaryWalletLogin =
+        user.walletKind === challenge.walletKind &&
+        user.normalizedWalletAddress === challenge.normalizedWalletAddress;
+      if (primaryWalletLogin) {
+        user.walletAddress = challenge.walletAddress;
+        user.normalizedWalletAddress = challenge.normalizedWalletAddress;
+      }
       user.lastLoginNetworkId = challenge.networkId;
+      user.lastLoginWalletKind = challenge.walletKind;
+      user.lastLoginWalletAddress = challenge.walletAddress;
+      user.lastLoginNormalizedWalletAddress = challenge.normalizedWalletAddress;
       user.lastLoginAt = now.toISOString();
       if (input.publicKey) {
         user.publicKey = input.publicKey;
+        user.lastLoginPublicKey = input.publicKey;
       }
+      this.upsertLinkedWallet(user, {
+        walletKind: challenge.walletKind,
+        walletAddress: challenge.walletAddress,
+        normalizedWalletAddress: challenge.normalizedWalletAddress,
+        networkId: challenge.networkId,
+        addedAt: now.toISOString(),
+        verifiedAt: now.toISOString(),
+        lastLoginAt: now.toISOString(),
+      });
 
       const sessionToken = createSecret('kiln_session');
       const session: UserSession = {
@@ -459,6 +504,77 @@ export class KilnUserStore {
     });
   }
 
+  async updateUserProfile(
+    userId: string,
+    input: { handle?: string | null },
+  ): Promise<KilnUser> {
+    return this.mutate((db) => {
+      const user = this.requireUser(db, userId);
+      if (Object.prototype.hasOwnProperty.call(input, 'handle')) {
+        const handle = input.handle?.trim() ?? '';
+        user.handle = handle || undefined;
+      }
+      return cloneUser(user);
+    });
+  }
+
+  async linkWalletToUser(
+    userId: string,
+    input: {
+      challengeId: string;
+      signature: string;
+      publicKey?: string;
+      label?: string;
+    },
+  ): Promise<KilnUser> {
+    return this.mutate(async (db) => {
+      const now = this.now();
+      this.pruneExpired(db, now);
+      const user = this.requireUser(db, userId);
+      const challenge = db.challenges.find((row) => row.id === input.challengeId);
+      if (!challenge || challenge.usedAt) {
+        throw new Error('Wallet link challenge is missing or already used.');
+      }
+      if (Date.parse(challenge.expiresAt) <= now.getTime()) {
+        throw new Error('Wallet link challenge has expired.');
+      }
+
+      const verified = await this.walletSignatureVerifier({
+        walletKind: challenge.walletKind,
+        walletAddress: challenge.walletAddress,
+        networkId: challenge.networkId,
+        message: challenge.message,
+        messageBytes: challenge.messageBytes,
+        signature: input.signature,
+        publicKey: input.publicKey,
+      });
+      if (!verified) {
+        throw new Error('Wallet signature verification failed.');
+      }
+
+      const existingOwner = this.findUserByWallet(
+        db,
+        challenge.walletKind,
+        challenge.normalizedWalletAddress,
+      );
+      if (existingOwner && existingOwner.id !== user.id) {
+        throw new Error('Wallet is already associated with another Kiln account.');
+      }
+
+      challenge.usedAt = now.toISOString();
+      this.upsertLinkedWallet(user, {
+        walletKind: challenge.walletKind,
+        walletAddress: challenge.walletAddress,
+        normalizedWalletAddress: challenge.normalizedWalletAddress,
+        networkId: challenge.networkId,
+        label: input.label?.trim() || undefined,
+        addedAt: now.toISOString(),
+        verifiedAt: now.toISOString(),
+      });
+      return cloneUser(user);
+    });
+  }
+
   async requestMcpAccess(userId: string): Promise<KilnUser['access']> {
     return this.mutate((db) => {
       const now = this.now();
@@ -470,8 +586,11 @@ export class KilnUserStore {
         checkedBy: ACCESS_WORKER_NAME,
       };
 
+      const accessWallets = this.accessWalletsForUser(user);
       const blocked = this.blockList.some((entry) =>
-        accessEntryMatches(entry, user.walletKind, user.normalizedWalletAddress),
+        accessWallets.some((wallet) =>
+          accessEntryMatches(entry, wallet.walletKind, wallet.normalizedWalletAddress),
+        ),
       );
       if (blocked) {
         user.access = {
@@ -485,7 +604,9 @@ export class KilnUserStore {
       }
 
       const matchedAccessList = this.accessList.some((entry) =>
-        accessEntryMatches(entry, user.walletKind, user.normalizedWalletAddress),
+        accessWallets.some((wallet) =>
+          accessEntryMatches(entry, wallet.walletKind, wallet.normalizedWalletAddress),
+        ),
       );
 
       user.access = {
@@ -618,6 +739,80 @@ export class KilnUserStore {
         token: { ...record },
         user: cloneUser(user),
       };
+    });
+  }
+
+  private findUserByWallet(
+    db: KilnUserDatabase,
+    walletKind: WalletKind,
+    normalizedWalletAddress: string,
+  ): KilnUser | undefined {
+    return db.users.find(
+      (row) =>
+        row.walletKind === walletKind &&
+        row.normalizedWalletAddress === normalizedWalletAddress,
+    ) ??
+      db.users.find((row) =>
+        (row.linkedWallets ?? []).some(
+          (wallet) =>
+            wallet.walletKind === walletKind &&
+            wallet.normalizedWalletAddress === normalizedWalletAddress,
+        ),
+      );
+  }
+
+  private upsertLinkedWallet(
+    user: KilnUser,
+    wallet: Omit<LinkedKilnUserWallet, 'id'>,
+  ): void {
+    const id = linkedWalletId(
+      wallet.walletKind,
+      wallet.normalizedWalletAddress,
+      wallet.networkId,
+    );
+    const existing = (user.linkedWallets ?? []).find((candidate) => candidate.id === id);
+    const nextWallet: LinkedKilnUserWallet = {
+      ...wallet,
+      id,
+      addedAt: existing?.addedAt ?? wallet.addedAt,
+      label: wallet.label ?? existing?.label,
+      verifiedAt: wallet.verifiedAt,
+      lastLoginAt: wallet.lastLoginAt ?? existing?.lastLoginAt,
+    };
+    user.linkedWallets = [
+      nextWallet,
+      ...(user.linkedWallets ?? []).filter((candidate) => candidate.id !== id),
+    ];
+  }
+
+  private accessWalletsForUser(
+    user: KilnUser,
+  ): Array<{ walletKind: WalletKind; normalizedWalletAddress: string }> {
+    const wallets = [
+      {
+        walletKind: user.walletKind,
+        normalizedWalletAddress: user.normalizedWalletAddress,
+      },
+      ...(user.linkedWallets ?? []).map((wallet) => ({
+        walletKind: wallet.walletKind,
+        normalizedWalletAddress: wallet.normalizedWalletAddress,
+      })),
+    ];
+    if (user.lastLoginWalletKind && user.lastLoginNormalizedWalletAddress) {
+      wallets.push({
+        walletKind: user.lastLoginWalletKind,
+        normalizedWalletAddress: user.lastLoginNormalizedWalletAddress,
+      });
+    }
+
+    const seen = new Set<string>();
+    return wallets.filter((wallet) => {
+      const id = `${wallet.walletKind}:${wallet.normalizedWalletAddress}`;
+      if (seen.has(id)) {
+        return false;
+      }
+      seen.add(id);
+      return true;
     });
   }
 
