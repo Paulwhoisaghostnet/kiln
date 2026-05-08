@@ -23,8 +23,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-RPC_PRIMARY = "https://mainnet.ecadinfra.com"
-RPC_FALLBACK = "https://rpc.tzkt.io/mainnet"
+RPC_PRIMARY = "https://rpc.tzkt.io/mainnet"
+RPC_FALLBACK = "https://rpc.tzbeta.net"
 TZKT = "https://api.tzkt.io/v1"
 USER_AGENT = "shadownet-kiln-reference-fetch/1.1 (+local)"
 

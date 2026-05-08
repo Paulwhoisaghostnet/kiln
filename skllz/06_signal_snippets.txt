@@ -18,7 +18,7 @@ Bowers/DEPLOY.md:185:- Global edge deployment
 Bowers/DEPLOY.md:189:## Switching to Mainnet
 Bowers/DEPLOY.md:191:The app ships with Shadownet (testnet) as the default. To switch to Mainnet:
 Bowers/DEPLOY.md:193:1. **In the UI:** Click the network badge in the sidebar to toggle between Shadownet and Mainnet. The wallet, RPC, and explorer links all switch automatically.
-Bowers/DEPLOY.md:195:2. **CSP headers:** The server already allows both `shadownet.tezos.ecadinfra.com` and `mainnet.ecadinfra.com` in its Content Security Policy.
+Bowers/DEPLOY.md:195:2. **CSP headers:** The server already allows both `rpc.shadownet.teztnets.com` and `rpc.tzkt.io/mainnet` in its Content Security Policy.
 Bowers/DEPLOY.md:197:3. **Wallet reconnection:** When switching networks, users need to reconnect their wallet — the Beacon SDK creates network-specific sessions.
 Bowers/DEPLOY.md:203:## Post-Deployment Checklist
 Bowers/DEPLOY.md:205:- [ ] Verify the site loads at your deployment URL
@@ -128,7 +128,7 @@ Bowers/BOWERS_MEMORY.md:104:  2. `originate.ts` — Contract address extraction 
 Bowers/BOWERS_MEMORY.md:106:  4. Dashboard/collection/mint-token pages — `styleIcons` only mapped 2 styles; now imports shared `styleIcons`. Explorer links hardcoded to ghostnet; now use `explorerBaseUrl` from network context.
 Bowers/BOWERS_MEMORY.md:109:  7. Created `network-context.tsx` — `NetworkProvider` with `ghostnet`/`mainnet` toggle; calls `setActiveNetwork()` on wallet module to reinitialize TezosToolkit + BeaconWallet for correct network.
 Bowers/BOWERS_MEMORY.md:110:  8. `wallet.ts` — Added `setActiveNetwork()` to reset tezos/wallet singletons on network change; `getWallet()` now uses `NetworkType.MAINNET` or `GHOSTNET` based on `currentNetwork`.
-Bowers/BOWERS_MEMORY.md:111:  9. `server/index.ts` — CSP `connectSrc` expanded with `mainnet.ecadinfra.com`, `tzkt.io`, `api.tzkt.io`, `api.mainnet.tzkt.io`.
+Bowers/BOWERS_MEMORY.md:111:  9. `server/index.ts` — CSP `connectSrc` expanded with `rpc.tzkt.io/mainnet`, `tzkt.io`, `api.tzkt.io`, `api.mainnet.tzkt.io`.
 Bowers/BOWERS_MEMORY.md:112:  10. Created `manage-contract.tsx` — Tabbed admin page: Blocklist (block/unblock), Mint Config (pause/resume, set price), Admin (transfer role), Withdraw. Wired to `/manage/:id` route.
 Bowers/BOWERS_MEMORY.md:113:  11. Added `DEPLOY.md` — Deployment instructions for Cloudflare, Render, Fly.io (all with free tiers).
 Bowers/BOWERS_MEMORY.md:114:- **octez.connect transition:** Beacon SDK is sunsetting; Trillitech's octez.connect (`@tezos-x/octez.connect-sdk`) is the approved successor. Implemented dual-provider architecture:
@@ -152,16 +152,16 @@ Bowers/.cursor/rules/tezos-contract-deployment.md:13:| Beacon bridge | `@taquito
 Bowers/.cursor/rules/tezos-contract-deployment.md:14:| Wallet extension | Temple (recommended) or Kukai | Simulates, signs, and injects the operation on-chain |
 Bowers/.cursor/rules/tezos-contract-deployment.md:18:The app defaults to **Shadownet** (Tezos long-term testnet, replacing Ghostnet which sunsetted March 2026).
 Bowers/.cursor/rules/tezos-contract-deployment.md:20:| Network | RPC URL | Chain ID | TzKT Explorer | TzKT API | Faucet |
-Bowers/.cursor/rules/tezos-contract-deployment.md:22:| Shadownet | `https://shadownet.tezos.ecadinfra.com` | `NetXsqzbfFenSTS` | `https://shadownet.tzkt.io` | `https://api.shadownet.tzkt.io/v1` | `https://faucet.shadownet.teztnets.com` |
-Bowers/.cursor/rules/tezos-contract-deployment.md:23:| Mainnet | `https://mainnet.ecadinfra.com` | `NetXdQprcVkpaWU` | `https://tzkt.io` | `https://api.tzkt.io/v1` | N/A |
+Bowers/.cursor/rules/tezos-contract-deployment.md:22:| Shadownet | `https://rpc.shadownet.teztnets.com` | `NetXsqzbfFenSTS` | `https://shadownet.tzkt.io` | `https://api.shadownet.tzkt.io/v1` | `https://faucet.shadownet.teztnets.com` |
+Bowers/.cursor/rules/tezos-contract-deployment.md:23:| Mainnet | `https://rpc.tzkt.io/mainnet` | `NetXdQprcVkpaWU` | `https://tzkt.io` | `https://api.tzkt.io/v1` | N/A |
 Bowers/.cursor/rules/tezos-contract-deployment.md:29:helper in `wallet.ts` handles this automatically.
 Bowers/.cursor/rules/tezos-contract-deployment.md:35:accidental mainnet deployments when the wallet is on the wrong network.
 Bowers/.cursor/rules/tezos-contract-deployment.md:37:## The canonical origination pattern (Taquito Wallet API)
 Bowers/.cursor/rules/tezos-contract-deployment.md:42:import { TezosToolkit } from "@taquito/taquito";
 Bowers/.cursor/rules/tezos-contract-deployment.md:43:import { BeaconWallet } from "@taquito/beacon-wallet";
-Bowers/.cursor/rules/tezos-contract-deployment.md:45:const Tezos = new TezosToolkit("https://shadownet.tezos.ecadinfra.com");
+Bowers/.cursor/rules/tezos-contract-deployment.md:45:const Tezos = new TezosToolkit("https://rpc.shadownet.teztnets.com");
 Bowers/.cursor/rules/tezos-contract-deployment.md:46:const wallet = new BeaconWallet({
-Bowers/.cursor/rules/tezos-contract-deployment.md:48:  network: { type: "custom", name: "shadownet", rpcUrl: "https://shadownet.tezos.ecadinfra.com" },
+Bowers/.cursor/rules/tezos-contract-deployment.md:48:  network: { type: "custom", name: "shadownet", rpcUrl: "https://rpc.shadownet.teztnets.com" },
 Bowers/.cursor/rules/tezos-contract-deployment.md:50:await wallet.requestPermissions();
 Bowers/.cursor/rules/tezos-contract-deployment.md:51:Tezos.setWalletProvider(wallet);
 Bowers/.cursor/rules/tezos-contract-deployment.md:55:const op = await Tezos.wallet
@@ -372,7 +372,7 @@ Bowers/docs/DEPLOYMENT-GUIDE.md:246:   contracts deployed before the auto-link f
 Bowers/docs/DEPLOYMENT-GUIDE.md:250:## Network Migration: Ghostnet to Shadownet
 Bowers/docs/DEPLOYMENT-GUIDE.md:252:Ghostnet (the previous Tezos long-term testnet) sunset in March 2026.
 Bowers/docs/DEPLOYMENT-GUIDE.md:255:| | Ghostnet (old) | Shadownet (current) |
-Bowers/docs/DEPLOYMENT-GUIDE.md:257:| RPC | `ghostnet.ecadinfra.com` | `shadownet.tezos.ecadinfra.com` |
+Bowers/docs/DEPLOYMENT-GUIDE.md:257:| RPC | `rpc.ghostnet.teztnets.com` | `rpc.shadownet.teztnets.com` |
 Bowers/docs/DEPLOYMENT-GUIDE.md:258:| Explorer | `ghostnet.tzkt.io` | `shadownet.tzkt.io` |
 Bowers/docs/DEPLOYMENT-GUIDE.md:259:| Faucet | `faucet.ghostnet.teztnets.com` | `faucet.shadownet.teztnets.com` |
 Bowers/docs/DEPLOYMENT-GUIDE.md:263:All references in the codebase have been updated from ghostnet to shadownet.
@@ -1783,7 +1783,7 @@ r00t/docs/tezos-bible.md:63:| TezosJ_plainJava | https://github.com/TezosRio/Tez
 r00t/docs/tezos-bible.md:64:| TezosJ_SDK | https://github.com/TezosRio/TezosJ_SDK | Android Java SDK for Tezos |
 r00t/docs/tezos-bible.md:68:## 3. Publishing on testnets (Ghostnet / Shadownet)
 r00t/docs/tezos-bible.md:70:### Ghostnet
-r00t/docs/tezos-bible.md:74:| RPC | https://rpc.ghostnet.teztnets.com (also ghostnet.ecadinfra.com, ghostnet.tezos.marigold.dev) |
+r00t/docs/tezos-bible.md:74:| RPC | https://rpc.ghostnet.teztnets.com (also rpc.ghostnet.teztnets.com, ghostnet.tezos.marigold.dev) |
 r00t/docs/tezos-bible.md:75:| TzKT base | https://api.ghostnet.tzkt.io/v1 (explorer: https://ghostnet.tzkt.io) |
 r00t/docs/tezos-bible.md:76:| Faucet | https://faucet.ghostnet.teztnets.com |
 r00t/docs/tezos-bible.md:77:| Explorer | https://ghostnet.tzkt.io |

@@ -112,7 +112,7 @@
   6. Created `blocklist.ts` — Client helpers: `blockAddress`, `unblockAddress`, `setAdmin`, `setMintPaused`, `setMintPrice`.
   7. Created `network-context.tsx` — `NetworkProvider` with `ghostnet`/`mainnet` toggle; calls `setActiveNetwork()` on wallet module to reinitialize TezosToolkit + BeaconWallet for correct network.
   8. `wallet.ts` — Added `setActiveNetwork()` to reset tezos/wallet singletons on network change; `getWallet()` now uses `NetworkType.MAINNET` or `GHOSTNET` based on `currentNetwork`.
-  9. `server/index.ts` — CSP `connectSrc` expanded with `mainnet.ecadinfra.com`, `tzkt.io`, `api.tzkt.io`, `api.mainnet.tzkt.io`.
+  9. `server/index.ts` — CSP `connectSrc` expanded with `rpc.tzkt.io/mainnet`, `tzkt.io`, `api.tzkt.io`, `api.mainnet.tzkt.io`.
   10. Created `manage-contract.tsx` — Tabbed admin page: Blocklist (block/unblock), Mint Config (pause/resume, set price), Admin (transfer role), Withdraw. Wired to `/manage/:id` route.
   11. Added `DEPLOY.md` — Deployment instructions for Cloudflare, Render, Fly.io (all with free tiers).
 - **octez.connect transition:** Beacon SDK is sunsetting; Trillitech's octez.connect (`@tezos-x/octez.connect-sdk`) is the approved successor. Implemented dual-provider architecture:
@@ -320,7 +320,7 @@ The app ships with Shadownet (testnet) as the default. To switch to Mainnet:
 
 1. **In the UI:** Click the network badge in the sidebar to toggle between Shadownet and Mainnet. The wallet, RPC, and explorer links all switch automatically.
 
-2. **CSP headers:** The server already allows both `shadownet.tezos.ecadinfra.com` and `mainnet.ecadinfra.com` in its Content Security Policy.
+2. **CSP headers:** The server already allows both `rpc.shadownet.teztnets.com` and `rpc.tzkt.io/mainnet` in its Content Security Policy.
 
 3. **Wallet reconnection:** When switching networks, users need to reconnect their wallet — the Beacon SDK creates network-specific sessions.
 

@@ -171,7 +171,7 @@
  - 180:### Free tier includes
  - 189:## Switching to Mainnet
  - 193:1. **In the UI:** Click the network badge in the sidebar to toggle between Shadownet and Mainnet. The wallet, RPC, and explorer links all switch automatically.
- - 195:2. **CSP headers:** The server already allows both `shadownet.tezos.ecadinfra.com` and `mainnet.ecadinfra.com` in its Content Security Policy.
+ - 195:2. **CSP headers:** The server already allows both `rpc.shadownet.teztnets.com` and `rpc.tzkt.io/mainnet` in its Content Security Policy.
  - 197:3. **Wallet reconnection:** When switching networks, users need to reconnect their wallet — the Beacon SDK creates network-specific sessions.
  - 199:4. **No code changes required** — the network context propagates through the entire stack.
  - 203:## Post-Deployment Checklist

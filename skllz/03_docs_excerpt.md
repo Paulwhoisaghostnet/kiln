@@ -218,8 +218,8 @@ The app defaults to **Shadownet** (Tezos long-term testnet, replacing Ghostnet w
 
 | Network | RPC URL | Chain ID | TzKT Explorer | TzKT API | Faucet |
 |---|---|---|---|---|---|
-| Shadownet | `https://shadownet.tezos.ecadinfra.com` | `NetXsqzbfFenSTS` | `https://shadownet.tzkt.io` | `https://api.shadownet.tzkt.io/v1` | `https://faucet.shadownet.teztnets.com` |
-| Mainnet | `https://mainnet.ecadinfra.com` | `NetXdQprcVkpaWU` | `https://tzkt.io` | `https://api.tzkt.io/v1` | N/A |
+| Shadownet | `https://rpc.shadownet.teztnets.com` | `NetXsqzbfFenSTS` | `https://shadownet.tzkt.io` | `https://api.shadownet.tzkt.io/v1` | `https://faucet.shadownet.teztnets.com` |
+| Mainnet | `https://rpc.tzkt.io/mainnet` | `NetXdQprcVkpaWU` | `https://tzkt.io` | `https://api.tzkt.io/v1` | N/A |
 
 ### Beacon SDK and Shadownet
 
@@ -241,10 +241,10 @@ Source: <https://taquito.io/docs/24.0.0/originate>
 import { TezosToolkit } from "@taquito/taquito";
 import { BeaconWallet } from "@taquito/beacon-wallet";
 
-const Tezos = new TezosToolkit("https://shadownet.tezos.ecadinfra.com");
+const Tezos = new TezosToolkit("https://rpc.shadownet.teztnets.com");
 const wallet = new BeaconWallet({
   name: "MyDapp",
-  network: { type: "custom", name: "shadownet", rpcUrl: "https://shadownet.tezos.ecadinfra.com" },
+  network: { type: "custom", name: "shadownet", rpcUrl: "https://rpc.shadownet.teztnets.com" },
 });
 await wallet.requestPermissions();
 Tezos.setWalletProvider(wallet);
@@ -452,7 +452,7 @@ async function ensureAdapter(): Promise<WalletAdapter> {
   6. Created `blocklist.ts` — Client helpers: `blockAddress`, `unblockAddress`, `setAdmin`, `setMintPaused`, `setMintPrice`.
   7. Created `network-context.tsx` — `NetworkProvider` with `ghostnet`/`mainnet` toggle; calls `setActiveNetwork()` on wallet module to reinitialize TezosToolkit + BeaconWallet for correct network.
   8. `wallet.ts` — Added `setActiveNetwork()` to reset tezos/wallet singletons on network change; `getWallet()` now uses `NetworkType.MAINNET` or `GHOSTNET` based on `currentNetwork`.
-  9. `server/index.ts` — CSP `connectSrc` expanded with `mainnet.ecadinfra.com`, `tzkt.io`, `api.tzkt.io`, `api.mainnet.tzkt.io`.
+  9. `server/index.ts` — CSP `connectSrc` expanded with `rpc.tzkt.io/mainnet`, `tzkt.io`, `api.tzkt.io`, `api.mainnet.tzkt.io`.
   10. Created `manage-contract.tsx` — Tabbed admin page: Blocklist (block/unblock), Mint Config (pause/resume, set price), Admin (transfer role), Withdraw. Wired to `/manage/:id` route.
   11. Added `DEPLOY.md` — Deployment instructions for Cloudflare, Render, Fly.io (all with free tiers).
 - **octez.connect transition:** Beacon SDK is sunsetting; Trillitech's octez.connect (`@tezos-x/octez.connect-sdk`) is the approved successor. Implemented dual-provider architecture:
@@ -10995,7 +10995,7 @@ Single-source reference for building on Tezos in this project. Review before eac
 
 | Item | Value |
 |------|--------|
-| RPC | https://rpc.ghostnet.teztnets.com (also ghostnet.ecadinfra.com, ghostnet.tezos.marigold.dev) |
+| RPC | https://rpc.ghostnet.teztnets.com (also rpc.ghostnet.teztnets.com, ghostnet.tezos.marigold.dev) |
 | TzKT base | https://api.ghostnet.tzkt.io/v1 (explorer: https://ghostnet.tzkt.io) |
 | Faucet | https://faucet.ghostnet.teztnets.com |
 | Explorer | https://ghostnet.tzkt.io |

@@ -105,7 +105,7 @@ const NETWORK_PROFILES: Record<KilnNetworkId, KilnNetworkProfile> = {
     status: 'active',
     tier: 'mainnet',
     accent: 'error',
-    defaultRpcUrl: 'https://mainnet.tezos.ecadinfra.com',
+    defaultRpcUrl: 'https://rpc.tzkt.io/mainnet',
     chainId: 'NetXdQprcVkpaWU',
     beaconNetworkName: 'mainnet',
     nativeSymbol: 'tez',
