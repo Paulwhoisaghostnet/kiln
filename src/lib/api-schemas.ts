@@ -52,10 +52,26 @@ const mutezAmountSchema = z.coerce
   .max(Number.MAX_SAFE_INTEGER, 'amountMutez exceeds JavaScript safe integer range');
 
 const scenarioAssertionSchema = z.object({
+  id: z.string().trim().min(1).max(160).optional(),
   kind: z.enum(['storage', 'balance', 'big_map']),
+  contractId: z.string().trim().min(1).max(120).optional(),
+  targetContractId: z.string().trim().min(1).max(120).optional(),
+  targetContractAddress: kt1AddressSchema.optional(),
   target: z.string().trim().min(1).max(160).optional(),
-  path: z.array(z.union([z.string(), z.number()])).max(32).optional(),
+  path: z.union([
+    z.string().trim().min(1).max(240),
+    z.array(z.union([z.string(), z.number()])).max(32),
+  ]).optional(),
+  bigMap: z.union([
+    z.string().trim().min(1).max(120),
+    z.array(z.union([z.string(), z.number()])).max(32),
+  ]).optional(),
+  key: z.unknown().optional(),
   equals: z.unknown().optional(),
+  expected: z.unknown().optional(),
+  expectedMutez: z.union([z.string().trim().regex(/^\d+$/), z.number().int().min(0)]).optional(),
+  description: z.string().trim().max(500).optional(),
+  afterStep: z.string().trim().max(120).optional(),
 });
 
 export const uploadPayloadSchema = z.object({

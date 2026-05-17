@@ -72,6 +72,10 @@ class FakeTezosService implements TezosServiceLike {
   async getContractStorage(): Promise<unknown> {
     return this.storage;
   }
+
+  async getContractBalanceMutez(): Promise<string> {
+    return '0';
+  }
 }
 
 describe('runContractE2E', () => {
@@ -186,6 +190,139 @@ describe('runContractE2E', () => {
       'A:start_auction',
       'B:bid_with_token',
     ]);
+  });
+
+  it('evaluates storage, balance, and big-map assertions after live E2E steps', async () => {
+    const calls: Array<{
+      wallet: WalletType;
+      contractAddress: string;
+      entrypoint: string;
+      args: unknown[];
+      options?: TezosCallOptions;
+    }> = [];
+    const marketAddress = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
+    const tokenAddress = 'KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW';
+    const result = await runContractE2E(
+      {
+        contracts: [
+          {
+            id: 'market',
+            address: marketAddress,
+            entrypoints: ['purchase'],
+          },
+          {
+            id: 'dummy_wtf',
+            address: tokenAddress,
+            entrypoints: [],
+          },
+        ],
+        steps: [
+          {
+            label: 'Buyer purchases pet medicine',
+            wallet: 'B',
+            targetContractId: 'market',
+            entrypoint: 'purchase',
+            args: ['2500000000', '1', 'kiln-e2e'],
+            assertions: [
+              {
+                id: 'market_token_storage',
+                kind: 'storage',
+                contractId: 'market',
+                path: 'wtf_token_address',
+                expected: tokenAddress,
+              },
+              {
+                id: 'market_zero_balance',
+                kind: 'balance',
+                contractId: 'market',
+                expectedMutez: '0',
+              },
+              {
+                id: 'buyer_ledger',
+                kind: 'big_map',
+                contractId: 'dummy_wtf',
+                bigMap: 'ledger',
+                key: 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6',
+                expected: '97500000000',
+              },
+            ],
+            expectFailure: false,
+          },
+        ],
+      },
+      (wallet) =>
+        new FakeTezosService(wallet, calls, [], {
+          wtf_token_address: tokenAddress,
+          ledger: new Map([
+            ['tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6', '97500000000'],
+          ]),
+        }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.assertionSummary).toEqual({
+      ok: true,
+      storage: true,
+      balance: true,
+      big_map: true,
+      passedKinds: ['storage', 'balance', 'big_map'],
+      missingKinds: [],
+      assertionCount: 3,
+    });
+    expect(result.results[0]?.assertions?.map((assertion) => assertion.status)).toEqual([
+      'passed',
+      'passed',
+      'passed',
+    ]);
+  });
+
+  it('fails closed when a declared assertion does not match chain state', async () => {
+    const calls: Array<{
+      wallet: WalletType;
+      contractAddress: string;
+      entrypoint: string;
+      args: unknown[];
+      options?: TezosCallOptions;
+    }> = [];
+
+    const result = await runContractE2E(
+      {
+        contractAddress: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+        contracts: [
+          {
+            id: 'counter',
+            address: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton',
+            entrypoints: ['mint'],
+          },
+        ],
+        steps: [
+          {
+            label: 'Assert wrong storage',
+            wallet: 'A',
+            entrypoint: 'mint',
+            args: [],
+            assertions: [
+              {
+                kind: 'storage',
+                path: 'counter',
+                expected: '2',
+              },
+            ],
+            expectFailure: false,
+          },
+        ],
+      },
+      (wallet) => new FakeTezosService(wallet, calls, [], { counter: '1' }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.assertionSummary.ok).toBe(false);
+    expect(result.results[0]).toEqual(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.stringContaining('Assertion storage failed'),
+      }),
+    );
   });
 
   it('normalizes generated purchase args and prepares FA2 balance/operator resources', async () => {

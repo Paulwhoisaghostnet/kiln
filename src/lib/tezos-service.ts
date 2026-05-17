@@ -63,6 +63,7 @@ export interface TezosServiceLike {
   originateContract(code: string, initialStorage: string): Promise<string>;
   getContractEntrypoints?(contractAddress: string): Promise<AbiEntrypoint[]>;
   getContractStorage?(contractAddress: string): Promise<unknown>;
+  getContractBalanceMutez?(contractAddress: string): Promise<string>;
   callContract(
     contractAddress: string,
     entrypoint: string,
@@ -487,5 +488,11 @@ export class TezosService implements TezosServiceLike {
       throw new Error(`Contract ${contractAddress} storage reader is unavailable.`);
     }
     return contract.storage();
+  }
+
+  async getContractBalanceMutez(contractAddress: string): Promise<string> {
+    await this.ensureExpectedChainId();
+    const balance = await this.tezos.tz.getBalance(contractAddress);
+    return balance.toFixed(0);
   }
 }

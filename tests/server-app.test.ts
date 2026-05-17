@@ -154,6 +154,12 @@ function mockTezosServiceFactory() {
         },
       ];
     },
+    async getContractStorage() {
+      return { counter: 1 };
+    },
+    async getContractBalanceMutez() {
+      return '0';
+    },
   });
 
   return { factory, calls };
@@ -1407,7 +1413,7 @@ describe('createApiApp', () => {
     });
   });
 
-  it('fails live E2E assertions closed until runtime readers exist', async () => {
+  it('evaluates live E2E storage assertions with runtime readers', async () => {
     const app = createApiApp({
       env: baseEnv(),
       createTezosService: mockTezosServiceFactory().factory,
@@ -1427,11 +1433,16 @@ describe('createApiApp', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.body.success).toBe(false);
+    expect(response.body.success).toBe(true);
     expect(response.body.results[0]).toEqual(
       expect.objectContaining({
-        status: 'failed',
-        error: expect.stringContaining('no-stub policy'),
+        status: 'passed',
+        assertions: [
+          expect.objectContaining({
+            kind: 'storage',
+            status: 'passed',
+          }),
+        ],
       }),
     );
   });

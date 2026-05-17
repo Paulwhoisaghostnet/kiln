@@ -400,19 +400,20 @@ async function describeContractCallFailure(input: {
   return message;
 }
 
-async function readMapValue(mapLike: unknown, key: number): Promise<unknown> {
+async function readMapValue(mapLike: unknown, key: unknown): Promise<unknown> {
   if (!mapLike) {
     return undefined;
   }
+  const stringKey = typeof key === 'string' ? key : String(key);
   if (mapLike instanceof Map) {
-    return mapLike.get(key) ?? mapLike.get(String(key));
+    return mapLike.get(key) ?? mapLike.get(stringKey);
   }
   if (isRecord(mapLike)) {
     const getter = mapLike.get;
     if (typeof getter === 'function') {
-      return await (getter as (input: number | string) => Promise<unknown> | unknown)(key);
+      return await (getter as (input: unknown) => Promise<unknown> | unknown)(key);
     }
-    return mapLike[String(key)] ?? mapLike[key];
+    return mapLike[stringKey];
   }
   return undefined;
 }
@@ -503,6 +504,229 @@ async function prepareTokenPurchaseResources(input: {
   );
 }
 
+type E2EStep = E2ERunPayload['steps'][number];
+type E2EAssertion = E2EStep['assertions'][number];
+
+type AssertionEvidence = {
+  id?: string;
+  kind: E2EAssertion['kind'];
+  status: 'passed' | 'failed';
+  passed: boolean;
+  contractAddress: string;
+  target?: string;
+  path?: Array<string | number> | string;
+  bigMap?: Array<string | number> | string;
+  key?: unknown;
+  expected?: unknown;
+  actual?: unknown;
+  error?: string;
+};
+
+function normalizePath(path: E2EAssertion['path'] | E2EAssertion['bigMap']): Array<string | number> {
+  if (Array.isArray(path)) {
+    return path;
+  }
+  if (typeof path === 'string') {
+    return path.split('.').map((part) => part.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function valueAtPath(value: unknown, path: Array<string | number>): unknown {
+  let current = value;
+  for (const segment of path) {
+    if (current === undefined || current === null) {
+      return undefined;
+    }
+    if (current instanceof Map) {
+      current = current.get(segment) ?? current.get(String(segment));
+      continue;
+    }
+    if (isRecord(current)) {
+      current = current[String(segment)];
+      continue;
+    }
+    if (Array.isArray(current) && typeof segment === 'number') {
+      current = current[segment];
+      continue;
+    }
+    return undefined;
+  }
+  return current;
+}
+
+function normalizeComparable(value: unknown): unknown {
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value.toString();
+  }
+  if (value instanceof Map) {
+    return Object.fromEntries(value.entries());
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeComparable);
+  }
+  if (isRecord(value)) {
+    const output: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      output[key] = normalizeComparable(item);
+    }
+    return output;
+  }
+  return value;
+}
+
+function valuesEqual(actual: unknown, expected: unknown): boolean {
+  const normalizedActual = normalizeComparable(actual);
+  const normalizedExpected = normalizeComparable(expected);
+  return JSON.stringify(normalizedActual) === JSON.stringify(normalizedExpected);
+}
+
+function expectedForAssertion(assertion: E2EAssertion): unknown {
+  if (assertion.kind === 'balance' && assertion.expectedMutez !== undefined) {
+    return String(assertion.expectedMutez);
+  }
+  if (assertion.expected !== undefined) {
+    return assertion.expected;
+  }
+  return assertion.equals;
+}
+
+function resolveAssertionTarget(input: {
+  assertion: E2EAssertion;
+  defaultTargetAddress: string;
+  manifest: Map<string, { address: string }>;
+}): { address: string; target?: string } {
+  const target =
+    input.assertion.targetContractAddress ??
+    input.assertion.target ??
+    input.assertion.contractId ??
+    input.assertion.targetContractId;
+
+  if (!target) {
+    return { address: input.defaultTargetAddress };
+  }
+  if (kt1Pattern.test(target)) {
+    return { address: target, target };
+  }
+  const manifestAddress = input.manifest.get(target)?.address;
+  if (!manifestAddress) {
+    throw new Error(`Assertion target '${target}' is not a known contract id or KT1 address.`);
+  }
+  return { address: manifestAddress, target };
+}
+
+async function evaluateAssertion(input: {
+  assertion: E2EAssertion;
+  defaultTargetAddress: string;
+  manifest: Map<string, { address: string }>;
+  tezosService: TezosServiceLike;
+}): Promise<AssertionEvidence> {
+  const { address, target } = resolveAssertionTarget({
+    assertion: input.assertion,
+    defaultTargetAddress: input.defaultTargetAddress,
+    manifest: input.manifest,
+  });
+  const expected = expectedForAssertion(input.assertion);
+  try {
+    let actual: unknown;
+    if (input.assertion.kind === 'balance') {
+      if (!input.tezosService.getContractBalanceMutez) {
+        throw new Error('Contract balance reader is unavailable.');
+      }
+      actual = await input.tezosService.getContractBalanceMutez(address);
+    } else if (input.assertion.kind === 'storage') {
+      if (!input.tezosService.getContractStorage) {
+        throw new Error('Contract storage reader is unavailable.');
+      }
+      const storage = await input.tezosService.getContractStorage(address);
+      const path = normalizePath(input.assertion.path);
+      actual = path.length > 0 ? valueAtPath(storage, path) : storage;
+    } else {
+      if (!input.tezosService.getContractStorage) {
+        throw new Error('Contract big-map reader is unavailable.');
+      }
+      const storage = await input.tezosService.getContractStorage(address);
+      const bigMapPath = normalizePath(input.assertion.bigMap ?? input.assertion.path);
+      const bigMap = valueAtPath(storage, bigMapPath);
+      actual = await readMapValue(bigMap, input.assertion.key);
+    }
+
+    const passed = valuesEqual(actual, expected);
+    return {
+      id: input.assertion.id,
+      kind: input.assertion.kind,
+      status: passed ? 'passed' : 'failed',
+      passed,
+      contractAddress: address,
+      target,
+      path: input.assertion.path,
+      bigMap: input.assertion.bigMap,
+      key: input.assertion.key,
+      expected: normalizeComparable(expected),
+      actual: normalizeComparable(actual),
+      error: passed ? undefined : 'Assertion value did not match expected value.',
+    };
+  } catch (error) {
+    return {
+      id: input.assertion.id,
+      kind: input.assertion.kind,
+      status: 'failed',
+      passed: false,
+      contractAddress: address,
+      target,
+      path: input.assertion.path,
+      bigMap: input.assertion.bigMap,
+      key: input.assertion.key,
+      expected: normalizeComparable(expected),
+      error: asMessage(error),
+    };
+  }
+}
+
+async function evaluateAssertions(input: {
+  assertions: E2EAssertion[];
+  defaultTargetAddress: string;
+  manifest: Map<string, { address: string }>;
+  tezosService: TezosServiceLike;
+}): Promise<AssertionEvidence[]> {
+  const evidence: AssertionEvidence[] = [];
+  for (const assertion of input.assertions) {
+    evidence.push(await evaluateAssertion({ ...input, assertion }));
+  }
+  return evidence;
+}
+
+function buildAssertionSummary(results: Array<{ assertions?: AssertionEvidence[] }>): {
+  ok: boolean;
+  storage: boolean;
+  balance: boolean;
+  big_map: boolean;
+  passedKinds: Array<'storage' | 'balance' | 'big_map'>;
+  missingKinds: Array<'storage' | 'balance' | 'big_map'>;
+  assertionCount: number;
+} {
+  const required: Array<'storage' | 'balance' | 'big_map'> = ['storage', 'balance', 'big_map'];
+  const assertions = results.flatMap((result) => result.assertions ?? []);
+  const passedKinds = new Set(
+    assertions
+      .filter((assertion) => assertion.passed)
+      .map((assertion) => assertion.kind),
+  );
+  const missingKinds = required.filter((kind) => !passedKinds.has(kind));
+  return {
+    ok: missingKinds.length === 0,
+    storage: passedKinds.has('storage'),
+    balance: passedKinds.has('balance'),
+    big_map: passedKinds.has('big_map'),
+    passedKinds: required.filter((kind) => passedKinds.has(kind)),
+    missingKinds,
+    assertionCount: assertions.length,
+  };
+}
+
 export async function runContractE2E(
   payload: E2ERunPayload,
   createTezosService: (wallet: WalletType) => TezosServiceLike,
@@ -524,8 +748,11 @@ export async function runContractE2E(
     hash?: string;
     level?: number | null;
     error?: string;
+    assertions?: AssertionEvidence[];
   }>;
+  assertionSummary: ReturnType<typeof buildAssertionSummary>;
 }> {
+  const contracts = payload.contracts ?? [];
   const results: Array<{
     label: string;
     wallet: WalletType;
@@ -535,9 +762,10 @@ export async function runContractE2E(
     hash?: string;
     level?: number | null;
     error?: string;
+    assertions?: AssertionEvidence[];
   }> = [];
   const contractManifestById = new Map(
-    payload.contracts.map((contract) => [contract.id, contract]),
+    contracts.map((contract) => [contract.id, contract]),
   );
 
   for (const [index, step] of payload.steps.entries()) {
@@ -588,28 +816,27 @@ export async function runContractE2E(
         });
         continue;
       }
-      if (step.assertions.length > 0) {
-        results.push({
-          label,
-          wallet: step.wallet,
-          contractAddress: targetAddress,
-          entrypoint: step.entrypoint,
-          status: 'failed',
-          hash: result.hash,
-          level: result.level,
-          error:
-            'Live Tezos E2E assertions are not implemented yet; no-stub policy blocks treating this step as passed.',
-        });
-        continue;
-      }
+      const assertions = await evaluateAssertions({
+        assertions: step.assertions,
+        defaultTargetAddress: targetAddress,
+        manifest: contractManifestById,
+        tezosService,
+      });
+      const failedAssertion = assertions.find((assertion) => !assertion.passed);
       results.push({
         label,
         wallet: step.wallet,
         contractAddress: targetAddress,
         entrypoint: step.entrypoint,
-        status: 'passed',
+        status: failedAssertion ? 'failed' : 'passed',
         hash: result.hash,
         level: result.level,
+        assertions: assertions.length > 0 ? assertions : undefined,
+        error: failedAssertion
+          ? `Assertion ${failedAssertion.id ?? failedAssertion.kind} failed: ${
+              failedAssertion.error ?? 'value mismatch'
+            }`
+          : undefined,
       });
     } catch (error) {
       results.push({
@@ -626,9 +853,9 @@ export async function runContractE2E(
   const passed = results.filter((result) => result.status === 'passed').length;
   const failed = results.length - passed;
   const coverage =
-    payload.contracts.length > 0
+    contracts.length > 0
       ? buildEntrypointCoverage({
-          contracts: payload.contracts.map((contract) => ({
+          contracts: contracts.map((contract) => ({
             id: contract.id,
             address: contract.address,
             entrypoints: contract.entrypoints,
@@ -636,6 +863,7 @@ export async function runContractE2E(
           steps: payload.steps,
         })
       : undefined;
+  const assertionSummary = buildAssertionSummary(results);
 
   return {
     success: failed === 0 && (coverage?.passed ?? true),
@@ -647,6 +875,7 @@ export async function runContractE2E(
     },
     coverage,
     results,
+    assertionSummary,
   };
 }
 
