@@ -238,6 +238,39 @@ export const workflowRunPayloadSchema = z.object({
   simulationSteps: z.array(workflowSimulationStepSchema).default([]),
 });
 
+const shadowboxContractSourceSchema = z.object({
+  id: z.string().trim().min(1).max(120),
+  sourceType: workflowSourceTypeSchema.default('auto'),
+  source: z.string().trim().min(1, 'Contract source is required'),
+  initialStorage: z.string().trim().min(1).optional(),
+  scenario: z.string().trim().min(1).max(120).optional(),
+});
+
+export const shadowboxRunPayloadSchema = z.object({
+  networkId: networkIdSchema,
+  sourceType: workflowSourceTypeSchema.default('auto'),
+  source: z.string().trim().min(1, 'Contract source is required').optional(),
+  initialStorage: z.string().trim().min(1).optional(),
+  scenario: z.string().trim().min(1).max(120).optional(),
+  contracts: z.array(shadowboxContractSourceSchema).max(10).default([]),
+  simulationSteps: z.array(workflowSimulationStepSchema).default([]),
+}).superRefine((payload, ctx) => {
+  if (!payload.source && payload.contracts.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['source'],
+      message: 'Shadowbox needs either source or contracts.',
+    });
+  }
+  if (payload.contracts.length > 0 && payload.simulationSteps.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['simulationSteps'],
+      message: 'Multi-contract Shadowbox runs need explicit simulation steps.',
+    });
+  }
+});
+
 /**
  * Solidity compile payload. `source` is the unified flattened .sol file (or a
  * multi-file object keyed by path). `entryContractName` picks which contract

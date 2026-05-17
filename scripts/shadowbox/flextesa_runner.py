@@ -34,6 +34,7 @@ HEX_RE = re.compile(r"^0x[0-9a-fA-F]+$")
 KT1_RE = re.compile(r"(KT1[1-9A-HJ-NP-Za-km-z]{33})")
 OPHASH_RE = re.compile(r"\b(o[pn][A-Za-z0-9]{30,})\b")
 LEVEL_RE = re.compile(r"level[:\s]+(\d+)", re.IGNORECASE)
+SCRIPT_EXPR_RE = re.compile(r"\b(expr[1-9A-HJ-NP-Za-km-z]{20,})\b")
 CONTRACT_ENTRYPOINT_RE = re.compile(r"\bCONTRACT\s+%([A-Za-z0-9_]+)\b", re.IGNORECASE)
 BURN_PLACEHOLDER_ADDRESS = "tz1burnburnburnburnburnburnburjAYjjX"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -845,6 +846,286 @@ def parse_level(text: str) -> int | None:
         return None
 
 
+def normalize_assertion_value(value: Any) -> str:
+    if isinstance(value, str):
+        stripped = value.strip()
+        if len(stripped) >= 2 and stripped[0] == '"' and stripped[-1] == '"':
+            return stripped[1:-1]
+        return stripped
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    if value is None:
+        return "Unit"
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value)
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def normalize_michelson_text(value: str) -> str:
+    stripped = re.sub(r"\s+", " ", value.strip().rstrip(";")).strip()
+    if len(stripped) >= 2 and stripped[0] == '"' and stripped[-1] == '"':
+        return stripped[1:-1]
+    return stripped
+
+
+def parse_balance_mutez(text: str) -> str | None:
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)", text)
+    if not match:
+        return None
+    raw = match.group(1)
+    whole, _, frac = raw.partition(".")
+    frac = (frac + "000000")[:6]
+    try:
+        return str((int(whole) * 1_000_000) + int(frac or "0"))
+    except ValueError:
+        return None
+
+
+def read_contract_storage(
+    config: RuntimeConfig,
+    container_name: str,
+    contract_address: str,
+) -> str:
+    result = docker_exec(
+        config,
+        container_name,
+        [
+            "octez-client",
+            "-M",
+            "client",
+            "get",
+            "contract",
+            "storage",
+            "for",
+            contract_address,
+        ],
+        timeout=30,
+    )
+    return f"{result.stdout}\n{result.stderr}".strip()
+
+
+def read_contract_balance_mutez(
+    config: RuntimeConfig,
+    container_name: str,
+    contract_address: str,
+) -> str | None:
+    result = docker_exec(
+        config,
+        container_name,
+        [
+            "octez-client",
+            "-M",
+            "client",
+            "get",
+            "balance",
+            "for",
+            contract_address,
+        ],
+        timeout=30,
+    )
+    return parse_balance_mutez(f"{result.stdout}\n{result.stderr}")
+
+
+def resolve_big_map_id(
+    config: RuntimeConfig,
+    container_name: str,
+    contract_address: str,
+    assertion: dict[str, Any],
+) -> str | None:
+    raw = assertion.get("bigMap")
+    if isinstance(raw, int):
+        return str(raw)
+    if isinstance(raw, str) and raw.strip().isdigit():
+        return raw.strip()
+
+    storage = read_contract_storage(config, container_name, contract_address)
+    match = re.search(r"\b(\d+)\b", storage)
+    return match.group(1) if match else None
+
+
+def extract_inline_big_map_value(storage: str, key_literal: str) -> str | None:
+    escaped_key = re.escape(key_literal)
+    match = re.search(rf"\bElt\s+{escaped_key}\s+([^;{{}}]+)", storage)
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
+def normalize_rpc_micheline_value(text: str) -> str:
+    stripped = text.strip()
+    try:
+        value = json.loads(stripped)
+    except json.JSONDecodeError:
+        return stripped
+    if isinstance(value, dict):
+        if isinstance(value.get("int"), str):
+            return value["int"]
+        if isinstance(value.get("string"), str):
+            return value["string"]
+        if isinstance(value.get("bytes"), str):
+            return f"0x{value['bytes']}"
+    return normalize_assertion_value(value)
+
+
+def hash_michelson_key(
+    config: RuntimeConfig,
+    container_name: str,
+    key_literal: str,
+    key_type: str,
+) -> str:
+    result = docker_exec(
+        config,
+        container_name,
+        [
+            "octez-client",
+            "-M",
+            "client",
+            "hash",
+            "data",
+            key_literal,
+            "of",
+            "type",
+            key_type,
+        ],
+        timeout=30,
+    )
+    text = f"{result.stdout}\n{result.stderr}"
+    match = SCRIPT_EXPR_RE.search(text)
+    if not match:
+        raise RuntimeError("Unable to hash big-map key.")
+    return match.group(1)
+
+
+def read_big_map_value(
+    config: RuntimeConfig,
+    container_name: str,
+    contract_address: str,
+    assertion: dict[str, Any],
+) -> str:
+    key_literal = to_michelson_literal(assertion.get("key"))
+    if key_literal is None:
+        raise RuntimeError("Unable to convert big-map assertion key into Michelson.")
+    storage = read_contract_storage(config, container_name, contract_address)
+    inline_value = extract_inline_big_map_value(storage, key_literal)
+    if inline_value is not None:
+        return inline_value
+
+    big_map_id = resolve_big_map_id(config, container_name, contract_address, assertion)
+    if not big_map_id:
+        raise RuntimeError("Unable to resolve big-map id from assertion or storage.")
+    key_type = str(assertion.get("keyType") or "string").strip() or "string"
+    key_hash = hash_michelson_key(config, container_name, key_literal, key_type)
+    try:
+        result = docker_exec(
+            config,
+            container_name,
+            [
+                "octez-client",
+                "-M",
+                "client",
+                "rpc",
+                "get",
+                f"/chains/main/blocks/head/context/big_maps/{big_map_id}/{key_hash}",
+            ],
+            timeout=30,
+        )
+        return normalize_rpc_micheline_value(f"{result.stdout}\n{result.stderr}")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        inline_value = extract_inline_big_map_value(storage, key_literal)
+        if inline_value is not None:
+            return inline_value
+        raise
+
+
+def expected_assertion_value(assertion: dict[str, Any]) -> Any:
+    if "expectedMutez" in assertion:
+        return assertion.get("expectedMutez")
+    if "expected" in assertion:
+        return assertion.get("expected")
+    if "equals" in assertion:
+        return assertion.get("equals")
+    return None
+
+
+def evaluate_shadowbox_assertions(
+    config: RuntimeConfig,
+    container_name: str,
+    address_by_id: dict[str, str],
+    default_contract_address: str,
+    assertions: Any,
+) -> list[dict[str, Any]]:
+    if not isinstance(assertions, list):
+        return []
+
+    results: list[dict[str, Any]] = []
+    for index, raw_assertion in enumerate(assertions):
+        if not isinstance(raw_assertion, dict):
+            results.append(
+                {
+                    "id": f"assertion_{index + 1}",
+                    "kind": "unknown",
+                    "status": "failed",
+                    "passed": False,
+                    "note": "Assertion must be an object.",
+                }
+            )
+            continue
+
+        assertion_id = str(raw_assertion.get("id") or f"assertion_{index + 1}")
+        kind = str(raw_assertion.get("kind") or "").strip()
+        target_contract_id = str(
+            raw_assertion.get("targetContractId")
+            or raw_assertion.get("contractId")
+            or raw_assertion.get("target")
+            or "",
+        ).strip()
+        contract_address = address_by_id.get(target_contract_id, default_contract_address)
+        expected = expected_assertion_value(raw_assertion)
+
+        try:
+            if kind == "storage":
+                actual = read_contract_storage(config, container_name, contract_address)
+            elif kind == "balance":
+                actual = read_contract_balance_mutez(config, container_name, contract_address)
+                if actual is None:
+                    raise RuntimeError("Unable to parse contract balance.")
+            elif kind == "big_map":
+                actual = read_big_map_value(config, container_name, contract_address, raw_assertion)
+            else:
+                raise RuntimeError(f"Unsupported assertion kind {kind or 'unknown'}.")
+
+            expected_normalized = normalize_assertion_value(expected)
+            actual_normalized = normalize_michelson_text(str(actual))
+            passed = actual_normalized == expected_normalized
+            results.append(
+                {
+                    "id": assertion_id,
+                    "kind": kind,
+                    "status": "passed" if passed else "failed",
+                    "passed": passed,
+                    "contractAddress": contract_address,
+                    "expected": expected_normalized,
+                    "actual": actual_normalized,
+                }
+            )
+        except Exception as error:  # noqa: BLE001
+            results.append(
+                {
+                    "id": assertion_id,
+                    "kind": kind or "unknown",
+                    "status": "failed",
+                    "passed": False,
+                    "contractAddress": contract_address,
+                    "expected": normalize_assertion_value(expected),
+                    "note": str(error),
+                }
+            )
+
+    return results
+
+
 def write_output(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -1250,18 +1531,6 @@ def main(argv: list[str]) -> int:
                 )
                 continue
 
-            if isinstance(assertions, list) and assertions:
-                step_results.append(
-                    {
-                        "label": label,
-                        "wallet": wallet,
-                        "entrypoint": entrypoint or "unknown",
-                        "status": "failed",
-                        "note": "Storage/balance/big-map assertions are not implemented in this runner; no-stub policy blocks treating this step as passed.",
-                    }
-                )
-                continue
-
             if not entrypoint:
                 step_results.append(
                     {
@@ -1334,15 +1603,30 @@ def main(argv: list[str]) -> int:
 
             if call_result is not None:
                 call_text = f"{call_result.stdout}\n{call_result.stderr}"
+                assertion_results = evaluate_shadowbox_assertions(
+                    config,
+                    container_name,
+                    address_by_id,
+                    target_contract_address,
+                    assertions,
+                )
+                assertions_passed = all(
+                    assertion.get("passed") is True for assertion in assertion_results
+                )
                 step_results.append(
                     {
                         "label": label,
                         "wallet": wallet,
                         "entrypoint": entrypoint,
-                        "status": "passed",
-                        "note": "Entrypoint call applied in ephemeral runtime.",
+                        "status": "passed" if assertions_passed else "failed",
+                        "note": (
+                            "Entrypoint call applied in ephemeral runtime."
+                            if assertions_passed
+                            else "Entrypoint call applied, but one or more assertions failed."
+                        ),
                         "operationHash": parse_operation_hash(call_text),
                         "level": parse_level(call_text),
+                        "assertions": assertion_results if assertion_results else None,
                     }
                 )
             elif timed_out:

@@ -53,6 +53,7 @@ export interface ShadowboxStepResult {
   note: string;
   operationHash?: string;
   level?: number;
+  assertions?: Array<Record<string, unknown>>;
 }
 
 export interface ShadowboxRunResult {
@@ -171,6 +172,13 @@ function normalizeStepResults(
         : {};
     const status = record.status === 'failed' ? 'failed' : 'passed';
 
+    const assertions = Array.isArray(record.assertions)
+      ? record.assertions.filter(
+          (assertion): assertion is Record<string, unknown> =>
+            assertion !== null && typeof assertion === 'object' && !Array.isArray(assertion),
+        )
+      : undefined;
+
     return {
       label:
         typeof record.label === 'string' && record.label.trim().length > 0
@@ -196,6 +204,7 @@ function normalizeStepResults(
         typeof record.level === 'number' && Number.isFinite(record.level)
           ? record.level
           : undefined,
+      assertions: assertions && assertions.length > 0 ? assertions : undefined,
     };
   });
 }

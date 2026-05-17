@@ -737,6 +737,116 @@ describe('createApiApp', () => {
     expect(response.body.shadowbox.passed).toBe(true);
   });
 
+  it('passes multi-contract shadowbox payloads and assertion evidence through the endpoint', async () => {
+    let seenContractIds: string[] = [];
+    let seenAssertions: unknown[] | undefined;
+    const app = createApiApp({
+      env: baseEnv({
+        KILN_SHADOWBOX_ENABLED: true,
+      }),
+      createTezosService: mockTezosServiceFactory().factory,
+      runShadowbox: async (input) => {
+        seenContractIds = input.contracts?.map((contract) => contract.id) ?? [];
+        seenAssertions = input.steps[1]?.assertions;
+        return {
+          enabled: true,
+          requiredForClearance: false,
+          provider: 'command',
+          executed: true,
+          passed: true,
+          jobId: 'sbox_multi',
+          contractAddress,
+          contracts: [
+            { id: 'ledger', address: contractAddress },
+            { id: 'payable', address: tokenAddresses.silver },
+          ],
+          startedAt: '2026-05-17T00:00:00.000Z',
+          endedAt: '2026-05-17T00:00:01.000Z',
+          durationMs: 1000,
+          summary: { total: 2, passed: 2, failed: 0 },
+          steps: [
+            {
+              label: 'Pay contract',
+              wallet: 'bert',
+              entrypoint: 'default',
+              status: 'passed',
+              note: 'Payable step applied.',
+            },
+            {
+              label: 'Set ledger',
+              wallet: 'ernie',
+              entrypoint: 'set',
+              status: 'passed',
+              note: 'Assertion step applied.',
+              assertions: [
+                {
+                  id: 'ledger_big_map',
+                  kind: 'big_map',
+                  status: 'passed',
+                  passed: true,
+                },
+              ],
+            },
+          ],
+          warnings: [],
+        };
+      },
+    });
+
+    const response = await request(app).post('/api/kiln/shadowbox/run').send({
+      contracts: [
+        {
+          id: 'ledger',
+          sourceType: 'michelson',
+          source: sampleMichelson,
+          initialStorage: 'Unit',
+        },
+        {
+          id: 'payable',
+          sourceType: 'michelson',
+          source: sampleMichelson,
+          initialStorage: 'Unit',
+        },
+      ],
+      simulationSteps: [
+        {
+          label: 'Pay contract',
+          wallet: 'bert',
+          targetContractId: 'payable',
+          entrypoint: 'default',
+          amountMutez: 1000000,
+        },
+        {
+          label: 'Set ledger',
+          wallet: 'ernie',
+          targetContractId: 'ledger',
+          entrypoint: 'set',
+          args: ['buyer', 7],
+          assertions: [
+            {
+              id: 'ledger_big_map',
+              kind: 'big_map',
+              targetContractId: 'ledger',
+              bigMap: 'storage',
+              key: 'buyer',
+              expected: '7',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(seenContractIds).toEqual(['ledger', 'payable']);
+    expect(seenAssertions).toHaveLength(1);
+    expect(response.body.shadowbox.steps[1].assertions[0]).toMatchObject({
+      id: 'ledger_big_map',
+      kind: 'big_map',
+      passed: true,
+    });
+  });
+
   it('uses compiled SmartPy storage for standalone shadowbox when caller sends Unit placeholder', async () => {
     const compiledStorage =
       '(Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" (Pair "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" 0))';

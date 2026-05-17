@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   predeployValidationPayloadSchema,
+  shadowboxRunPayloadSchema,
   smartpyCompilePayloadSchema,
   workflowRunPayloadSchema,
 } from '../../lib/api-schemas.js';
@@ -112,7 +113,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
         const result = await runContractWorkflow(
           {
             sourceType: payload.data.sourceType,
-            source: payload.data.source,
+            source: payload.data.source ?? '',
             initialStorage: payload.data.initialStorage,
             scenario: payload.data.scenario,
             simulationSteps: mapSimulationSteps(payload.data.simulationSteps),
@@ -265,7 +266,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
     services.requireApiToken,
     services.mutationLimiter,
     async (req, res) => {
-      const payload = workflowRunPayloadSchema.safeParse(req.body);
+      const payload = shadowboxRunPayloadSchema.safeParse(req.body);
       if (!payload.success) {
         res.status(400).json({
           error: validationErrorMessage(payload.error),
@@ -282,39 +283,80 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           return;
         }
 
-        const source = await materializeContractSource({
-          sourceType: payload.data.sourceType,
-          source: payload.data.source,
-          scenario: payload.data.scenario,
-          compileSmartPy: services.compileSmartPy,
-        });
-        const initialStorage = resolveSmartPyInitialStorage({
-          requestedInitialStorage: payload.data.initialStorage,
-          compiledInitialStorage: source.compiled?.initialStorage,
-        }).initialStorage;
-        const injectedArtifacts = injectKilnTokenArtifacts(
-          { code: source.michelson, initialStorage },
-          services.env,
+        const contractInputs =
+          payload.data.contracts.length > 0
+            ? payload.data.contracts
+            : [
+                {
+                  id: 'contract',
+                  sourceType: payload.data.sourceType,
+                  source: payload.data.source ?? '',
+                  initialStorage: payload.data.initialStorage,
+                  scenario: payload.data.scenario,
+                },
+              ];
+        const materializedContracts = await Promise.all(
+          contractInputs.map(async (contractInput) => {
+            const source = await materializeContractSource({
+              sourceType: contractInput.sourceType,
+              source: contractInput.source,
+              scenario: contractInput.scenario,
+              compileSmartPy: services.compileSmartPy,
+            });
+            const initialStorage = resolveSmartPyInitialStorage({
+              requestedInitialStorage: contractInput.initialStorage,
+              compiledInitialStorage: source.compiled?.initialStorage,
+            }).initialStorage;
+            const injectedArtifacts = injectKilnTokenArtifacts(
+              { code: source.michelson, initialStorage },
+              services.env,
+            );
+            const parsedEntrypoints = readMichelsonEntrypoints(injectedArtifacts.code);
+            return {
+              id: contractInput.id,
+              sourceType: source.sourceType,
+              michelson: injectedArtifacts.code,
+              initialStorage: injectedArtifacts.initialStorage,
+              parsedEntrypoints,
+            };
+          }),
         );
-        const injectedCode = injectedArtifacts.code;
-        const injectedInitialStorage = injectedArtifacts.initialStorage;
-        const parsedEntrypoints = readMichelsonEntrypoints(injectedCode);
-        const entrypoints = parsedEntrypoints.map((entry) => entry.name);
+        const primary = materializedContracts[0];
+        if (!primary) {
+          res.status(400).json({
+            error: 'Shadowbox needs at least one materialized contract.',
+          });
+          return;
+        }
+        const entrypointRecords = materializedContracts.flatMap(
+          (contract) => contract.parsedEntrypoints,
+        );
+        const entrypoints = entrypointRecords.map((entry) => entry.name);
         const entrypointTypes = Object.fromEntries(
-          parsedEntrypoints
+          entrypointRecords
             .filter((entry) => entry.parameterType)
             .map((entry) => [entry.name, entry.parameterType as string]),
         );
         const entrypointArgCandidates = Object.fromEntries(
-          parsedEntrypoints
+          entrypointRecords
             .filter((entry) => (entry.sampleArgs?.length ?? 0) > 0)
             .map((entry) => [entry.name, entry.sampleArgs as string[]]),
         );
+        const injectedCode = primary.michelson;
+        const injectedInitialStorage = primary.initialStorage;
         const codeHash = hashContractCode(injectedCode);
         const shadowbox = await services.runShadowbox({
-          sourceType: source.sourceType,
+          sourceType: primary.sourceType,
           michelson: injectedCode,
           initialStorage: injectedInitialStorage,
+          contracts:
+            materializedContracts.length > 1
+              ? materializedContracts.map((contract) => ({
+                  id: contract.id,
+                  michelson: contract.michelson,
+                  initialStorage: contract.initialStorage,
+                }))
+              : undefined,
           entrypoints,
           entrypointTypes,
           entrypointArgCandidates,
@@ -339,7 +381,7 @@ export function createWorkflowRouter(services: ApiAppServices): Router {
           success: shadowbox.executed && shadowbox.passed,
           networkId: network.id,
           ecosystem: network.ecosystem,
-          sourceType: source.sourceType,
+          sourceType: primary.sourceType,
           codeHash,
           shadowbox,
         });
