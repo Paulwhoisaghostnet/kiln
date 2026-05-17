@@ -20,7 +20,9 @@ spec.loader.exec_module(module)
 print(json.dumps({
   "updateOperators": module.build_arg("update_operators", "bert", [0]),
   "updateOperatorCandidates": module.build_arg_candidates("update_operators", "bert", [0]),
+  "fa2Mint": module.build_arg("mint", "bert", [1], "list (pair address nat)"),
   "fa2Transfer": module.build_arg("transfer", "bert", [1], "list (pair address (list (pair address (pair nat nat))))"),
+  "setAdminCandidates": module.build_arg_candidates("set_administrator", "bert", [], None, ['"tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6"']),
   "purchaseCandidates": module.build_arg_candidates("purchase", "bert", [1]),
   "ignoredTypeCandidates": module.build_arg_candidates("some_entrypoint", "bert", [1], "pair nat nat string"),
   "providedPairCandidates": module.build_arg_candidates("some_entrypoint", "bert", [1], None, ['(Pair 1 1 "from-ts")']),
@@ -52,7 +54,9 @@ print(json.dumps({
   ) as {
     updateOperators: string;
     updateOperatorCandidates: string[];
+    fa2Mint: string;
     fa2Transfer: string;
+    setAdminCandidates: string[];
     purchaseCandidates: string[];
     ignoredTypeCandidates: string[];
     providedPairCandidates: string[];
@@ -86,9 +90,15 @@ describe('Flextesa shadowbox runner argument compatibility', () => {
         '{ Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" (Pair "tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6" 0) }',
       ]),
     );
+    expect(expressions.fa2Mint).toBe(
+      '{ Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" 1 }',
+    );
     expect(expressions.fa2Transfer).toBe(
       '{ Pair "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb" { Pair "tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6" (Pair 0 1) } }',
     );
+    expect(expressions.setAdminCandidates).toEqual([
+      '"tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6"',
+    ]);
     expect(expressions.purchaseCandidates).toEqual([
       '1',
       '(Pair 1 1 "shadowbox")',

@@ -751,6 +751,8 @@ def build_arg(
         and entrypoint
         in {"mint", "mint_tokens", "create_token", "mint_editions", "burn", "burn_tokens"}
     ):
+        if parameter_type and "list (pair address nat)" in parameter_type:
+            return f'{{ Pair {escape_michelson_string(wallet_address(wallet))} {str(args[0]).strip()} }}'
         return f'(Pair {escape_michelson_string(wallet_address(wallet))} {str(args[0]).strip()})'
 
     if (
@@ -790,9 +792,11 @@ def build_arg_candidates(
     arg = build_arg(entrypoint, wallet, args, parameter_type)
     has_explicit_args = len(args) > 0
     candidates = []
-    if arg is not None:
+    if provided_candidates and not has_explicit_args:
+        candidates.extend(provided_candidates)
+    elif arg is not None:
         candidates.append(arg)
-    if provided_candidates and (has_explicit_args or not candidates):
+    if provided_candidates and has_explicit_args:
         candidates.extend(provided_candidates)
 
     flexible_reachability_entrypoints = {
