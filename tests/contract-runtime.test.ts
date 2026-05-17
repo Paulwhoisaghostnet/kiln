@@ -265,7 +265,14 @@ describe('runContractE2E', () => {
                   record[0] === 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6' &&
                   String(record[1]) === '0'
                 ) {
-                  return '97500000000';
+                  return {
+                    s: '1',
+                    e: '10',
+                    c: ['97500000000'],
+                    toString() {
+                      return '97500000000';
+                    },
+                  };
                 }
               }
               return undefined;

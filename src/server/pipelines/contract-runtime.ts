@@ -596,6 +596,15 @@ function normalizeComparable(value: unknown): unknown {
   if (typeof value === 'number' && Number.isInteger(value)) {
     return value.toString();
   }
+  if (value && typeof value === 'object') {
+    const toString = (value as { toString?: unknown }).toString;
+    if (typeof toString === 'function' && toString !== Object.prototype.toString) {
+      const rendered = toString.call(value);
+      if (typeof rendered === 'string' && rendered !== '[object Object]') {
+        return rendered;
+      }
+    }
+  }
   if (value instanceof Map) {
     return Object.fromEntries(value.entries());
   }
