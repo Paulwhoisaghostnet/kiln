@@ -411,7 +411,7 @@ async function readMapValue(mapLike: unknown, key: unknown): Promise<unknown> {
   if (isRecord(mapLike)) {
     const getter = mapLike.get;
     if (typeof getter === 'function') {
-      return await (getter as (input: unknown) => Promise<unknown> | unknown)(key);
+      return await (getter as (input: unknown) => Promise<unknown> | unknown).call(mapLike, key);
     }
     return mapLike[stringKey];
   }
