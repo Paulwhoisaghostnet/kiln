@@ -339,6 +339,9 @@ describe('createApiApp', () => {
     expect(response.body.entrypoints.shadowbox).toBe('/api/kiln/shadowbox/run');
     expect(response.body.noStubPolicy.shadowboxMockClearance).toBe('blocked');
     expect(response.body.systemScenarios.payableTezosCalls).toBe('supported');
+    expect(response.body.systemScenarios.storageAssertions).toBe(
+      'supported-in-live-e2e-runtime',
+    );
   });
 
   it('returns capabilities for the requested network instead of only the runtime default', async () => {

@@ -64,7 +64,10 @@ export function buildKilnCapabilities(
         network.ecosystem === 'tezos'
           ? 'supported-in-live-e2e-payloads'
           : 'blocked-until-adapter-e2e-runner',
-      storageAssertions: 'blocked-until-runtime-reader',
+      storageAssertions:
+        network.ecosystem === 'tezos'
+          ? 'supported-in-live-e2e-runtime'
+          : 'blocked-until-adapter-e2e-runner',
       shadowboxMultiContract:
         network.ecosystem === 'tezos'
           ? 'supported-in-command-provider'

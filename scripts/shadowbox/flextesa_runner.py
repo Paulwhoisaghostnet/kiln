@@ -732,7 +732,12 @@ def build_purchase_arg_candidates() -> list[str]:
     ]
 
 
-def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
+def build_arg(
+    entrypoint: str,
+    wallet: str,
+    args: list[Any],
+    parameter_type: str | None = None,
+) -> str | None:
     if entrypoint == "update_operators":
         return build_update_operators_args(wallet, args)[0]
 
@@ -756,6 +761,9 @@ def build_arg(entrypoint: str, wallet: str, args: list[Any]) -> str | None:
     ):
         amount = str(args[0]).strip()
         target = "tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6"
+        if parameter_type and "list (pair address (list" in parameter_type:
+            owner = escape_michelson_string(wallet_address(wallet))
+            return f'{{ Pair {owner} {{ Pair {escape_michelson_string(target)} (Pair 0 {amount}) }} }}'
         return f'(Pair {escape_michelson_string(target)} {amount})'
 
     if len(args) == 1:
@@ -777,14 +785,15 @@ def build_arg_candidates(
     parameter_type: str | None = None,
     provided_candidates: list[str] | None = None,
 ) -> list[str]:
-    del parameter_type
     if entrypoint == "update_operators":
         return build_update_operators_args(wallet, args)
-    arg = build_arg(entrypoint, wallet, args)
-    using_provided_candidates = bool(provided_candidates)
-    candidates = [*(provided_candidates or [])]
-    if not using_provided_candidates and arg is not None:
+    arg = build_arg(entrypoint, wallet, args, parameter_type)
+    has_explicit_args = len(args) > 0
+    candidates = []
+    if arg is not None:
         candidates.append(arg)
+    if provided_candidates and (has_explicit_args or not candidates):
+        candidates.extend(provided_candidates)
 
     flexible_reachability_entrypoints = {
         "buy",
@@ -793,12 +802,12 @@ def build_arg_candidates(
         "fulfill_ask",
         "purchase",
     }
-    if not using_provided_candidates and entrypoint == "purchase":
+    if not provided_candidates and entrypoint == "purchase":
         candidates.extend(build_purchase_arg_candidates())
-    if not using_provided_candidates and entrypoint in flexible_reachability_entrypoints:
+    if not provided_candidates and entrypoint in flexible_reachability_entrypoints:
         candidates.extend(["Unit", "1"])
     if (
-        not using_provided_candidates
+        not provided_candidates
         and len(args) == 1
         and isinstance(args[0], (int, str))
         and str(args[0]).strip().lstrip("-").isdigit()
