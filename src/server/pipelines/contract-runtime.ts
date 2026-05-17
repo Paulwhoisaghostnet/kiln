@@ -405,13 +405,47 @@ async function readMapValue(mapLike: unknown, key: unknown): Promise<unknown> {
     return undefined;
   }
   const stringKey = typeof key === 'string' ? key : String(key);
+  const candidateKeys =
+    typeof key === 'string' && /^(tz1|tz2|tz3|KT1)/.test(key)
+      ? [
+          key,
+          { 0: key, 1: 0 },
+          { 0: key, 1: '0' },
+          [key, 0],
+          { owner: key, token_id: 0 },
+          { address: key, token_id: 0 },
+        ]
+      : [key];
   if (mapLike instanceof Map) {
-    return mapLike.get(key) ?? mapLike.get(stringKey);
+    for (const candidate of candidateKeys) {
+      const value = mapLike.get(candidate) ?? mapLike.get(JSON.stringify(candidate));
+      if (value !== undefined) {
+        return value;
+      }
+    }
+    return mapLike.get(stringKey);
   }
   if (isRecord(mapLike)) {
     const getter = mapLike.get;
     if (typeof getter === 'function') {
-      return await (getter as (input: unknown) => Promise<unknown> | unknown).call(mapLike, key);
+      let lastError: unknown;
+      for (const candidate of candidateKeys) {
+        try {
+          const value = await (getter as (input: unknown) => Promise<unknown> | unknown).call(
+            mapLike,
+            candidate,
+          );
+          if (value !== undefined) {
+            return value;
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (lastError) {
+        throw lastError;
+      }
+      return undefined;
     }
     return mapLike[stringKey];
   }

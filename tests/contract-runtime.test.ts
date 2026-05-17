@@ -253,9 +253,24 @@ describe('runContractE2E', () => {
       (wallet) =>
         new FakeTezosService(wallet, calls, [], {
           wtf_token_address: tokenAddress,
-          ledger: new Map([
-            ['tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6', '97500000000'],
-          ]),
+          ledger: {
+            provider: true,
+            get(key: unknown) {
+              if (!this.provider) {
+                throw new Error('getter context lost');
+              }
+              if (key && typeof key === 'object' && !Array.isArray(key)) {
+                const record = key as Record<string, unknown>;
+                if (
+                  record[0] === 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6' &&
+                  String(record[1]) === '0'
+                ) {
+                  return '97500000000';
+                }
+              }
+              return undefined;
+            },
+          },
         }),
     );
 
