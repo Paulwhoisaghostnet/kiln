@@ -36,7 +36,6 @@
     "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
-    "@airgap/beacon-dapp": "^4.8.1",
     "@stablelib/blake2b": "^1.0.1",
     "@taquito/beacon-wallet": "^24.3.0",
     "@taquito/michel-codec": "^24.3.0",
