@@ -114,8 +114,9 @@ function isRuleRelevantForContractType(
 
 export async function listGuidedElementsFromReferences(
   contractType: GuidedContractType,
+  input?: { referenceRoot?: string },
 ): Promise<GuidedElementOption[]> {
-  const contracts = await listReferenceContracts();
+  const contracts = await listReferenceContracts(input);
   const relevantRules = GUIDED_ELEMENT_RULES.filter((rule) =>
     isRuleRelevantForContractType(rule, contractType),
   );
@@ -143,4 +144,3 @@ export async function listGuidedElementsFromReferences(
     };
   });
 }
-

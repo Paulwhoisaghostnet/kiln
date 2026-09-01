@@ -2,7 +2,7 @@ import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createApiApp } from '../src/server-app.js';
 import type { AppEnv } from '../src/lib/env.js';
@@ -13,6 +13,7 @@ import { buildWorkflowDrivenSimulationSteps } from '../src/lib/workflow-discover
 const walletAAddress = 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb';
 const walletBAddress = 'tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6';
 const contractAddress = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton';
+const referenceFixtureRoot = resolve(process.cwd(), 'tests/fixtures/reference-corpus');
 const tokenAddresses = {
   bronze: 'KT1L5m2ohNDhbzSbRcitn1LaMmGf7jhDbVGj',
   silver: 'KT1SxqT3TUF44syQ5QauuF9L8upWjr4ayVoq',
@@ -82,7 +83,7 @@ function baseEnv(overrides: Partial<AppEnv> = {}): AppEnv {
     KILN_ACTIVITY_LOG_PATH: overrides.KILN_ACTIVITY_LOG_PATH,
     KILN_PYTHON: overrides.KILN_PYTHON,
     KILN_EXPORT_ROOT: overrides.KILN_EXPORT_ROOT,
-    KILN_REFERENCE_ROOT: overrides.KILN_REFERENCE_ROOT,
+    KILN_REFERENCE_ROOT: overrides.KILN_REFERENCE_ROOT ?? referenceFixtureRoot,
   };
 }
 

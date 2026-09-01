@@ -7,7 +7,7 @@ import { listReferenceContracts } from '../src/lib/reference-contracts.js';
 describe('listReferenceContracts', () => {
   it('indexes known reference contracts with relative artifact paths', async () => {
     const contracts = await listReferenceContracts({
-      referenceRoot: resolve(process.cwd(), 'reference'),
+      referenceRoot: resolve(process.cwd(), 'tests/fixtures/reference-corpus'),
     });
 
     expect(contracts.length).toBeGreaterThanOrEqual(1);

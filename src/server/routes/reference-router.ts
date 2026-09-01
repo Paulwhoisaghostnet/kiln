@@ -11,13 +11,16 @@ import { asMessage, validationErrorMessage } from '../http.js';
 
 export function createReferenceRouter(services: ApiAppServices): Router {
   const router = Router();
+  const referenceInput = {
+    referenceRoot: services.env.KILN_REFERENCE_ROOT,
+  };
 
   router.get(
     '/api/kiln/reference/contracts',
     services.requireApiToken,
     async (_req, res) => {
       try {
-        const contracts = await listReferenceContracts();
+        const contracts = await listReferenceContracts(referenceInput);
         res.json({
           success: true,
           count: contracts.length,
@@ -47,6 +50,7 @@ export function createReferenceRouter(services: ApiAppServices): Router {
       try {
         const elements = await listGuidedElementsFromReferences(
           payload.data.contractType,
+          referenceInput,
         );
         res.json({
           success: true,
@@ -76,6 +80,7 @@ export function createReferenceRouter(services: ApiAppServices): Router {
       try {
         const referenceElements = await listGuidedElementsFromReferences(
           payload.data.contractType,
+          referenceInput,
         );
         const selectedElementSet = new Set(payload.data.selectedElements);
         const selectedReferenceElements = referenceElements.filter((element) =>

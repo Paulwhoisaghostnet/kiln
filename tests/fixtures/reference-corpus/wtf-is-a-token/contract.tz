@@ -1,0 +1,7 @@
+parameter (or (unit %mint) (unit %burn));
+storage unit;
+code {
+  CDR;
+  NIL operation;
+  PAIR
+};
